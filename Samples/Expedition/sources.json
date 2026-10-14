@@ -158,12 +158,12 @@
     "artist": "Bumps",
     "title": "Can You See?",
     "folder": "Bumps - Can You See",
-    "loops": 18,
+    "loops": 12,
     "source_url": "https://www.youtube.com/watch?v=57klyQWXC1U",
     "source_bpm": 158,
     "bpm_range": [
-      155.2,
-      161.1
+      156.8,
+      160.0
     ],
     "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
   }

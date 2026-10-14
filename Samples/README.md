@@ -1,6 +1,6 @@
 # Breakwater sample library
 
-258 stereo 48 kHz / 24-bit PCM WAV loops across 14 song pages. The initial 60 Niagara loops retain their original files and IDs (0–59). The October 14 percussion expedition adds 198 loops with IDs 60–257.
+252 stereo 48 kHz / 24-bit PCM WAV loops across 14 song pages. The initial 60 Niagara loops retain their original files and IDs (0–59). The October 14 percussion expedition contributes 192 loops with stable IDs in 60–257; IDs 240–245 were retired with the one-bar Can You See? cuts.
 
 These are decoded exports of lossy YouTube streams, not lossless masters. Audio rights remain with their respective owners; the application source does not grant a separate sample license.
 
@@ -24,13 +24,13 @@ These are decoded exports of lossy YouTube streams, not lossless masters. Audio 
 | John Cage & Third Coast Percussion — Third Construction | 12 | 159 | [Recording](https://www.youtube.com/watch?v=6jyoD-ZYSmw) |
 | Valentina Magaletti & Julian Sartorius — Sobaka | 18 | 121 | [Recording](https://www.youtube.com/watch?v=3YLmlkUojF8) |
 | Bumps — Biotic Discussion | 18 | 126 | [Recording](https://www.youtube.com/watch?v=qdFC1eIBAMs) |
-| Bumps — Can You See? | 18 | 158 | [Recording](https://www.youtube.com/watch?v=57klyQWXC1U) |
+| Bumps — Can You See? | 12 | 158 | [Recording](https://www.youtube.com/watch?v=57klyQWXC1U) |
 
 BPM is measured per cut from its frame length and assigned beat count. Page BPM is the median of that page's loops. Four-pulse bars are a sampling convention for live and polyrhythmic material, not a statement about the original score. Third Construction includes changing, asymmetrical textures (approximately 127–199 interpreted BPM); use the per-pad BPM as the reference. Locked Groove 022 is one repeated 1.8-second performance: its six pads are two entry phases at 1-, 2- and 4-bar lengths.
 
 **Snare anchors for Penguin and Biotic Discussion:** use the backbeats on 2 and 4 to establish bar timing, including when kicks anticipate the beat. Penguin 06 is the user-approved reference and remains byte-identical. Twelve Penguin cuts and six further Biotic cuts were realigned; `backbeat-alignment.json` in each pack records source boundaries and snare timing. Internal swing and pitch are untouched. Web audio, offline auditions and OP-1 patches are synchronized; revised cuts await user audition.
 
-**Can You See? downbeats:** 13 cuts were revised (01, 05, 06, 09 and 13 unchanged). Its `downbeat-alignment.json` records the edits. Pad IDs, numbers and bar lengths are stable across all revisions.
+**Can You See? phrases:** following listening feedback, this page contains only two- and four-bar loops: eight two-bar cuts (07–14) and four four-bar cuts (15–18). The one-bar cuts (01–06) were removed from the app and sample packs. Retained WAVs and OP-1 patches are byte-identical, with their original pad IDs and numbers. `selection.json` records the current selection; `downbeat-alignment.json` preserves the earlier boundary-edit history.
 
 **A Safe Balm downbeats:** after audition feedback, 14 cuts were moved to nearby kick-led bar downbeats using unchanged pads 02 and 05 as references. Pads 07 and 14 also remain unchanged. Pad IDs, numbers and bar lengths are preserved; `Expedition/sb/downbeat-alignment.json` records the exact edits. The revised files are ready for further listening review.
 

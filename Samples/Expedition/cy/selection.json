@@ -1,0 +1,37 @@
+{
+  "song": "cy",
+  "date": "2026-10-14",
+  "reason": "User listening feedback: Can You See? only makes sense with loops of two bars or longer.",
+  "minimum_bars": 2,
+  "removed_numbers": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "retired_catalog_ids": [
+    240,
+    241,
+    242,
+    243,
+    244,
+    245
+  ],
+  "retained_numbers": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18
+  ],
+  "retained_audio": "WAVs and OP-1 patches byte-identical; no recutting or renumbering."
+}

@@ -164,7 +164,8 @@ test('all catalog samples exist with unique IDs and valid waveform/phrase metada
   const catalog = JSON.parse(readFileSync(new URL('../../Samples/catalog.json', import.meta.url)));
   const all = catalog.flatMap(song => song.loops);
   assert.equal(catalog.length, 14);
-  assert.equal(all.length, 258);
+  assert.equal(all.length, 252);
+  assert.ok(catalog.find(song => song.id === 'cy').loops.every(sample => sample.bars >= 2));
   assert.deepEqual(catalog.slice(0,2).flatMap(song => song.loops.map(sample => sample.id)), Array.from({length:60}, (_,i) => i));
   assert.equal(new Set(all.map(sample => sample.id)).size, all.length);
   for (const sample of all) {

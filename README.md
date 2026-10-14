@@ -1,6 +1,6 @@
 # Breakwater
 
-A native iPad instrument and a static browser player for percussion loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. The bundled library has 258 loops across 14 song pages: the original 60 Niagara cuts plus 198 loops from the percussion audition shortlist. See [the sample catalog](Samples/README.md) for sources and counts.
+A native iPad instrument and a static browser player for percussion loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. The bundled library has 252 loops across 14 song pages: the original 60 Niagara cuts plus 192 loops from the percussion audition shortlist. See [the sample catalog](Samples/README.md) for sources and counts.
 
 ![Breakwater on iPad](Docs/Design/tablet-landscape.png)
 

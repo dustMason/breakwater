@@ -1,5 +1,11 @@
 # Validation
 
+## Can You See? phrase lengths — 2026-10-14
+
+- User listening feedback requires loops of at least two bars. Removed six one-bar cuts (01–06 / catalog IDs 240–245), retaining eight two-bar loops (07–14) and four four-bar loops (15–18). All retained WAVs and OP-1 patches are byte-identical; pad IDs, numbers, and every other song are unchanged.
+- All 252 catalog/WAV checks and 13 JavaScript tests pass; the static site builds. The offline player passes JavaScript syntax checks, the regenerated numbered MP3 decodes, and Desktop pack checksums match. Each export contains exactly twelve retained WAVs and native OP-1 patches.
+- Browser verification shows only pads 07–18, labeled two or four bars. The refreshed player is stopped on Can You See? at 158 BPM. No audio was played during this check.
+
 ## Penguin and Biotic snare anchors — 2026-10-14
 
 - Followed the user's instruction to anchor snare backbeats on 2 and 4. Penguin 06 is the explicit reference and stays byte-identical in WAV and OP-1 form. Twelve Penguin cuts and six further Biotic cuts have updated boundaries. Each pack's `backbeat-alignment.json` supersedes kick-only phase selection and records detected backbeats, boundary edits and timing errors.

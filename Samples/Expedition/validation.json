@@ -1698,63 +1698,9 @@
   },
   {
     "song": "cy",
-    "count": 18,
+    "count": 12,
     "common_gain_db": -0.9999999999999997,
     "loops": [
-      {
-        "loop": 1,
-        "sha256": "2000f5234a9e29ca6f378a82e16adb5610a6d3906a2f103aa490e6d2d4c177a3",
-        "frames": 72519,
-        "peak_dbfs": -1.0,
-        "rms_dbfs": -10.588,
-        "seam_jump": 0,
-        "rhythmic_score": 0.5942
-      },
-      {
-        "loop": 2,
-        "sha256": "f6ab44257a521dce1f31d5d51508ee804829b71e5a446ef703de559d840ad8a0",
-        "frames": 71513,
-        "peak_dbfs": -1.0,
-        "rms_dbfs": -10.712,
-        "seam_jump": 0,
-        "rhythmic_score": 0.418
-      },
-      {
-        "loop": 3,
-        "sha256": "99b71d239761a2d6bb24ef0a956edc5e775dfa4d996747a1861f2b8bef907803",
-        "frames": 72562,
-        "peak_dbfs": -1.0,
-        "rms_dbfs": -11.581,
-        "seam_jump": 0,
-        "rhythmic_score": 0.2367
-      },
-      {
-        "loop": 4,
-        "sha256": "c064f5c357c820c9e7b15035939a224553992d389b0850ad479d10294968c80e",
-        "frames": 74235,
-        "peak_dbfs": -1.0,
-        "rms_dbfs": -11.775,
-        "seam_jump": 0,
-        "rhythmic_score": 0.0894
-      },
-      {
-        "loop": 5,
-        "sha256": "1d2849bdd4887b6a7659f96d2bbc0403c0a095e3c9021f46d98d4c39f138ca3c",
-        "frames": 72947,
-        "peak_dbfs": -1.0,
-        "rms_dbfs": -10.869,
-        "seam_jump": 0,
-        "rhythmic_score": 0.6535
-      },
-      {
-        "loop": 6,
-        "sha256": "bbfcccd66b6ba25d2fe436c7634044f03ea4ca584b8a126bc47e0c3fc25bb03b",
-        "frames": 72947,
-        "peak_dbfs": -1.0,
-        "rms_dbfs": -9.687,
-        "seam_jump": 0,
-        "rhythmic_score": 0.6036
-      },
       {
         "loop": 7,
         "sha256": "728587f0e7f1af60be5a12def07cec17ee3cc0097d1b3fc2f7c19e64ebed794a",
