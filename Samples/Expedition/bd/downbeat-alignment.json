@@ -223,5 +223,7 @@
     "all_18_op1_patches_reimported": true,
     "all_18_op1_pcm_checks_passed": true,
     "human_listening_review": "Revised cuts await user audition; phase and attack checks are digital analysis."
-  }
+  },
+  "superseded_by": "backbeat-alignment.json",
+  "status": "Historical kick-entry pass; backbeat-alignment.json records subsequent user-requested snare anchoring."
 }

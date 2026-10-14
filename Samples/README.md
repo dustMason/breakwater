@@ -28,7 +28,9 @@ These are decoded exports of lossy YouTube streams, not lossless masters. Audio 
 
 BPM is measured per cut from its frame length and assigned beat count. Page BPM is the median of that page's loops. Four-pulse bars are a sampling convention for live and polyrhythmic material, not a statement about the original score. Third Construction includes changing, asymmetrical textures (approximately 127–199 interpreted BPM); use the per-pad BPM as the reference. Locked Groove 022 is one repeated 1.8-second performance: its six pads are two entry phases at 1-, 2- and 4-bar lengths.
 
-**Bumps downbeat revisions:** Biotic Discussion has 15 recut pads (01, 02 and 05 unchanged); Can You See? has 13 (01, 05, 06, 09 and 13 unchanged). Starts follow the kick-led bar phase; nearby source material, pad IDs and bar lengths are retained. Each pack has a `downbeat-alignment.json` edit record. Web audio, offline auditions and OP-1 patches are synchronized. Revised cuts await user audition.
+**Snare anchors for Penguin and Biotic Discussion:** use the backbeats on 2 and 4 to establish bar timing, including when kicks anticipate the beat. Penguin 06 is the user-approved reference and remains byte-identical. Twelve Penguin cuts and six further Biotic cuts were realigned; `backbeat-alignment.json` in each pack records source boundaries and snare timing. Internal swing and pitch are untouched. Web audio, offline auditions and OP-1 patches are synchronized; revised cuts await user audition.
+
+**Can You See? downbeats:** 13 cuts were revised (01, 05, 06, 09 and 13 unchanged). Its `downbeat-alignment.json` records the edits. Pad IDs, numbers and bar lengths are stable across all revisions.
 
 **A Safe Balm downbeats:** after audition feedback, 14 cuts were moved to nearby kick-led bar downbeats using unchanged pads 02 and 05 as references. Pads 07 and 14 also remain unchanged. Pad IDs, numbers and bar lengths are preserved; `Expedition/sb/downbeat-alignment.json` records the exact edits. The revised files are ready for further listening review.
 

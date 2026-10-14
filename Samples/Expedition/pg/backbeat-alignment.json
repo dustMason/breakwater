@@ -1,0 +1,643 @@
+{
+  "song": "pg",
+  "reason": "User requested snare hits on beats 2 and 4 as the anchors for Penguin and Biotic Discussion. Penguin pad 06 is the explicit user-approved reference.",
+  "reference_cut": 6,
+  "reference_note": "User-approved Penguin 06, preserved byte-identically.",
+  "method": "Track repeated snare backbeats, assign odd beat offsets (beats 2/4), and fit boundary timing locally. Preserve the reference cut and existing cuts within 50 ms of that phase. Changed cuts snap within 8 ms to a detected entry when available, otherwise within 0.67 ms to a low-amplitude PCM boundary. Preserve contiguous source audio, internal swing and pitch; no quantization or time stretching.",
+  "sample_rate": 48000,
+  "reference_phase_offset_seconds": 0.011677083333495375,
+  "unchanged": [
+    3,
+    6,
+    11,
+    14,
+    17,
+    18
+  ],
+  "changes": [
+    {
+      "number": 1,
+      "changed": true,
+      "old_start_sample": 634611,
+      "old_end_sample": 766042,
+      "start_sample": 602517,
+      "end_sample": 733660,
+      "shift_seconds": -0.668625,
+      "snare_source_times": [
+        13.2210625,
+        14.589270833333334
+      ],
+      "snare_beat_offsets": [
+        1,
+        3
+      ],
+      "old_snare_errors_ms": [
+        -684.536,
+        -685.401
+      ],
+      "snare_errors_ms": [
+        -14.411,
+        -12.276
+      ]
+    },
+    {
+      "number": 2,
+      "changed": true,
+      "old_start_sample": 3032301,
+      "old_end_sample": 3161813,
+      "start_sample": 3065614,
+      "end_sample": 3194631,
+      "shift_seconds": 0.694021,
+      "snare_source_times": [
+        64.52766666666666,
+        65.87110416666667
+      ],
+      "snare_beat_offsets": [
+        1,
+        3
+      ],
+      "old_snare_errors_ms": [
+        680.187,
+        674.542
+      ],
+      "snare_errors_ms": [
+        -11.255,
+        -11.745
+      ]
+    },
+    {
+      "number": 3,
+      "changed": false,
+      "old_start_sample": 4096356,
+      "old_end_sample": 4227629,
+      "start_sample": 4096356,
+      "end_sample": 4227629,
+      "shift_seconds": 0.0,
+      "snare_source_times": [
+        86.00489583333334,
+        87.37154166666667
+      ],
+      "snare_beat_offsets": [
+        1,
+        3
+      ],
+      "old_snare_errors_ms": [
+        -19.568,
+        -20.349
+      ],
+      "snare_errors_ms": [
+        -19.568,
+        -20.349
+      ]
+    },
+    {
+      "number": 4,
+      "changed": true,
+      "old_start_sample": 5935823,
+      "old_end_sample": 6065762,
+      "start_sample": 5904149,
+      "end_sample": 6033128,
+      "shift_seconds": -0.659875,
+      "snare_source_times": [
+        123.66297916666667,
+        125.0065
+      ],
+      "snare_beat_offsets": [
+        1,
+        3
+      ],
+      "old_snare_errors_ms": [
+        -676.766,
+        -686.776
+      ],
+      "snare_errors_ms": [
+        -11.891,
+        -11.901
+      ]
+    },
+    {
+      "number": 5,
+      "changed": true,
+      "old_start_sample": 8086071,
+      "old_end_sample": 8214659,
+      "start_sample": 8094022,
+      "end_sample": 8221666,
+      "shift_seconds": 0.165646,
+      "snare_source_times": [
+        169.272875,
+        170.60658333333333
+      ],
+      "snare_beat_offsets": [
+        1,
+        3
+      ],
+      "old_snare_errors_ms": [
+        143.333,
+        137.583
+      ],
+      "snare_errors_ms": [
+        -17.396,
+        -13.313
+      ]
+    },
+    {
+      "number": 6,
+      "changed": false,
+      "old_start_sample": 10410471,
+      "old_end_sample": 10538481,
+      "start_sample": 10410471,
+      "end_sample": 10538481,
+      "shift_seconds": 0.0,
+      "snare_source_times": [
+        217.535625,
+        218.86060416666666
+      ],
+      "snare_beat_offsets": [
+        1,
+        3
+      ],
+      "old_snare_errors_ms": [
+        -15.906,
+        -24.365
+      ],
+      "snare_errors_ms": [
+        -15.906,
+        -24.365
+      ]
+    },
+    {
+      "number": 7,
+      "changed": true,
+      "old_start_sample": 1607973,
+      "old_end_sample": 1867736,
+      "start_sample": 1641443,
+      "end_sample": 1901032,
+      "shift_seconds": 0.697292,
+      "snare_source_times": [
+        34.86214583333334,
+        36.20495833333333,
+        37.56729166666667,
+        38.91116666666667
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        686.242,
+        676.122,
+        685.523,
+        676.466
+      ],
+      "snare_errors_ms": [
+        -10.596,
+        -19.81,
+        -9.503,
+        -17.654
+      ]
+    },
+    {
+      "number": 8,
+      "changed": true,
+      "old_start_sample": 2724624,
+      "old_end_sample": 2984129,
+      "start_sample": 2675497,
+      "end_sample": 2935351,
+      "shift_seconds": -1.023479,
+      "snare_source_times": [
+        56.407604166666665,
+        57.7505,
+        59.12072916666666,
+        60.46222916666667
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        -1031.19,
+        -1039.883,
+        -1021.242,
+        -1031.331
+      ],
+      "snare_errors_ms": [
+        -8.62,
+        -19.13,
+        -2.307,
+        -14.214
+      ]
+    },
+    {
+      "number": 9,
+      "changed": true,
+      "old_start_sample": 3955592,
+      "old_end_sample": 4219457,
+      "start_sample": 3963938,
+      "end_sample": 4227629,
+      "shift_seconds": 0.173875,
+      "snare_source_times": [
+        83.25445833333333,
+        84.6308125,
+        86.00489583333334,
+        87.37154166666667
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        159.143,
+        161.201,
+        160.987,
+        153.336
+      ],
+      "snare_errors_ms": [
+        -14.279,
+        -11.315,
+        -10.622,
+        -17.367
+      ]
+    },
+    {
+      "number": 10,
+      "changed": true,
+      "old_start_sample": 4837248,
+      "old_end_sample": 5096341,
+      "start_sample": 4870686,
+      "end_sample": 5129835,
+      "shift_seconds": 0.696625,
+      "snare_source_times": [
+        102.13670833333333,
+        103.470875,
+        104.84702083333333,
+        106.17377083333334
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        685.987,
+        670.711,
+        697.414,
+        674.721
+      ],
+      "snare_errors_ms": [
+        -10.784,
+        -26.352,
+        0.06,
+        -22.924
+      ]
+    },
+    {
+      "number": 11,
+      "changed": false,
+      "old_start_sample": 6803408,
+      "old_end_sample": 7062790,
+      "start_sample": 6803408,
+      "end_sample": 7062790,
+      "shift_seconds": 0.0,
+      "snare_source_times": [
+        142.43183333333334,
+        143.78722916666666,
+        145.13247916666666,
+        146.4715
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        18.693,
+        23.141,
+        17.443,
+        5.516
+      ],
+      "snare_errors_ms": [
+        18.693,
+        23.141,
+        17.443,
+        5.516
+      ]
+    },
+    {
+      "number": 12,
+      "changed": true,
+      "old_start_sample": 7828699,
+      "old_end_sample": 8086071,
+      "start_sample": 7836315,
+      "end_sample": 8094022,
+      "shift_seconds": 0.158667,
+      "snare_source_times": [
+        163.913375,
+        165.26079166666668,
+        166.58808333333334,
+        167.93972916666667
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        145.24,
+        152.177,
+        138.99,
+        150.156
+      ],
+      "snare_errors_ms": [
+        -14.299,
+        -9.107,
+        -24.039,
+        -14.617
+      ]
+    },
+    {
+      "number": 13,
+      "changed": true,
+      "old_start_sample": 8651161,
+      "old_end_sample": 8907292,
+      "start_sample": 8611138,
+      "end_sample": 8867029,
+      "shift_seconds": -0.833812,
+      "snare_source_times": [
+        180.05958333333334,
+        181.38339583333334,
+        182.7093125,
+        184.05991666666668
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        -839.945,
+        -850.148,
+        -858.247,
+        -841.659
+      ],
+      "snare_errors_ms": [
+        -5.508,
+        -14.461,
+        -21.31,
+        -3.471
+      ]
+    },
+    {
+      "number": 14,
+      "changed": false,
+      "old_start_sample": 10153637,
+      "old_end_sample": 10410471,
+      "start_sample": 10153637,
+      "end_sample": 10410471,
+      "shift_seconds": 0.0,
+      "snare_source_times": [
+        212.19547916666667,
+        213.51360416666665,
+        214.85327083333334,
+        216.18420833333334
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "old_snare_errors_ms": [
+        -7.464,
+        -27.016,
+        -25.026,
+        -31.766
+      ],
+      "snare_errors_ms": [
+        -7.464,
+        -27.016,
+        -25.026,
+        -31.766
+      ]
+    },
+    {
+      "number": 15,
+      "changed": true,
+      "old_start_sample": 1191623,
+      "old_end_sample": 1706059,
+      "start_sample": 1256208,
+      "end_sample": 1769970,
+      "shift_seconds": 1.345521,
+      "snare_source_times": [
+        26.836041666666667,
+        28.162104166666666,
+        29.51,
+        30.839416666666665,
+        32.174625,
+        33.4994375,
+        34.86214583333334,
+        36.20495833333333
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15
+      ],
+      "old_snare_errors_ms": [
+        1340.724,
+        1327.109,
+        1335.328,
+        1325.068,
+        1320.599,
+        1305.734,
+        1328.766,
+        1331.901
+      ],
+      "snare_errors_ms": [
+        -3.919,
+        -15.779,
+        -5.805,
+        -14.31,
+        -17.023,
+        -30.133,
+        -5.346,
+        -0.456
+      ]
+    },
+    {
+      "number": 16,
+      "changed": true,
+      "old_start_sample": 5322642,
+      "old_end_sample": 5838635,
+      "start_sample": 5386846,
+      "end_sample": 5904149,
+      "shift_seconds": 1.337583,
+      "snare_source_times": [
+        112.89777083333334,
+        114.22285416666666,
+        115.5700625,
+        116.929,
+        118.29625,
+        119.62525,
+        120.97814583333333,
+        122.3060625
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15
+      ],
+      "old_snare_errors_ms": [
+        1337.53,
+        1318.882,
+        1322.358,
+        1337.564,
+        1361.082,
+        1346.35,
+        1355.514,
+        1339.699
+      ],
+      "snare_errors_ms": [
+        -1.759,
+        -23.819,
+        -23.754,
+        -11.96,
+        8.147,
+        -9.996,
+        -4.243,
+        -23.47
+      ]
+    },
+    {
+      "number": 17,
+      "changed": false,
+      "old_start_sample": 7194947,
+      "old_end_sample": 7709276,
+      "start_sample": 7194947,
+      "end_sample": 7709276,
+      "shift_seconds": 0.0,
+      "snare_source_times": [
+        150.539875,
+        151.87939583333332,
+        153.20825,
+        154.56147916666666,
+        155.90152083333334,
+        157.25239583333334,
+        158.6080625,
+        159.92275
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15
+      ],
+      "old_snare_errors_ms": [
+        -24.553,
+        -24.431,
+        -34.975,
+        -21.145,
+        -20.501,
+        -9.025,
+        7.243,
+        -17.467
+      ],
+      "snare_errors_ms": [
+        -24.553,
+        -24.431,
+        -34.975,
+        -21.145,
+        -20.501,
+        -9.025,
+        7.243,
+        -17.467
+      ]
+    },
+    {
+      "number": 18,
+      "changed": false,
+      "old_start_sample": 8222571,
+      "old_end_sample": 8738254,
+      "start_sample": 8222571,
+      "end_sample": 8738254,
+      "shift_seconds": 0.0,
+      "snare_source_times": [
+        171.96225,
+        173.30610416666667,
+        174.6815625,
+        176.0464375,
+        177.37902083333333,
+        178.7009375,
+        180.05958333333334,
+        181.38339583333334
+      ],
+      "snare_beat_offsets": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15
+      ],
+      "old_snare_errors_ms": [
+        -12.775,
+        -11.845,
+        20.689,
+        42.639,
+        32.298,
+        11.29,
+        27.012,
+        7.9
+      ],
+      "snare_errors_ms": [
+        -12.775,
+        -11.845,
+        20.689,
+        42.639,
+        32.298,
+        11.29,
+        27.012,
+        7.9
+      ]
+    }
+  ],
+  "verification": {
+    "changed_wavs": 12,
+    "unchanged_wavs_and_op1_patches": [
+      3,
+      6,
+      11,
+      14,
+      17,
+      18
+    ],
+    "all_18_op1_patches_reimported": true,
+    "all_18_op1_pcm_checks_passed": true,
+    "human_listening_review": "Revised cuts await user audition; phase and attack checks are digital analysis."
+  }
+}

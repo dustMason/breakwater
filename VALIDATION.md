@@ -1,5 +1,12 @@
 # Validation
 
+## Penguin and Biotic snare anchors — 2026-10-14
+
+- Followed the user's instruction to anchor snare backbeats on 2 and 4. Penguin 06 is the explicit reference and stays byte-identical in WAV and OP-1 form. Twelve Penguin cuts and six further Biotic cuts have updated boundaries. Each pack's `backbeat-alignment.json` supersedes kick-only phase selection and records detected backbeats, boundary edits and timing errors.
+- Snare intervals were tracked through each relevant source region; one absent Biotic backbeat was interpolated from its neighbors and is recorded in the working grid. Boundary timing was fitted locally to the backbeats while retaining each reference's phase offset. Existing cuts within 50 ms of that phase were retained. Only boundaries changed: no internal quantization, pitch change or time stretching. Measured backbeat timing errors stay below 43 ms in Penguin and 37 ms in Biotic, including retained cuts and natural performance variation.
+- All 258 catalog/WAV checks pass. All 36 OP-1 patches pass official-codec re-import and independent mono PCM, length and boundary checks. Unchanged patches and WAVs are byte-identical; the other twelve songs and all pad IDs are unchanged. The static site builds successfully. Revised cuts still need user audition and physical OP-1 playback.
+- Both offline players pass JavaScript syntax checks and both numbered MP3 reels decode. Desktop pack checksums match the revised exports. Muted browser playback of Penguin 01 and Biotic Discussion 05 was verified; the player is stopped on Penguin at 89 BPM with volume restored.
+
 ## Remaining Bumps downbeat revisions — 2026-10-14
 
 - Recut 15 Biotic Discussion pads and 13 Can You See? pads after the user reported wrong-beat starts. Source bar phase and low-frequency attacks guided nearby kick-led entries. IDs, pad numbers and 1/2/4-bar lengths remain stable; pitch and internal timing are unchanged. Per-pack `downbeat-alignment.json` records exact source-frame edits and distinguishes analysis-selected references from user-approved ones.
