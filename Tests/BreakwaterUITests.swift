@@ -5,10 +5,13 @@ final class BreakwaterUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--reset-preferences"]
+        app.launchArguments = ["--reset-preferences", "--mute-audio"]
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
         XCTAssertTrue(app.buttons["pad_0"].waitForExistence(timeout: 20))
+        waitUntilReady()
+    }
+    func waitUntilReady() {
         XCTAssertTrue(app.buttons["transport"].waitForExistence(timeout: 20))
         let ready = NSPredicate(format: "enabled == true")
         expectation(for: ready, evaluatedWith: app.buttons["transport"])
@@ -49,8 +52,9 @@ final class BreakwaterUITests: XCTestCase {
         waitForValue("pad_2", "Excluded")
         app.buttons["editPads"].tap()
         XCTAssertFalse(app.buttons["pad_2"].isEnabled)
-        app.terminate(); app.launchArguments = []; app.launch()
+        app.terminate(); app.launchArguments = ["--mute-audio"]; app.launch()
         XCTAssertTrue(app.buttons["pad_2"].waitForExistence(timeout: 20))
+        waitUntilReady()
         waitForValue("pad_2", "Excluded")
         app.buttons["editPads"].tap()
         app.buttons["pad_2"].tap()
@@ -75,5 +79,30 @@ final class BreakwaterUITests: XCTestCase {
         capture("tablet-appearance")
         XCTAssertTrue(app.buttons["settings"].isHittable)
         XCTAssertTrue(app.buttons["pad_29"].isHittable)
+    }
+    func test05RevisedLibrary() {
+        let pages: [(String, Int, Int)] = [
+            ("A Safe Balm", 18, 74),
+            ("Penguin", 18, 179),
+            ("Biotic Discussion", 18, 222),
+            ("Can You See?", 12, 257)
+        ]
+        for (name, count, pad) in pages {
+            app.buttons["songMenu"].tap()
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name + " ·")).firstMatch.tap()
+            XCTAssertTrue(app.buttons["pad_\(pad)"].waitForExistence(timeout: 3))
+            XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'pad_' ")).count, count)
+            if name == "Can You See?" {
+                for removed in 240...245 { XCTAssertFalse(app.buttons["pad_\(removed)"].exists) }
+                for retained in 246...257 { XCTAssertTrue(app.buttons["pad_\(retained)"].exists) }
+            }
+            app.buttons["pad_\(pad)"].tap()
+            waitForValue("pad_\(pad)", "Playing")
+            app.segmentedControls.buttons["Slice"].tap()
+            XCTAssertTrue(app.segmentedControls.buttons["Slice"].isSelected)
+            app.buttons["transport"].tap()
+            app.segmentedControls.buttons["Tape"].tap()
+        }
+        capture("revised-library-can-you-see")
     }
 }

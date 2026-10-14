@@ -8,7 +8,7 @@ final class AudioModel: ObservableObject {
     @Published var selectedSong = 0 {
         didSet {
             guard songs.indices.contains(selectedSong) else { return }
-            let ids = songs[selectedSong].loops.map(\.id)
+            let ids = songs[selectedSong].midiPads
             control.async { [weak self] in self?.midiPads = ids; self?.heldNotes.removeAll(); self?.midiChord.removeAll() }
         }
     }
@@ -32,7 +32,7 @@ final class AudioModel: ObservableObject {
     private var midi: MIDIInput?
     private var timer: Timer?
     private var observers: [NSObjectProtocol] = []
-    private var midiPads: [Int32] = []
+    private var midiPads: [Int32: Int32] = [:]
     private var heldNotes: Set<Int32> = []
     private var midiChord: [Int32] = []
     private var startAttempted = false
@@ -61,7 +61,7 @@ final class AudioModel: ObservableObject {
             let ids = songs.flatMap(\.loops).map(\.id)
             guard !songs.isEmpty, songs.allSatisfy({ !$0.loops.isEmpty }),
                   Set(ids).count == ids.count, ids.allSatisfy({ $0 >= 0 && $0 < 1024 }) else { throw LoadError.invalidCatalog }
-            midiPads = songs[0].loops.map(\.id)
+            midiPads = songs[0].midiPads
         } catch { self.error = "The sample library could not load: \(error.localizedDescription)"; return }
         let all = songs.flatMap(\.loops), handle = dsp
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -100,11 +100,10 @@ final class AudioModel: ObservableObject {
             guard let self else { return }
             if status >= 0xF0 { bw_midi(self.dsp, status, value, time); return }
             let note = value & 0xFF, velocity = value >> 8, kind = status & 0xF0
-            guard note >= 36 && Int(note - 36) < self.midiPads.count else { return }
+            guard let id = self.midiPads[note] else { return }
             if kind == 0x90 && velocity > 0 {
                 if self.heldNotes.isEmpty { self.midiChord = [] }
                 self.heldNotes.insert(note)
-                let id = self.midiPads[Int(note - 36)]
                 if !self.midiChord.contains(id) { self.midiChord.append(id) }
                 self.midiChord.withUnsafeBufferPointer { bw_queue(self.dsp, $0.baseAddress, Int32($0.count)) }
             } else if kind == 0x80 || kind == 0x90 { self.heldNotes.remove(note) }
@@ -155,6 +154,11 @@ final class AudioModel: ObservableObject {
             }
             node = source; engine.attach(source); engine.connect(source, to: engine.mainMixerNode, format: format)
             engine.mainMixerNode.outputVolume = 0.85
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--mute-audio") {
+                engine.mainMixerNode.outputVolume = 0
+            }
+            #endif
         }
         try engine.start(); startAttempted = true; updateOutput()
     }

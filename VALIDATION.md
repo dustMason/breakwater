@@ -1,5 +1,12 @@
 # Validation
 
+## Native library refresh, build 2 — 2026-10-14
+
+- Rebuilt the iPad app with the shared current catalog: 14 songs and 252 loops. Both the Debug Simulator bundle and Release arm64 device bundle have byte-identical catalogs and WAV hashes to `Samples/`; all six retired Can You See? WAVs are absent. This includes the latest Safe Balm 09 replacement and Penguin/Biotic backbeat edits.
+- MIDI notes now follow displayed pad numbers after curation: Can You See? 07 remains note 42 and 18 remains note 53; removed pads 01–06 stay unmapped. Swift interaction/MIDI tests and all 252 catalog/WAV checks pass. Build number is 2 in both Xcode configurations and the project generator.
+- Native UI checks pass for launch/queue/song switching, drag cycles/portrait/settings, appearance, and all four revised song pages. The expanded-library test loads and plays Safe Balm 09, Penguin 06, Biotic 01, and Can You See? 18; it checks Tape/Slice selection and the absence of retired pads. The saved-exclusions test initially tapped before loading finished on relaunch; after adding the same readiness wait used at initial launch, its focused rerun passes. Test audio is muted using a Debug-only launch option.
+- Release device build succeeds with signing disabled. The verified Debug build is installed in the existing iPad (A16) Simulator. No physical iPad was detected; signing, installation, MIDI hardware timing and A12 performance remain to be checked on the user's device.
+
 ## A Safe Balm pad 09 replacement — 2026-10-14
 
 - After the user reported an offset in 09, compared its local rhythm with approved pads 02/05. The opening includes an extra early snare and an ambiguous kick entry. Replaced it with the next full two-bar phrase, 00:39.888–00:43.523 (132.056 BPM), retaining its ID and number. This is a neighboring phrase replacement, not an internal timing adjustment; the revised cut awaits user audition.

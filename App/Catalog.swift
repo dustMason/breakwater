@@ -22,6 +22,10 @@ struct Song: Codable, Identifiable {
     let sourceBPM: Int
     let sourceURL: URL
     let loops: [LoopSample]
+    var midiPads: [Int32: Int32] {
+        Dictionary(uniqueKeysWithValues: loops.filter { (1...30).contains($0.number) }
+            .map { (Int32(35 + $0.number), $0.id) })
+    }
 }
 struct PlaybackState {
     var beat = 0.0

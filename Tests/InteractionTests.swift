@@ -17,6 +17,14 @@ import Foundation
   assert(events.contains{$0.0==0x90 && $0.1==(61|90<<8)})
   assert(events.contains{$0.0==0xF2 && $0.1==132})
   assert(events.suffix(3).map{$0.0}==[0xFA,0xFC,0xFB])
+  let songs = try! JSONDecoder().decode([Song].self, from: Data(contentsOf: URL(fileURLWithPath: "Samples/catalog.json")))
+  for song in songs {
+   for loop in song.loops { assert(song.midiPads[Int32(35 + loop.number)] == loop.id) }
+  }
+  let curated = songs.first { $0.id == "cy" }!
+  for note: Int32 in 36...41 { assert(curated.midiPads[note] == nil) }
+  assert(curated.midiPads[42] == 246 && curated.midiPads[53] == 257)
+  print("PASS: MIDI notes follow displayed pad numbers; removed Can You See? pads stay unmapped")
   print("PASS: multi-touch order, release latch, new-gesture replacement, MIDI running status, interleaved clock, SysEx and transport")
  }
 }
