@@ -2,4 +2,4 @@
 
 Jordan selected mockup C on 2026-10-14 and explicitly requested a song dropdown instead of the two song tabs, because the library will grow. The approved image's waveforms, bar lengths and sync display are illustrative. The shipping app uses the actual PCM envelopes and loop metadata, native safe areas and controls, and live transport state.
 
-The generation prompt is embedded in the approved PNG. The app icon is generated from actual sg06 waveform data by `Scripts/generate_icon.swift`; its origin is embedded in that PNG. Native app screenshots document the implementation, not generated imagery.
+The generation prompt is embedded in the approved PNG. The app icon is a custom capital B inspired by 1970s krautrock record lettering, generated with the built-in image-generation tool. Its original artwork is `app-icon-source.png` and its complete prompt is `app-icon-prompt.md`. Run `swift Scripts/generate_icon.swift` from the repository root to package it as an opaque 1024×1024 sRGB asset; the script embeds the prompt in the resulting PNG. Native app screenshots document the implementation, not generated imagery.

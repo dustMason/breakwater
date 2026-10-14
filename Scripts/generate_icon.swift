@@ -1,28 +1,35 @@
-import AppKit
 import Foundation
+import CoreGraphics
+import ImageIO
+import UniformTypeIdentifiers
 
-// The icon is data geometry: the actual sg06 amplitude envelope and playhead.
+// Package the committed lettering artwork as an opaque, sRGB iOS app icon.
+// Run from the repository root: swift Scripts/generate_icon.swift
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-let catalog = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("Samples/catalog.json"))) as! [[String: Any]]
-let loops = catalog[0]["loops"] as! [[String: Any]]
-let peaks = loops[5]["waveform"] as! [Double]
+let sourceURL = root.appendingPathComponent("Docs/Design/app-icon-source.png")
+let promptURL = root.appendingPathComponent("Docs/Design/app-icon-prompt.md")
+let outputURL = root.appendingPathComponent("App/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
+let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil)!
+let artwork = CGImageSourceCreateImageAtIndex(source, 0, nil)!
+precondition(artwork.width == artwork.height, "App icon source must be square")
+
 let size = 1024
-let bitmap = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size*4,
-                       space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
-let context = NSGraphicsContext(cgContext: bitmap, flipped: false)
-NSGraphicsContext.saveGraphicsState(); NSGraphicsContext.current = context
-NSColor(srgbRed: 0, green: 0.30, blue: 0.79, alpha: 1).setFill()
-NSBezierPath(rect: NSRect(x: 0, y: 0, width: size, height: size)).fill()
-NSColor.white.withAlphaComponent(0.13).setFill()
-NSBezierPath(rect: NSRect(x: 0, y: 0, width: 585, height: size)).fill()
-let waveform=NSBezierPath()
-for (i,peak) in peaks.enumerated() {
- let p=NSPoint(x:110+804*Double(i)/Double(peaks.count-1),y:512+peak*260)
- if i==0 { waveform.move(to:p) } else { waveform.line(to:p) }
-}
-for i in peaks.indices.reversed() { waveform.line(to:NSPoint(x:110+804*Double(i)/Double(peaks.count-1),y:512-peaks[i]*260)) }
-waveform.close(); NSColor.white.setFill(); waveform.fill()
-NSBezierPath(rect:NSRect(x:582,y:110,width:6,height:804)).fill()
-NSGraphicsContext.restoreGraphicsState()
-let rep = NSBitmapImageRep(cgImage: bitmap.makeImage()!)
-try rep.representation(using: .png, properties: [:])!.write(to: root.appendingPathComponent("App/Assets.xcassets/AppIcon.appiconset/AppIcon.png"))
+let bitmap = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4,
+                       space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                       bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+bitmap.setFillColor(CGColor(red: 0.07, green: 0.04, blue: 0.02, alpha: 1))
+bitmap.fill(CGRect(x: 0, y: 0, width: size, height: size))
+bitmap.interpolationQuality = .high
+bitmap.draw(artwork, in: CGRect(x: 0, y: 0, width: size, height: size))
+
+let prompt = try String(contentsOf: promptURL, encoding: .utf8)
+let metadata: [CFString: Any] = [
+    kCGImagePropertyPNGDictionary: [
+        kCGImagePropertyPNGDescription: "Breakwater app icon. Original artwork generated with the built-in image_gen tool.\n\n\(prompt)",
+        kCGImagePropertyPNGSoftware: "Breakwater Scripts/generate_icon.swift"
+    ]
+]
+let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.png.identifier as CFString, 1, nil)!
+CGImageDestinationAddImage(destination, bitmap.makeImage()!, metadata as CFDictionary)
+precondition(CGImageDestinationFinalize(destination), "Failed to write app icon")
+print("Wrote opaque 1024×1024 sRGB app icon to \(outputURL.path)")
