@@ -1,5 +1,15 @@
 # Validation
 
+## Percussion sample expansion — 2026-10-14
+
+- Added 198 loops from all twelve retained playlist recordings: ten sources × 18, Third Construction × 12, Locked Groove 022 × 6. Total catalog: 14 songs / 258 loops. Original Niagara entries and IDs are unchanged.
+- Every new 48 kHz / 24-bit stereo WAV decoded successfully; PCM lengths, BPM/beat consistency, finite samples, peaks ≤ −1 dBFS, zero seam endpoints and sampler markers were checked. Representative seam plots were visually inspected. Source URLs, exact times, timing interpretations and per-file hashes are recorded in the sample catalog/provenance.
+- 198 original OP-1 drum presets were produced with the official utility codec, using one isolated codec process per source pack. Every output re-imported as mono with Loop mode, pitch zero, correct key mapping and endpoints within three frames. An independent PCM check verified 44.1 kHz / 16-bit, <12 seconds, zero boundaries and bit-identical audio to the prepared mono conversion. Physical OP-1 import/playback remains untested.
+- All twelve numbered MP3 reels decode; all twelve embedded-audio offline players pass JavaScript syntax checks. The 496-file Desktop sample-dump copy was checksum-verified against the prepared output.
+- `npm test`: 13 tests pass, including overlapping on-demand loads, no unrelated downloads, failed-load retry and exclusions changing during decoding. `Tests/ClockAndCatalogTests.py` passes for all 258 WAVs. Static build succeeds and all 267 required assets return HTTP 200. Complete site is approximately 293 MB; Pages deployment has not run.
+- Browser checks at the existing desktop viewport: all fourteen songs in the dropdown; muted playback from each new song; Shift-click next-bar cycles; source-tempo reset; cross-page browsing without interruption; new-ID exclusions persisting through reload and restored after testing; reload does not autoplay. Inspected console has no warnings/errors. The layout/CSS is unchanged; the new library has not been physically tested on iPad.
+- These are algorithmically selected audition candidates, with no human listening pass. Third Construction's bar/tempo labels are practical editing interpretations, and Locked Groove 022's six files are length/phase variants of its repeated 1.8-second cycle.
+
 ## Static browser player — 2026-10-14
 
 - `npm test`: 11 JavaScript tests passed. Covers next-bar replacements, complete 1/2/4-bar cycles, cross-song selection, smooth tempo changes, measured pitch scaling, disabled-pad removal/fade-out, cancellation of excluded pending pads, stop/restart, transition discontinuities, gesture ordering, and all 60 catalog records.

@@ -163,7 +163,9 @@ test('multi-touch, drag and shift-append latch in order; releases do not rewrite
 test('all catalog samples exist with unique IDs and valid waveform/phrase metadata', () => {
   const catalog = JSON.parse(readFileSync(new URL('../../Samples/catalog.json', import.meta.url)));
   const all = catalog.flatMap(song => song.loops);
-  assert.equal(all.length, 60);
+  assert.equal(catalog.length, 14);
+  assert.equal(all.length, 258);
+  assert.deepEqual(catalog.slice(0,2).flatMap(song => song.loops.map(sample => sample.id)), Array.from({length:60}, (_,i) => i));
   assert.equal(new Set(all.map(sample => sample.id)).size, all.length);
   for (const sample of all) {
     assert.ok(existsSync(new URL(`../../Samples/${sample.file}`, import.meta.url)));

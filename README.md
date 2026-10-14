@@ -1,6 +1,6 @@
 # Breakwater
 
-A native iPad instrument and a static browser player for Niagara drum loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. Both versions include 30 Sangandongo loops and 30 Malanga loops.
+A native iPad instrument and a static browser player for percussion loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. The bundled library has 258 loops across 14 song pages: the original 60 Niagara cuts plus 198 loops from the percussion audition shortlist. See [the sample catalog](Samples/README.md) for sources and counts.
 
 ![Breakwater on iPad](Docs/Design/tablet-landscape.png)
 
@@ -34,7 +34,7 @@ python3 Scripts/serve_web.py
 
 The browser version uses the same song pages, real waveform previews, next-bar replacements, full-length cycles, and persistent pad exclusions. Drag across pads or Shift-click to build a cycle with a mouse; on a tablet, hold one pad while touching more. Keyboard users can navigate pads with the arrow keys and activate with Enter/Space (Shift adds to the cycle). On small screens the grid scrolls vertically; touch taps launch on release so swiping does not trigger samples. The bottom transport stays visible.
 
-Enter a tempo, use **Tap tempo**, or **Use source**. Pitch follows speed, with smoothly changing tempo and short transition fades. There is no MIDI or Slice mode in this version. The first play gesture downloads and decodes the 64 MB sample library. Playback then runs in an AudioWorklet on the audio thread, independently of animation and main-thread timers. Browser interruptions require pressing Play again. Preferences belong to this browser and are separate from the native app.
+Enter a tempo, use **Tap tempo**, or **Use source**. Pitch follows speed, with smoothly changing tempo and short transition fades. There is no MIDI or Slice mode in this version. Only selected loops download and decode when first triggered; subsequent plays use the in-memory cache. Rapid selections share in-flight downloads, and failed clips can be retried without reloading successful clips. Playback then runs in an AudioWorklet on the audio thread, independently of animation and main-thread timers. Browser interruptions require pressing Play again. Preferences belong to this browser and are separate from the native app.
 
 Use a current browser with AudioWorklet support. HTTPS or localhost is required; opening `index.html` as a local file does not work. Mobile browsers can suspend audio in the background or when the device locks. Physical iPad/browser background behavior remains unverified.
 

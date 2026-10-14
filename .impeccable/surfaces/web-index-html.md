@@ -9,7 +9,7 @@ related_targets: ["Web/app.js","Web/style.css"]
 Mode: Operate. Static HTML/CSS/JavaScript port of the approved native performance surface; desktop, tablet and small screens.
 
 ## Direction contract
-THESIS: The existing waveform instrument, immediately playable in a browser, using the same sixty committed samples.
+THESIS: The existing waveform instrument, immediately playable in a browser, using the shared committed sample catalog (now 258 loops across 14 sources).
 OWN-WORLD: Inherit DESIGN.md's neutral surfaces, system typography, thin borders and blue playing/queued states. Reuse the approved B icon.
 STORY: Choose a song, tap a loop, change tempo, build a latched cycle, and persistently exclude unwanted pads. Browsing does not interrupt audio.
 FIRST VIEWPORT: Compact song dropdown and source BPM above the expanding waveform grid; transport, editable tempo, volume and Edit pads below. Six columns on landscape tablets/desktops, five on portrait tablets, three on narrow phones with the grid scrollable and transport anchored.
@@ -28,3 +28,6 @@ Grid width below 460px uses three columns; below 650px it uses four. Wider grids
 The documentation pass checked `Web/index.html`, `Web/style.css`, `Web/app.js`, audio implementation, `App/Palette.swift`, `App/GridView.swift`, `PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json`. It opened `.impeccable/review/web-desktop.png` (1440×900), `web-tablet.png` (820×1180) and `web-mobile.png` (390×844): all retain the waveform-first hierarchy and visible bottom transport. `.impeccable/review/web-finish-review.md` records **ship**, with no material fixes. These are source/capture checks, not a new physical-touch, audible-quality or publication claim.
 
 `DESIGN.md` and `.impeccable/design.json` remain unchanged and native-authoritative. The historical native evidence paragraph's open browser plan/asset-gate wording predates this adaptation; this surface's review record owns the browser finish disposition. That historical wording was not repaired or promoted into a new design rule.
+
+## Sample-library expansion
+The October 14 percussion pass adds twelve song pages without changing the composition or CSS. Playback fetches only selected clips and shares in-flight decodes between rapid gestures. Per-song timing ranges and interpretation notes are available on the source-BPM tooltip. `VALIDATION.md` records the catalog, audio, OP-1 and browser checks.

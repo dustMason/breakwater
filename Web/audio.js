@@ -5,7 +5,8 @@ export class AudioPlayer {
     this.onInterruption = onInterruption;
     this.context = this.node = this.output = null;
     this.loaded = new Set();
-    this.initializing = this.loading = null;
+    this.initializing = null;
+    this.inFlight = new Map();
     this.tempo = 120;
     this.volume = .8;
   }
@@ -44,30 +45,35 @@ export class AudioPlayer {
     this.setTempo(this.tempo);
   }
 
-  async load(samples, disabled) {
-    if (this.loading) return this.loading;
-    this.loading = (async () => {
-      const remaining = samples.filter(sample => !this.loaded.has(sample.id));
-      let cursor = 0;
-      const errors = [];
-      await Promise.all(Array.from({ length: Math.min(4, remaining.length) }, async () => {
-        while (cursor < remaining.length) {
-          const sample = remaining[cursor++];
-          try {
-            const response = await fetch(new URL(`./Samples/${sample.file}`, import.meta.url));
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
-            const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i).slice());
-            this.node.port.postMessage({ type: 'load', id: sample.id, beats: sample.beats, channels }, channels.map(channel => channel.buffer));
-            this.enable(sample.id, !disabled.has(sample.id));
-            this.loaded.add(sample.id);
-            this.onProgress(this.loaded.size, samples.length);
-          } catch (error) { errors.push(`${sample.file}: ${error.message}`); }
-        }
-      }));
-      if (errors.length) throw new Error(`Couldn't load ${errors.length} loop${errors.length === 1 ? '' : 's'}. Check your connection and press Retry. (${errors[0]})`);
-    })().finally(() => { this.loading = null; });
-    return this.loading;
+  async load(samples, disabled, onProgress = this.onProgress) {
+    const requested = [...new Map(samples.map(sample => [sample.id, sample])).values()];
+    let cursor = 0, done = 0;
+    const errors = [];
+    const ensure = sample => {
+      if (this.loaded.has(sample.id)) return Promise.resolve();
+      if (!this.inFlight.has(sample.id)) {
+        const pending = (async () => {
+          const response = await fetch(new URL(`./Samples/${sample.file}`, import.meta.url));
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
+          const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i).slice());
+          this.node.port.postMessage({ type: 'load', id: sample.id, beats: sample.beats, channels }, channels.map(channel => channel.buffer));
+          this.enable(sample.id, !disabled.has(sample.id));
+          this.loaded.add(sample.id);
+        })().finally(() => this.inFlight.delete(sample.id));
+        this.inFlight.set(sample.id, pending);
+      }
+      return this.inFlight.get(sample.id);
+    };
+    await Promise.all(Array.from({ length: Math.min(4, requested.length) }, async () => {
+      while (cursor < requested.length) {
+        const sample = requested[cursor++];
+        try { await ensure(sample); }
+        catch (error) { errors.push(`${sample.file}: ${error.message}`); }
+        onProgress(++done, requested.length);
+      }
+    }));
+    if (errors.length) throw new Error(`Couldn't load ${errors.length} loop${errors.length === 1 ? '' : 's'}. Check your connection and press Retry. (${errors[0]})`);
   }
 
   command(data) { this.node?.port.postMessage(data); }

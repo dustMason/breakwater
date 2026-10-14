@@ -10,7 +10,7 @@ let tempo = bounded(saved.tempo, 120, 30, 300);
 let volume = bounded(saved.volume, .8, 0, 1);
 const disabled = new Set(Array.isArray(saved.disabled) ? saved.disabled.filter(Number.isInteger) : []);
 let songs = [], samples = [], song = null;
-let editing = false, loading = false, ready = false, desired = [], request = 0;
+let editing = false, loading = false, desired = [], request = 0;
 let state = { playing: false, active: null, beat: 0, progress: 0, pending: false, queue: [] };
 let pads = new Map();
 let lastAnnouncement = '';
@@ -62,6 +62,7 @@ function showSong(id) {
   $('song').value = song.id;
   $('artist').textContent = song.artist;
   $('source-bpm').textContent = `≈${song.sourceBPM}`;
+  $('source-bpm').title = song.sourceBPMRange ? `Loop range: ${song.sourceBPMRange.join('–')} BPM. ${song.timingNote || ''}` : 'Approximate source tempo';
   $('grid').setAttribute('aria-label', `${song.name} loop pads`);
   gesture.cancel();
   scrollTouches.clear();
@@ -140,11 +141,17 @@ async function select(ids) {
   desired = [...new Set(ids)].filter(id => !disabled.has(id));
   if (!desired.length) return;
   const attempt = ++request;
-  loading = !ready;
+  const selected = samples.filter(sample => desired.includes(sample.id));
+  loading = selected.some(sample => !audio.loaded.has(sample.id));
   paint();
   try {
     await audio.unlock();
-    if (!ready) { await audio.load(samples, disabled); ready = true; }
+    await audio.load(selected, disabled, (done, total) => {
+      if (attempt !== request || !loading) return;
+      $('loading-progress').max = total;
+      $('loading-progress').value = done;
+      notice(`Loading loops · ${done} / ${total}`, false, true);
+    });
     if (attempt !== request) return;
     loading = false;
     desired = desired.filter(id => !disabled.has(id));

@@ -3,9 +3,10 @@
 from pathlib import Path
 import json,struct,wave
 r=Path(__file__).resolve().parents[1];songs=json.loads((r/'Samples/catalog.json').read_text());seen=set()
-assert len(songs)==2
+assert len(songs)==14
+expected_counts={'sg':30,'ml':30,'lg':6,'tc':12}
 for song in songs:
- assert len(song['loops'])==30
+ assert len(song['loops'])==expected_counts.get(song['id'],18)
  for loop in song['loops']:
   assert loop['id'] not in seen;seen.add(loop['id'])
   with wave.open(str(r/'Samples'/loop['file'])) as f:
@@ -16,5 +17,5 @@ for song in songs:
   assert loop['sliceFrames'][0]==0 and loop['sliceFrames']==sorted(set(loop['sliceFrames']))
   assert all(0<=s<loop['frames'] for s in loop['sliceFrames'])
   assert len(loop['waveform'])==100 and all(0<=x<=1 for x in loop['waveform'])
-assert seen==set(range(60))
-print('PASS: all 60 bundled WAVs, stable IDs, source timing, beat counts, waveform data, and transient markers')
+assert seen==set(range(258))
+print('PASS: all 258 bundled WAVs, stable IDs, source timing, beat counts, waveform data, and transient markers')
