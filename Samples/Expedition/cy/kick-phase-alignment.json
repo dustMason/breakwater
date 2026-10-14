@@ -1,0 +1,326 @@
+{
+  "song": "cy",
+  "date": "2026-10-14",
+  "sample_rate": 48000,
+  "reference": {
+    "number": 7,
+    "source_onset_frame": 446462,
+    "source_time_seconds": 9.301291666666666,
+    "user_approved": true
+  },
+  "method": "Circularly rotate existing PCM to the corresponding kick-led two-bar phrase, matched against approved pad 07 using four-band rhythmic envelopes. Four-bar cuts retain both cycles. Add 0.75 ms in / 3 ms out boundary fades. Preserve pitch, duration, beat count and pad IDs; rotate waveform and transient metadata with audio.",
+  "changes": [
+    {
+      "number": 7,
+      "source_onset_frame": 446462,
+      "rotation_frames": 91420,
+      "rotation_beats": 4.978862164977229,
+      "rhythm_correlation_to_approved_07": 1.0,
+      "old_start_frame": 355042,
+      "old_end_frame": 501935,
+      "frames": 146893,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 246,
+      "source_segments": [
+        {
+          "startFrame": 446462,
+          "endFrame": 501935
+        },
+        {
+          "startFrame": 355042,
+          "endFrame": 446462
+        }
+      ],
+      "original_sha256": "728587f0e7f1af60be5a12def07cec17ee3cc0097d1b3fc2f7c19e64ebed794a",
+      "revised_sha256": "6cf2d1a572fcb96f28c2bd4649861d3b517355fe1ceee397327ff9a5971b9156"
+    },
+    {
+      "number": 8,
+      "source_onset_frame": 883540,
+      "rotation_frames": 18506,
+      "rotation_beats": 1.01945284149205,
+      "rhythm_correlation_to_approved_07": 0.5747775871102196,
+      "old_start_frame": 865034,
+      "old_end_frame": 1010257,
+      "frames": 145223,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 247,
+      "source_segments": [
+        {
+          "startFrame": 883540,
+          "endFrame": 1010257
+        },
+        {
+          "startFrame": 865034,
+          "endFrame": 883540
+        }
+      ],
+      "original_sha256": "101c9c642f278986c429c7d63fd43b243b87c8181372cc7623ccb9975c01aea4",
+      "revised_sha256": "0c7e85dc964cdbc99aa3b71234f3644baf92f74728d577638f27a9e4b24d9343"
+    },
+    {
+      "number": 9,
+      "source_onset_frame": 1613022,
+      "rotation_frames": 90642,
+      "rotation_beats": 4.988861445741687,
+      "rhythm_correlation_to_approved_07": 0.724825037479572,
+      "old_start_frame": 1522380,
+      "old_end_frame": 1667731,
+      "frames": 145351,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 248,
+      "source_segments": [
+        {
+          "startFrame": 1613022,
+          "endFrame": 1667731
+        },
+        {
+          "startFrame": 1522380,
+          "endFrame": 1613022
+        }
+      ],
+      "original_sha256": "bac5d9c4bbc0337e2974659c2f50e061f2ad8b47910897b14354db9cd0c029c4",
+      "revised_sha256": "345e96d48e238580c59b18f10c8eb59a1554ef13ddd81db7719531cce35eea0b"
+    },
+    {
+      "number": 10,
+      "source_onset_frame": 2486620,
+      "rotation_frames": 91672,
+      "rotation_beats": 5.000143177587935,
+      "rhythm_correlation_to_approved_07": 0.7906042438828192,
+      "old_start_frame": 2394948,
+      "old_end_frame": 2541619,
+      "frames": 146671,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 249,
+      "source_segments": [
+        {
+          "startFrame": 2486620,
+          "endFrame": 2541619
+        },
+        {
+          "startFrame": 2394948,
+          "endFrame": 2486620
+        }
+      ],
+      "original_sha256": "7ad0515f0d1d6d11950c205264104f3154aabfeef05595d7e5e83a0f467950e3",
+      "revised_sha256": "b00176c937906376d473041696ddb6fa7202fa2a123c54072ebb7d548254fc27"
+    },
+    {
+      "number": 11,
+      "source_onset_frame": 3214665,
+      "rotation_frames": 89209,
+      "rotation_beats": 4.95567699689607,
+      "rhythm_correlation_to_approved_07": 0.8482785948622271,
+      "old_start_frame": 3125456,
+      "old_end_frame": 3269467,
+      "frames": 144011,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 250,
+      "source_segments": [
+        {
+          "startFrame": 3214665,
+          "endFrame": 3269467
+        },
+        {
+          "startFrame": 3125456,
+          "endFrame": 3214665
+        }
+      ],
+      "original_sha256": "0210ef2ab56720279f4d321da4958e53be64f161688bfff15917d28c4cee635d",
+      "revised_sha256": "805d424ae8821dc0bd2bb344c1167e4fd9aba8bea5c77501a58a7536e2326957"
+    },
+    {
+      "number": 12,
+      "source_onset_frame": 3651954,
+      "rotation_frames": 90935,
+      "rotation_beats": 4.994233304042179,
+      "rhythm_correlation_to_approved_07": 0.7712495407459492,
+      "old_start_frame": 3561019,
+      "old_end_frame": 3706683,
+      "frames": 145664,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 251,
+      "source_segments": [
+        {
+          "startFrame": 3651954,
+          "endFrame": 3706683
+        },
+        {
+          "startFrame": 3561019,
+          "endFrame": 3651954
+        }
+      ],
+      "original_sha256": "0d95a2112dce6c32f1eee2872717fc8ba41ecea499fb187e02b37f2d4a7f5598",
+      "revised_sha256": "3dbf672351574ed45a592e1f748a6bb5f14f9054fc868cf8791e23aea4960802"
+    },
+    {
+      "number": 13,
+      "source_onset_frame": 4525276,
+      "rotation_frames": 91861,
+      "rotation_beats": 5.055502050026141,
+      "rhythm_correlation_to_approved_07": 0.7794974891969901,
+      "old_start_frame": 4433415,
+      "old_end_frame": 4578779,
+      "frames": 145364,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 252,
+      "source_segments": [
+        {
+          "startFrame": 4525276,
+          "endFrame": 4578779
+        },
+        {
+          "startFrame": 4433415,
+          "endFrame": 4525276
+        }
+      ],
+      "original_sha256": "f24a1994f0cd7127b380291fb4a17f3a9be8752dc05d8fadf778632e7f6afd5c",
+      "revised_sha256": "76a18d4cd0699a0d9d1c24a229680c1ebab7614c7d566bf31a780ebcc103518d"
+    },
+    {
+      "number": 14,
+      "source_onset_frame": 4962076,
+      "rotation_frames": 90812,
+      "rotation_beats": 5.0307873415968425,
+      "rhythm_correlation_to_approved_07": 0.7430475401100607,
+      "old_start_frame": 4871264,
+      "old_end_frame": 5015674,
+      "frames": 144410,
+      "beats": 8,
+      "bars": 2,
+      "catalog_id": 253,
+      "source_segments": [
+        {
+          "startFrame": 4962076,
+          "endFrame": 5015674
+        },
+        {
+          "startFrame": 4871264,
+          "endFrame": 4962076
+        }
+      ],
+      "original_sha256": "2cc070e7ab77b0834b80f88d13fc9507f7e1c9e2da2874be0da0424851aa8cb6",
+      "revised_sha256": "87d3606eede5042274fecc0001cce64b136eb0394114872b04a49db933e17196"
+    },
+    {
+      "number": 15,
+      "source_onset_frame": 1322209,
+      "rotation_frames": 238460,
+      "rotation_beats": 13.033449934411893,
+      "rhythm_correlation_to_approved_07": 0.7475734181588793,
+      "old_start_frame": 1083749,
+      "old_end_frame": 1376485,
+      "frames": 292736,
+      "beats": 16,
+      "bars": 4,
+      "catalog_id": 254,
+      "source_segments": [
+        {
+          "startFrame": 1322209,
+          "endFrame": 1376485
+        },
+        {
+          "startFrame": 1083749,
+          "endFrame": 1322209
+        }
+      ],
+      "original_sha256": "d20942756034b6876f3b52fc64bcc75f03013618f63a3d590a96299786a96872",
+      "revised_sha256": "51f934bea9a24292c52383d61d9568a03c41f3746b92c7fc4b37056f33ccb8ee"
+    },
+    {
+      "number": 16,
+      "source_onset_frame": 2048893,
+      "rotation_frames": 90848,
+      "rotation_beats": 4.9862716713434,
+      "rhythm_correlation_to_approved_07": 0.818349925021931,
+      "old_start_frame": 1958045,
+      "old_end_frame": 2249559,
+      "frames": 291514,
+      "beats": 16,
+      "bars": 4,
+      "catalog_id": 255,
+      "source_segments": [
+        {
+          "startFrame": 2048893,
+          "endFrame": 2249559
+        },
+        {
+          "startFrame": 1958045,
+          "endFrame": 2048893
+        }
+      ],
+      "original_sha256": "a2e2db23f0993698ba7e8be38d3827535a3e4120038209173f140291b80487ea",
+      "revised_sha256": "7d3470e6d55798f5dd5366f792a46f6cb1a872d19bce8afbfdef157c2f0d0839"
+    },
+    {
+      "number": 17,
+      "source_onset_frame": 3797933,
+      "rotation_frames": 91250,
+      "rotation_beats": 5.009263706855143,
+      "rhythm_correlation_to_approved_07": 0.7987867170112508,
+      "old_start_frame": 3706683,
+      "old_end_frame": 3998143,
+      "frames": 291460,
+      "beats": 16,
+      "bars": 4,
+      "catalog_id": 256,
+      "source_segments": [
+        {
+          "startFrame": 3797933,
+          "endFrame": 3998143
+        },
+        {
+          "startFrame": 3706683,
+          "endFrame": 3797933
+        }
+      ],
+      "original_sha256": "733d0485f07013acebb1d744e1832b12f25b7142b114e694de8ae2daf84ed4af",
+      "revised_sha256": "2ef859fa8543cddf776c3aeb470bcc1b0f176d6fdd6978a358aedd7dae6f8e49"
+    },
+    {
+      "number": 18,
+      "source_onset_frame": 4379124,
+      "rotation_frames": 235783,
+      "rotation_beats": 13.005398622420486,
+      "rhythm_correlation_to_approved_07": 0.7663236403751056,
+      "old_start_frame": 4143341,
+      "old_end_frame": 4433415,
+      "frames": 290074,
+      "beats": 16,
+      "bars": 4,
+      "catalog_id": 257,
+      "source_segments": [
+        {
+          "startFrame": 4379124,
+          "endFrame": 4433415
+        },
+        {
+          "startFrame": 4143341,
+          "endFrame": 4379124
+        }
+      ],
+      "original_sha256": "37a4b3273f5226f82c89255b1eed36da2d2f8031fcf904e21fc44e31f2d1fbb4",
+      "revised_sha256": "8a4057552fbe508a70c32333ab2c56202b14baf9fbd65c16d7a95d688ee8c308"
+    }
+  ],
+  "verification": {
+    "approved_07_pcm_identical": true,
+    "unchanged_frames_beats_bpm_and_ids": true,
+    "pcm_unchanged_except_rotation_and_new_edge_fades": true,
+    "other_240_wavs_byte_identical": true,
+    "listening_review": "Pad 07 approved by user; the remaining 11 edits await user audition.",
+    "all_12_op1_patches_reimported": true,
+    "all_12_op1_pcm_checks_passed": true,
+    "all_12_offline_embedded_wavs_match": true,
+    "all_252_web_samples_match": true,
+    "all_252_catalog_and_wav_checks_passed": true
+  }
+}

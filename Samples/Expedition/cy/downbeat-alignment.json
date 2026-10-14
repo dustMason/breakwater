@@ -227,5 +227,6 @@
     "all_18_op1_patches_reimported": true,
     "all_18_op1_pcm_checks_passed": true,
     "human_listening_review": "Revised cuts await user audition; phase and attack checks are digital analysis."
-  }
+  },
+  "followup": "kick-phase-alignment.json records the subsequent user-approved phrase phase applied to all 12 retained loops. Earlier audio/validation statements describe the preceding revision."
 }

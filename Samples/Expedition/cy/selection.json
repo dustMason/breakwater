@@ -33,5 +33,6 @@
     17,
     18
   ],
-  "retained_audio": "WAVs and OP-1 patches byte-identical; no recutting or renumbering."
+  "retained_audio": "WAVs and OP-1 patches byte-identical; no recutting or renumbering.",
+  "followup": "kick-phase-alignment.json records the subsequent user-approved phrase phase applied to all 12 retained loops. Earlier audio/validation statements describe the preceding revision."
 }

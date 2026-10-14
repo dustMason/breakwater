@@ -1703,97 +1703,97 @@
     "loops": [
       {
         "loop": 7,
-        "sha256": "728587f0e7f1af60be5a12def07cec17ee3cc0097d1b3fc2f7c19e64ebed794a",
+        "sha256": "6cf2d1a572fcb96f28c2bd4649861d3b517355fe1ceee397327ff9a5971b9156",
         "frames": 146893,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.289,
+        "rms_dbfs": -11.292,
         "seam_jump": 0,
         "rhythmic_score": 0.5589
       },
       {
         "loop": 8,
-        "sha256": "101c9c642f278986c429c7d63fd43b243b87c8181372cc7623ccb9975c01aea4",
+        "sha256": "0c7e85dc964cdbc99aa3b71234f3644baf92f74728d577638f27a9e4b24d9343",
         "frames": 145223,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.674,
+        "rms_dbfs": -10.678,
         "seam_jump": 0,
         "rhythmic_score": 0.4588
       },
       {
         "loop": 9,
-        "sha256": "bac5d9c4bbc0337e2974659c2f50e061f2ad8b47910897b14354db9cd0c029c4",
+        "sha256": "345e96d48e238580c59b18f10c8eb59a1554ef13ddd81db7719531cce35eea0b",
         "frames": 145351,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.053,
+        "rms_dbfs": -11.054,
         "seam_jump": 0,
         "rhythmic_score": 0.6578
       },
       {
         "loop": 10,
-        "sha256": "7ad0515f0d1d6d11950c205264104f3154aabfeef05595d7e5e83a0f467950e3",
+        "sha256": "b00176c937906376d473041696ddb6fa7202fa2a123c54072ebb7d548254fc27",
         "frames": 146671,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.697,
+        "rms_dbfs": -10.7,
         "seam_jump": 0,
         "rhythmic_score": 0.5817
       },
       {
         "loop": 11,
-        "sha256": "0210ef2ab56720279f4d321da4958e53be64f161688bfff15917d28c4cee635d",
+        "sha256": "805d424ae8821dc0bd2bb344c1167e4fd9aba8bea5c77501a58a7536e2326957",
         "frames": 144011,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.954,
+        "rms_dbfs": -10.959,
         "seam_jump": 0,
         "rhythmic_score": 0.5466
       },
       {
         "loop": 12,
-        "sha256": "0d95a2112dce6c32f1eee2872717fc8ba41ecea499fb187e02b37f2d4a7f5598",
+        "sha256": "3dbf672351574ed45a592e1f748a6bb5f14f9054fc868cf8791e23aea4960802",
         "frames": 145664,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.202,
+        "rms_dbfs": -11.203,
         "seam_jump": 0,
         "rhythmic_score": 0.6047
       },
       {
         "loop": 13,
-        "sha256": "f24a1994f0cd7127b380291fb4a17f3a9be8752dc05d8fadf778632e7f6afd5c",
+        "sha256": "76a18d4cd0699a0d9d1c24a229680c1ebab7614c7d566bf31a780ebcc103518d",
         "frames": 145364,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.332,
+        "rms_dbfs": -10.338,
         "seam_jump": 0,
         "rhythmic_score": 0.7051
       },
       {
         "loop": 14,
-        "sha256": "2cc070e7ab77b0834b80f88d13fc9507f7e1c9e2da2874be0da0424851aa8cb6",
+        "sha256": "87d3606eede5042274fecc0001cce64b136eb0394114872b04a49db933e17196",
         "frames": 144410,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.645,
+        "rms_dbfs": -10.652,
         "seam_jump": 0,
         "rhythmic_score": 0.4
       },
       {
         "loop": 15,
-        "sha256": "d20942756034b6876f3b52fc64bcc75f03013618f63a3d590a96299786a96872",
+        "sha256": "51f934bea9a24292c52383d61d9568a03c41f3746b92c7fc4b37056f33ccb8ee",
         "frames": 292736,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.044,
+        "rms_dbfs": -11.045,
         "seam_jump": 0,
         "rhythmic_score": 0.1209
       },
       {
         "loop": 16,
-        "sha256": "a2e2db23f0993698ba7e8be38d3827535a3e4120038209173f140291b80487ea",
+        "sha256": "7d3470e6d55798f5dd5366f792a46f6cb1a872d19bce8afbfdef157c2f0d0839",
         "frames": 291514,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.468,
+        "rms_dbfs": -10.471,
         "seam_jump": 0,
         "rhythmic_score": 0.5838
       },
       {
         "loop": 17,
-        "sha256": "733d0485f07013acebb1d744e1832b12f25b7142b114e694de8ae2daf84ed4af",
+        "sha256": "2ef859fa8543cddf776c3aeb470bcc1b0f176d6fdd6978a358aedd7dae6f8e49",
         "frames": 291460,
         "peak_dbfs": -1.0,
         "rms_dbfs": -11.704,
@@ -1802,10 +1802,10 @@
       },
       {
         "loop": 18,
-        "sha256": "37a4b3273f5226f82c89255b1eed36da2d2f8031fcf904e21fc44e31f2d1fbb4",
+        "sha256": "8a4057552fbe508a70c32333ab2c56202b14baf9fbd65c16d7a95d688ee8c308",
         "frames": 290074,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.473,
+        "rms_dbfs": -10.474,
         "seam_jump": 0,
         "rhythmic_score": 0.1226
       }
