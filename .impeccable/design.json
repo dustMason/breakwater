@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T20:28:44.573502+00:00",
+  "title": "Design System: Breakwater",
+  "extensions": {
+    "colorMeta": {
+      "tint-light": {
+        "role": "primary",
+        "displayName": "Instrument Blue — Light",
+        "tonalRamp": [
+          "oklch(15% 0.21441 261.24)",
+          "oklch(26% 0.21441 261.24)",
+          "oklch(38% 0.21441 261.24)",
+          "oklch(49% 0.21441 261.24)",
+          "oklch(61% 0.21441 261.24)",
+          "oklch(72% 0.21441 261.24)",
+          "oklch(84% 0.21441 261.24)",
+          "oklch(95% 0.21441 261.24)"
+        ]
+      },
+      "tint-dark": {
+        "role": "primary",
+        "displayName": "Instrument Blue — Dark",
+        "tonalRamp": [
+          "oklch(15% 0.14373 253.03)",
+          "oklch(26% 0.14373 253.03)",
+          "oklch(38% 0.14373 253.03)",
+          "oklch(49% 0.14373 253.03)",
+          "oklch(61% 0.14373 253.03)",
+          "oklch(72% 0.14373 253.03)",
+          "oklch(84% 0.14373 253.03)",
+          "oklch(95% 0.14373 253.03)"
+        ]
+      },
+      "playing": {
+        "role": "primary",
+        "displayName": "Playing Blue",
+        "tonalRamp": [
+          "oklch(15% 0.20448 261.20)",
+          "oklch(26% 0.20448 261.20)",
+          "oklch(38% 0.20448 261.20)",
+          "oklch(49% 0.20448 261.20)",
+          "oklch(61% 0.20448 261.20)",
+          "oklch(72% 0.20448 261.20)",
+          "oklch(84% 0.20448 261.20)",
+          "oklch(95% 0.20448 261.20)"
+        ]
+      },
+      "secondary-text-light": {
+        "role": "neutral",
+        "displayName": "Secondary Text — Light",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26% 0.00000 0.00)",
+          "oklch(38% 0.00000 0.00)",
+          "oklch(49% 0.00000 0.00)",
+          "oklch(61% 0.00000 0.00)",
+          "oklch(72% 0.00000 0.00)",
+          "oklch(84% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "secondary-text-dark": {
+        "role": "neutral",
+        "displayName": "Secondary Text — Dark",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26% 0.00000 0.00)",
+          "oklch(38% 0.00000 0.00)",
+          "oklch(49% 0.00000 0.00)",
+          "oklch(61% 0.00000 0.00)",
+          "oklch(72% 0.00000 0.00)",
+          "oklch(84% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Active Ink",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26% 0.00000 0.00)",
+          "oklch(38% 0.00000 0.00)",
+          "oklch(49% 0.00000 0.00)",
+          "oklch(61% 0.00000 0.00)",
+          "oklch(72% 0.00000 0.00)",
+          "oklch(84% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Song title",
+        "purpose": "SwiftUI .title2.weight(.semibold), native Dynamic Type; preview uses its standard 22-point base only."
+      },
+      "timing": {
+        "displayName": "Timing numerals",
+        "purpose": "SwiftUI .title2.monospacedDigit(); tempo form uses .title.monospacedDigit(). Native Dynamic Type owns sizes."
+      },
+      "body": {
+        "displayName": "Native body",
+        "purpose": "SwiftUI body, callout and native Form styles; no app-owned fixed size or line height."
+      },
+      "pad-number": {
+        "displayName": "Pad number",
+        "purpose": "UIFontMetrics subheadline scaling, maximum 23 points; monospaced digits."
+      },
+      "pad-bars": {
+        "displayName": "Bar length",
+        "purpose": "UIFontMetrics caption1 scaling, maximum 19 points; accessibility categories abbreviate bars to b."
+      },
+      "pad-status": {
+        "displayName": "Pad state",
+        "purpose": "UIFontMetrics caption2 scaling, maximum 16 points; state and ordered queue labels."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "pending-queue-pulse",
+        "value": "opacity 0 → 1; 0.55 s; autoreverses; repeats indefinitely",
+        "purpose": "CABasicAnimation on queued pending pads. Suppressed when UIAccessibility.isReduceMotionEnabled; text and static fill remain."
+      },
+      {
+        "name": "playback-phase",
+        "value": "x = width × clamp(progress, 0, 1); playhead width 1.5 pt; implicit actions disabled",
+        "purpose": "Engine-driven phase fill and playhead, not a fixed-duration animation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "two-row-dock",
+        "value": "available width < 720 native pt OR Dynamic Type accessibility category"
+      },
+      {
+        "name": "six-column-grid",
+        "value": "grid width > 1.12 × grid height; otherwise five columns"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Song dropdown",
+      "kind": "nav",
+      "refersTo": "song-menu",
+      "description": "Static HTML panel translation of native controls; one native point is shown as one CSS pixel for preview only. Native semantics, Dynamic Type, system colors and focus presentation remain authoritative. Preview focus uses the browser default; it is not an app focus-ring token. The selected song opens the native Menu/Picker. This preview is not wired to navigation.",
+      "html": "<button class=\"ds-song\" aria-haspopup=\"menu\">Sangandongo<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3 6l5 5 5-5\"/></svg></button>",
+      "css": ".ds-song{min-height:44px;border:0;background:transparent;color:light-dark(rgb(0% 32% 84%),rgb(38% 67% 100%));font-family:system-ui;font-size:22px;font-weight:600;display:inline-flex;align-items:center;gap:9px}.ds-song svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}.ds-song:hover{cursor:pointer}.ds-song:focus-visible{outline:auto}.ds-song:active{cursor:pointer}"
+    },
+    {
+      "name": "Ready waveform pad",
+      "kind": "custom",
+      "refersTo": "waveform-pad",
+      "description": "Static HTML panel translation of native controls; one native point is shown as one CSS pixel for preview only. Native semantics, Dynamic Type, system colors and focus presentation remain authoritative. Preview focus uses the browser default; it is not an app focus-ring token. Waveform is actual catalog geometry from sg, loop 01; semantic secondary waveform ink is approximated by GrayText only in this panel.",
+      "html": "<button class=\"ds-pad \" aria-label=\"Loop 01, 1 bars\"><span class=\"ds-pad-number\">01</span><span class=\"ds-pad-bars\">1 bars</span><svg class=\"ds-wave\" viewBox=\"0 0 180 56\" aria-hidden=\"true\"><path d=\"M0.00,13.88 L1.82,9.78 L3.64,18.44 L5.45,19.14 L7.27,20.16 L9.09,21.52 L10.91,22.78 L12.73,21.72 L14.55,18.35 L16.36,17.99 L18.18,22.31 L20.00,22.10 L21.82,15.40 L23.64,6.51 L25.45,9.05 L27.27,16.17 L29.09,17.82 L30.91,20.63 L32.73,24.05 L34.55,18.92 L36.36,14.98 L38.18,16.66 L40.00,15.51 L41.82,19.94 L43.64,6.06 L45.45,5.18 L47.27,11.12 L49.09,16.60 L50.91,17.84 L52.73,21.95 L54.55,21.84 L56.36,24.42 L58.18,15.57 L60.00,14.77 L61.82,13.75 L63.64,20.18 L65.45,23.17 L67.27,13.54 L69.09,8.21 L70.91,15.94 L72.73,18.15 L74.55,21.49 L76.36,23.66 L78.18,22.66 L80.00,21.18 L81.82,20.08 L83.64,17.53 L85.45,20.04 L87.27,22.00 L89.09,19.03 L90.91,4.71 L92.73,9.55 L94.55,15.19 L96.36,18.50 L98.18,18.92 L100.00,21.70 L101.82,21.65 L103.64,19.13 L105.45,19.97 L107.27,15.57 L109.09,17.80 L110.91,14.33 L112.73,17.16 L114.55,5.88 L116.36,6.05 L118.18,11.66 L120.00,18.64 L121.82,17.85 L123.64,22.26 L125.45,24.74 L127.27,21.50 L129.09,16.16 L130.91,12.44 L132.73,22.23 L134.55,22.59 L136.36,4.60 L138.18,8.47 L140.00,10.10 L141.82,15.91 L143.64,20.84 L145.45,20.31 L147.27,24.45 L149.09,23.85 L150.91,24.12 L152.73,24.69 L154.55,24.88 L156.36,25.45 L158.18,22.24 L160.00,23.43 L161.82,25.18 L163.64,25.73 L165.45,25.58 L167.27,25.88 L169.09,26.01 L170.91,25.37 L172.73,10.35 L174.55,16.43 L176.36,21.59 L178.18,23.45 L180.00,25.13 L180.00,30.87 L178.18,32.55 L176.36,34.41 L174.55,39.57 L172.73,45.65 L170.91,30.63 L169.09,29.99 L167.27,30.12 L165.45,30.42 L163.64,30.27 L161.82,30.82 L160.00,32.57 L158.18,33.76 L156.36,30.55 L154.55,31.12 L152.73,31.31 L150.91,31.88 L149.09,32.15 L147.27,31.55 L145.45,35.69 L143.64,35.16 L141.82,40.09 L140.00,45.90 L138.18,47.53 L136.36,51.40 L134.55,33.41 L132.73,33.77 L130.91,43.56 L129.09,39.84 L127.27,34.50 L125.45,31.26 L123.64,33.74 L121.82,38.15 L120.00,37.36 L118.18,44.34 L116.36,49.95 L114.55,50.12 L112.73,38.84 L110.91,41.67 L109.09,38.20 L107.27,40.43 L105.45,36.03 L103.64,36.87 L101.82,34.35 L100.00,34.30 L98.18,37.08 L96.36,37.50 L94.55,40.81 L92.73,46.45 L90.91,51.29 L89.09,36.97 L87.27,34.00 L85.45,35.96 L83.64,38.47 L81.82,35.92 L80.00,34.82 L78.18,33.34 L76.36,32.34 L74.55,34.51 L72.73,37.85 L70.91,40.06 L69.09,47.79 L67.27,42.46 L65.45,32.83 L63.64,35.82 L61.82,42.25 L60.00,41.23 L58.18,40.43 L56.36,31.58 L54.55,34.16 L52.73,34.05 L50.91,38.16 L49.09,39.40 L47.27,44.88 L45.45,50.82 L43.64,49.94 L41.82,36.06 L40.00,40.49 L38.18,39.34 L36.36,41.02 L34.55,37.08 L32.73,31.95 L30.91,35.37 L29.09,38.18 L27.27,39.83 L25.45,46.95 L23.64,49.49 L21.82,40.60 L20.00,33.90 L18.18,33.69 L16.36,38.01 L14.55,37.65 L12.73,34.28 L10.91,33.22 L9.09,34.48 L7.27,35.84 L5.45,36.86 L3.64,37.56 L1.82,46.22 L0.00,42.12 Z\"/></svg><span class=\"ds-status\"></span></button>",
+      "css": ".ds-pad{position:relative;display:block;overflow:hidden;width:200px;height:136px;padding:5px 10px 23px;border:.75px solid color-mix(in srgb,GrayText 30%,transparent);border-radius:7px;background:Canvas;color:CanvasText;font-family:system-ui;text-align:left}.ds-pad-number{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.ds-pad-bars{float:right;font-size:12px;color:light-dark(rgb(36% 36% 36%),rgb(76% 76% 76%))}.ds-wave{position:absolute;left:10px;right:10px;top:31px;width:calc(100% - 20px);height:calc(100% - 61px);fill:GrayText}.ds-status{position:absolute;left:10px;bottom:3px;height:20px;font-size:11px;font-weight:600}.ds-pad:hover{cursor:pointer}.ds-pad:focus-visible{outline:auto}.ds-pad:active{cursor:pointer}"
+    },
+    {
+      "name": "Playing waveform pad",
+      "kind": "custom",
+      "refersTo": "waveform-pad-playing",
+      "description": "Static HTML panel translation of native controls; one native point is shown as one CSS pixel for preview only. Native semantics, Dynamic Type, system colors and focus presentation remain authoritative. Preview focus uses the browser default; it is not an app focus-ring token. Phase shown at 40% for the preview; the app reads engine progress directly.",
+      "html": "<button class=\"ds-pad ds-playing\" aria-label=\"Loop 01, 1 bars, PLAYING · 1\"><span class=\"ds-pad-number\">01</span><span class=\"ds-pad-bars\">1 bars</span><svg class=\"ds-wave\" viewBox=\"0 0 180 56\" aria-hidden=\"true\"><path d=\"M0.00,13.88 L1.82,9.78 L3.64,18.44 L5.45,19.14 L7.27,20.16 L9.09,21.52 L10.91,22.78 L12.73,21.72 L14.55,18.35 L16.36,17.99 L18.18,22.31 L20.00,22.10 L21.82,15.40 L23.64,6.51 L25.45,9.05 L27.27,16.17 L29.09,17.82 L30.91,20.63 L32.73,24.05 L34.55,18.92 L36.36,14.98 L38.18,16.66 L40.00,15.51 L41.82,19.94 L43.64,6.06 L45.45,5.18 L47.27,11.12 L49.09,16.60 L50.91,17.84 L52.73,21.95 L54.55,21.84 L56.36,24.42 L58.18,15.57 L60.00,14.77 L61.82,13.75 L63.64,20.18 L65.45,23.17 L67.27,13.54 L69.09,8.21 L70.91,15.94 L72.73,18.15 L74.55,21.49 L76.36,23.66 L78.18,22.66 L80.00,21.18 L81.82,20.08 L83.64,17.53 L85.45,20.04 L87.27,22.00 L89.09,19.03 L90.91,4.71 L92.73,9.55 L94.55,15.19 L96.36,18.50 L98.18,18.92 L100.00,21.70 L101.82,21.65 L103.64,19.13 L105.45,19.97 L107.27,15.57 L109.09,17.80 L110.91,14.33 L112.73,17.16 L114.55,5.88 L116.36,6.05 L118.18,11.66 L120.00,18.64 L121.82,17.85 L123.64,22.26 L125.45,24.74 L127.27,21.50 L129.09,16.16 L130.91,12.44 L132.73,22.23 L134.55,22.59 L136.36,4.60 L138.18,8.47 L140.00,10.10 L141.82,15.91 L143.64,20.84 L145.45,20.31 L147.27,24.45 L149.09,23.85 L150.91,24.12 L152.73,24.69 L154.55,24.88 L156.36,25.45 L158.18,22.24 L160.00,23.43 L161.82,25.18 L163.64,25.73 L165.45,25.58 L167.27,25.88 L169.09,26.01 L170.91,25.37 L172.73,10.35 L174.55,16.43 L176.36,21.59 L178.18,23.45 L180.00,25.13 L180.00,30.87 L178.18,32.55 L176.36,34.41 L174.55,39.57 L172.73,45.65 L170.91,30.63 L169.09,29.99 L167.27,30.12 L165.45,30.42 L163.64,30.27 L161.82,30.82 L160.00,32.57 L158.18,33.76 L156.36,30.55 L154.55,31.12 L152.73,31.31 L150.91,31.88 L149.09,32.15 L147.27,31.55 L145.45,35.69 L143.64,35.16 L141.82,40.09 L140.00,45.90 L138.18,47.53 L136.36,51.40 L134.55,33.41 L132.73,33.77 L130.91,43.56 L129.09,39.84 L127.27,34.50 L125.45,31.26 L123.64,33.74 L121.82,38.15 L120.00,37.36 L118.18,44.34 L116.36,49.95 L114.55,50.12 L112.73,38.84 L110.91,41.67 L109.09,38.20 L107.27,40.43 L105.45,36.03 L103.64,36.87 L101.82,34.35 L100.00,34.30 L98.18,37.08 L96.36,37.50 L94.55,40.81 L92.73,46.45 L90.91,51.29 L89.09,36.97 L87.27,34.00 L85.45,35.96 L83.64,38.47 L81.82,35.92 L80.00,34.82 L78.18,33.34 L76.36,32.34 L74.55,34.51 L72.73,37.85 L70.91,40.06 L69.09,47.79 L67.27,42.46 L65.45,32.83 L63.64,35.82 L61.82,42.25 L60.00,41.23 L58.18,40.43 L56.36,31.58 L54.55,34.16 L52.73,34.05 L50.91,38.16 L49.09,39.40 L47.27,44.88 L45.45,50.82 L43.64,49.94 L41.82,36.06 L40.00,40.49 L38.18,39.34 L36.36,41.02 L34.55,37.08 L32.73,31.95 L30.91,35.37 L29.09,38.18 L27.27,39.83 L25.45,46.95 L23.64,49.49 L21.82,40.60 L20.00,33.90 L18.18,33.69 L16.36,38.01 L14.55,37.65 L12.73,34.28 L10.91,33.22 L9.09,34.48 L7.27,35.84 L5.45,36.86 L3.64,37.56 L1.82,46.22 L0.00,42.12 Z\"/></svg><span class=\"ds-status\">PLAYING · 1</span></button>",
+      "css": ".ds-pad{position:relative;display:block;overflow:hidden;width:200px;height:136px;padding:5px 10px 23px;border:.75px solid color-mix(in srgb,GrayText 30%,transparent);border-radius:7px;background:Canvas;color:CanvasText;font-family:system-ui;text-align:left}.ds-pad-number{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.ds-pad-bars{float:right;font-size:12px;color:light-dark(rgb(36% 36% 36%),rgb(76% 76% 76%))}.ds-wave{position:absolute;left:10px;right:10px;top:31px;width:calc(100% - 20px);height:calc(100% - 61px);fill:GrayText}.ds-status{position:absolute;left:10px;bottom:3px;height:20px;font-size:11px;font-weight:600}.ds-pad:hover{cursor:pointer}.ds-pad:focus-visible{outline:auto}.ds-pad:active{cursor:pointer}.ds-playing{background:rgb(0% 30% 79%);color:#fff}.ds-playing .ds-pad-bars{color:#fff}.ds-playing .ds-wave{fill:#fff}.ds-playing::before{content:\"\";position:absolute;inset:0 auto 0 0;width:40%;background:rgb(100% 100% 100% / 14%);border-right:1.5px solid #fff}"
+    },
+    {
+      "name": "Pending ordered pad",
+      "kind": "custom",
+      "refersTo": "waveform-pad-queued",
+      "description": "Static HTML panel translation of native controls; one native point is shown as one CSS pixel for preview only. Native semantics, Dynamic Type, system colors and focus presentation remain authoritative. Preview focus uses the browser default; it is not an app focus-ring token. Pending order has both readable text and the implemented pulse. Reduce Motion preserves a static state.",
+      "html": "<button class=\"ds-pad ds-queued\" aria-label=\"Loop 01, 1 bars, 2  NEXT BAR\"><span class=\"ds-pad-number\">01</span><span class=\"ds-pad-bars\">1 bars</span><svg class=\"ds-wave\" viewBox=\"0 0 180 56\" aria-hidden=\"true\"><path d=\"M0.00,13.88 L1.82,9.78 L3.64,18.44 L5.45,19.14 L7.27,20.16 L9.09,21.52 L10.91,22.78 L12.73,21.72 L14.55,18.35 L16.36,17.99 L18.18,22.31 L20.00,22.10 L21.82,15.40 L23.64,6.51 L25.45,9.05 L27.27,16.17 L29.09,17.82 L30.91,20.63 L32.73,24.05 L34.55,18.92 L36.36,14.98 L38.18,16.66 L40.00,15.51 L41.82,19.94 L43.64,6.06 L45.45,5.18 L47.27,11.12 L49.09,16.60 L50.91,17.84 L52.73,21.95 L54.55,21.84 L56.36,24.42 L58.18,15.57 L60.00,14.77 L61.82,13.75 L63.64,20.18 L65.45,23.17 L67.27,13.54 L69.09,8.21 L70.91,15.94 L72.73,18.15 L74.55,21.49 L76.36,23.66 L78.18,22.66 L80.00,21.18 L81.82,20.08 L83.64,17.53 L85.45,20.04 L87.27,22.00 L89.09,19.03 L90.91,4.71 L92.73,9.55 L94.55,15.19 L96.36,18.50 L98.18,18.92 L100.00,21.70 L101.82,21.65 L103.64,19.13 L105.45,19.97 L107.27,15.57 L109.09,17.80 L110.91,14.33 L112.73,17.16 L114.55,5.88 L116.36,6.05 L118.18,11.66 L120.00,18.64 L121.82,17.85 L123.64,22.26 L125.45,24.74 L127.27,21.50 L129.09,16.16 L130.91,12.44 L132.73,22.23 L134.55,22.59 L136.36,4.60 L138.18,8.47 L140.00,10.10 L141.82,15.91 L143.64,20.84 L145.45,20.31 L147.27,24.45 L149.09,23.85 L150.91,24.12 L152.73,24.69 L154.55,24.88 L156.36,25.45 L158.18,22.24 L160.00,23.43 L161.82,25.18 L163.64,25.73 L165.45,25.58 L167.27,25.88 L169.09,26.01 L170.91,25.37 L172.73,10.35 L174.55,16.43 L176.36,21.59 L178.18,23.45 L180.00,25.13 L180.00,30.87 L178.18,32.55 L176.36,34.41 L174.55,39.57 L172.73,45.65 L170.91,30.63 L169.09,29.99 L167.27,30.12 L165.45,30.42 L163.64,30.27 L161.82,30.82 L160.00,32.57 L158.18,33.76 L156.36,30.55 L154.55,31.12 L152.73,31.31 L150.91,31.88 L149.09,32.15 L147.27,31.55 L145.45,35.69 L143.64,35.16 L141.82,40.09 L140.00,45.90 L138.18,47.53 L136.36,51.40 L134.55,33.41 L132.73,33.77 L130.91,43.56 L129.09,39.84 L127.27,34.50 L125.45,31.26 L123.64,33.74 L121.82,38.15 L120.00,37.36 L118.18,44.34 L116.36,49.95 L114.55,50.12 L112.73,38.84 L110.91,41.67 L109.09,38.20 L107.27,40.43 L105.45,36.03 L103.64,36.87 L101.82,34.35 L100.00,34.30 L98.18,37.08 L96.36,37.50 L94.55,40.81 L92.73,46.45 L90.91,51.29 L89.09,36.97 L87.27,34.00 L85.45,35.96 L83.64,38.47 L81.82,35.92 L80.00,34.82 L78.18,33.34 L76.36,32.34 L74.55,34.51 L72.73,37.85 L70.91,40.06 L69.09,47.79 L67.27,42.46 L65.45,32.83 L63.64,35.82 L61.82,42.25 L60.00,41.23 L58.18,40.43 L56.36,31.58 L54.55,34.16 L52.73,34.05 L50.91,38.16 L49.09,39.40 L47.27,44.88 L45.45,50.82 L43.64,49.94 L41.82,36.06 L40.00,40.49 L38.18,39.34 L36.36,41.02 L34.55,37.08 L32.73,31.95 L30.91,35.37 L29.09,38.18 L27.27,39.83 L25.45,46.95 L23.64,49.49 L21.82,40.60 L20.00,33.90 L18.18,33.69 L16.36,38.01 L14.55,37.65 L12.73,34.28 L10.91,33.22 L9.09,34.48 L7.27,35.84 L5.45,36.86 L3.64,37.56 L1.82,46.22 L0.00,42.12 Z\"/></svg><span class=\"ds-status\">2  NEXT BAR</span></button>",
+      "css": ".ds-pad{position:relative;display:block;overflow:hidden;width:200px;height:136px;padding:5px 10px 23px;border:.75px solid color-mix(in srgb,GrayText 30%,transparent);border-radius:7px;background:Canvas;color:CanvasText;font-family:system-ui;text-align:left}.ds-pad-number{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.ds-pad-bars{float:right;font-size:12px;color:light-dark(rgb(36% 36% 36%),rgb(76% 76% 76%))}.ds-wave{position:absolute;left:10px;right:10px;top:31px;width:calc(100% - 20px);height:calc(100% - 61px);fill:GrayText}.ds-status{position:absolute;left:10px;bottom:3px;height:20px;font-size:11px;font-weight:600}.ds-pad:hover{cursor:pointer}.ds-pad:focus-visible{outline:auto}.ds-pad:active{cursor:pointer}.ds-queued{--ds-tint:light-dark(rgb(0% 32% 84%),rgb(38% 67% 100%));background:color-mix(in srgb,var(--ds-tint) 10%,transparent);border-color:color-mix(in srgb,var(--ds-tint) 40%,transparent);color:var(--ds-tint)}.ds-queued .ds-wave{fill:var(--ds-tint)}.ds-queued::before{content:\"\";position:absolute;inset:0;background:color-mix(in srgb,var(--ds-tint) 12%,transparent);animation:ds-queued-pulse .55s infinite alternate}@keyframes ds-queued-pulse{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.ds-queued::before{animation:none}}"
+    },
+    {
+      "name": "Transport control",
+      "kind": "button",
+      "refersTo": "transport",
+      "description": "Static HTML panel translation of native controls; one native point is shown as one CSS pixel for preview only. Native semantics, Dynamic Type, system colors and focus presentation remain authoritative. Preview focus uses the browser default; it is not an app focus-ring token. Minimum 75-by-44-point frame in the app. Play uses instrument tint; the native Stop state uses SwiftUI red.",
+      "html": "<button class=\"ds-transport\"><svg viewBox=\"0 0 18 18\" aria-hidden=\"true\"><path d=\"M4 2L16 9 4 16Z\"/></svg>Play</button>",
+      "css": ".ds-transport{min-width:75px;min-height:44px;display:inline-flex;align-items:center;gap:4px;background:transparent;border:0;font:600 17px system-ui;color:light-dark(rgb(0% 32% 84%),rgb(38% 67% 100%))}.ds-transport svg{width:18px;height:18px;fill:currentColor}.ds-transport:hover{cursor:pointer}.ds-transport:focus-visible{outline:auto}.ds-transport:active{cursor:pointer}"
+    },
+    {
+      "name": "Playback mode picker",
+      "kind": "input",
+      "refersTo": "mode-picker",
+      "description": "Static HTML panel translation of native controls; one native point is shown as one CSS pixel for preview only. Native semantics, Dynamic Type, system colors and focus presentation remain authoritative. Preview focus uses the browser default; it is not an app focus-ring token. Native segmented Tape/Slice Picker; this semantic radio preview intentionally leaves browser control chrome native instead of inventing iOS material tokens.",
+      "html": "<fieldset class=\"ds-mode\"><legend>Playback mode</legend><label><input type=\"radio\" name=\"ds-mode\" checked>Tape</label><label><input type=\"radio\" name=\"ds-mode\">Slice</label></fieldset>",
+      "css": ".ds-mode{min-width:150px;min-height:44px;font-family:system-ui;color:CanvasText;display:flex;align-items:center;gap:12px}.ds-mode input{accent-color:light-dark(rgb(0% 32% 84%),rgb(38% 67% 100%))}.ds-mode label:hover{cursor:pointer}.ds-mode input:focus-visible{outline:auto}.ds-mode label:active{cursor:pointer}"
+    },
+    {
+      "name": "Timing offset control",
+      "kind": "input",
+      "description": "Static HTML panel translation of native controls; one native point is shown as one CSS pixel for preview only. Native semantics, Dynamic Type, system colors and focus presentation remain authoritative. Preview focus uses the browser default; it is not an app focus-ring token. Native Settings Form slider, −200 to +200 ms with 1 ms steps. Browser slider chrome is only a preview of the native input role.",
+      "html": "<label class=\"ds-offset\">Timing offset <span>0 ms</span><input aria-label=\"Timing offset\" type=\"range\" min=\"-200\" max=\"200\" step=\"1\" value=\"0\"></label>",
+      "css": ".ds-offset{display:block;font-family:system-ui;color:CanvasText}.ds-offset span{float:right;font-variant-numeric:tabular-nums}.ds-offset input{display:block;width:100%;accent-color:light-dark(rgb(0% 32% 84%),rgb(38% 67% 100%))}.ds-offset input:hover{cursor:pointer}.ds-offset input:focus-visible{outline:auto}.ds-offset input:active{cursor:pointer}",
+      "refersTo": "timing-offset"
+    }
+  ],
+  "narrative": {
+    "northStar": "The playable waveform grid",
+    "overview": "The samples themselves occupy the screen. Breakwater extends the existing audition player's crisp surface, hairline grid and strong blue playback field into a native iPad instrument. The waveform is both a recognizable sound and a directly playable control; the moving phase sweep makes the current sound visible.\n\nThe interface is flat, dense and functional. Native SF typography, semantic light/dark surfaces and system controls surround custom UIKit pads. Color identifies musical state; geometry comes from actual sample data. There is no decorative texture or illustration in the performance surface.",
+    "keyCharacteristics": [
+      "Real PCM waveform geometry is the primary visual content.",
+      "Blue identifies active playback and ordered queue state.",
+      "Native controls, Dynamic Type and semantic appearance provide the surrounding interface.",
+      "A scalable song dropdown and bottom transport preserve space for playable pads."
+    ],
+    "rules": [
+      {
+        "name": "The Readable Metadata Rule",
+        "body": "Small informational text uses the opaque adaptive secondary text role; reserve secondary and tertiary system ink for the waveform and exclusion treatments that actually use them.",
+        "section": "colors"
+      },
+      {
+        "name": "The State Has Words Rule",
+        "body": "Preserve the PLAYING, NEXT BAR, CYCLE and exclusion labels and their accessibility values when changing visual state treatments.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** derive waveform geometry and progress from actual sample and playback data.",
+      "**Do** use the adaptive secondary text role for small informational copy.",
+      "**Do** preserve native Dynamic Type, semantic appearance and button accessibility roles.",
+      "**Do** retain ordered state text alongside blue playback and queue treatments.",
+      "**Do** let the dropdown scale with the song library and keep performance controls at the bottom."
+    ],
+    "donts": [
+      "**Don't** restore the comp's song tabs in place of the approved dropdown.",
+      "**Don't** replace real waveform geometry with decorative artwork.",
+      "**Don't** freeze semantic surfaces or Dynamic Type into screenshot-specific values.",
+      "**Don't** add custom shadows, texture or display-font styling to this flat native instrument.",
+      "**Don't** treat Simulator captures, documentation or the scoped ship verdict as physical-device verification."
+    ]
+  }
+}
