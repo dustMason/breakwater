@@ -28,6 +28,8 @@ These are decoded exports of lossy YouTube streams, not lossless masters. Audio 
 
 BPM is measured per cut from its frame length and assigned beat count. Page BPM is the median of that page's loops. Four-pulse bars are a sampling convention for live and polyrhythmic material, not a statement about the original score. Third Construction includes changing, asymmetrical textures (approximately 127–199 interpreted BPM); use the per-pad BPM as the reference. Locked Groove 022 is one repeated 1.8-second performance: its six pads are two entry phases at 1-, 2- and 4-bar lengths.
 
+**A Safe Balm downbeats:** after audition feedback, 14 cuts were moved to nearby kick-led bar downbeats using unchanged pads 02 and 05 as references. Pads 07 and 14 also remain unchanged. Pad IDs, numbers and bar lengths are preserved; `Expedition/sb/downbeat-alignment.json` records the exact edits. The revised files are ready for further listening review.
+
 New cuts follow detected transient entries and score neighboring rhythm/phrase similarity. They keep the recording's original pitch and internal timing, with no quantization, time stretch, EQ or compression. Each track receives only a common gain reduction if needed to keep peaks below -1 dBFS; raised-cosine edge fades are 0.75 ms in / 3 ms out. WAV sampler markers span the whole file.
 
 `catalog.json` includes stable IDs, source timestamps, measured BPM, frame/beat counts, waveform envelopes and transient indices. `Expedition/sources.json` lists source recordings and timing caveats; `Expedition/validation.json` records hashes, PCM lengths, levels and seam checks. All new WAVs pass decode/format/boundary checks. These remain audition candidates: they have not had a human listening pass.

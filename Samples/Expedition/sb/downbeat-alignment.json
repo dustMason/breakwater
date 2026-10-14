@@ -1,0 +1,229 @@
+{
+  "song": "sb",
+  "reason": "User prefers the kick-led bar downbeat heard in pads 02 and 05; pad 01 was a snare entry. Align all pads to that bar phase using nearby source transients.",
+  "references": [
+    2,
+    5
+  ],
+  "unchanged": [
+    2,
+    5,
+    7,
+    14
+  ],
+  "method": "Anchors 02 and 05 are 31 bars apart. Locate existing transient-refined candidates around that phase, confirm low-frequency kick energy, and retain original 1/2/4-bar lengths. Cut contiguous source audio; no quantization or time stretching.",
+  "sample_rate": 48000,
+  "changes": [
+    {
+      "number": 1,
+      "changed": true,
+      "old_start_sample": 504149,
+      "old_end_sample": 591053,
+      "start_sample": 520426,
+      "end_sample": 607165,
+      "shift_seconds": 0.339104,
+      "bar_offset_from_reference_02": -10,
+      "first_120ms_low_to_high_db": 26.86
+    },
+    {
+      "number": 2,
+      "changed": false,
+      "old_start_sample": 1391618,
+      "old_end_sample": 1478379,
+      "start_sample": 1391618,
+      "end_sample": 1478379,
+      "shift_seconds": 0.0,
+      "bar_offset_from_reference_02": 0,
+      "first_120ms_low_to_high_db": 27.71
+    },
+    {
+      "number": 3,
+      "changed": true,
+      "old_start_sample": 2333455,
+      "old_end_sample": 2421179,
+      "start_sample": 2350029,
+      "end_sample": 2437523,
+      "shift_seconds": 0.345292,
+      "bar_offset_from_reference_02": 11,
+      "first_120ms_low_to_high_db": 26.73
+    },
+    {
+      "number": 4,
+      "changed": true,
+      "old_start_sample": 2857452,
+      "old_end_sample": 2945073,
+      "start_sample": 2873718,
+      "end_sample": 2961768,
+      "shift_seconds": 0.338875,
+      "bar_offset_from_reference_02": 17,
+      "first_120ms_low_to_high_db": 20.34
+    },
+    {
+      "number": 5,
+      "changed": false,
+      "old_start_sample": 4093653,
+      "old_end_sample": 4181205,
+      "start_sample": 4093653,
+      "end_sample": 4181205,
+      "shift_seconds": 0.0,
+      "bar_offset_from_reference_02": 31,
+      "first_120ms_low_to_high_db": 24.13
+    },
+    {
+      "number": 6,
+      "changed": true,
+      "old_start_sample": 4818404,
+      "old_end_sample": 4905210,
+      "start_sample": 4791773,
+      "end_sample": 4878848,
+      "shift_seconds": -0.554812,
+      "bar_offset_from_reference_02": 39,
+      "first_120ms_low_to_high_db": 20.81
+    },
+    {
+      "number": 7,
+      "changed": false,
+      "old_start_sample": 346124,
+      "old_end_sample": 520426,
+      "start_sample": 346124,
+      "end_sample": 520426,
+      "shift_seconds": 0.0,
+      "bar_offset_from_reference_02": -12,
+      "first_120ms_low_to_high_db": 29.68
+    },
+    {
+      "number": 8,
+      "changed": true,
+      "old_start_sample": 1086150,
+      "old_end_sample": 1260859,
+      "start_sample": 1043102,
+      "end_sample": 1217418,
+      "shift_seconds": -0.896833,
+      "bar_offset_from_reference_02": -4,
+      "first_120ms_low_to_high_db": 25.79
+    },
+    {
+      "number": 9,
+      "changed": true,
+      "old_start_sample": 1833259,
+      "old_end_sample": 2007710,
+      "start_sample": 1827351,
+      "end_sample": 2002009,
+      "shift_seconds": -0.123083,
+      "bar_offset_from_reference_02": 5,
+      "first_120ms_low_to_high_db": 28.11
+    },
+    {
+      "number": 10,
+      "changed": true,
+      "old_start_sample": 2203291,
+      "old_end_sample": 2377397,
+      "start_sample": 2176198,
+      "end_sample": 2350029,
+      "shift_seconds": -0.564438,
+      "bar_offset_from_reference_02": 9,
+      "first_120ms_low_to_high_db": 29.19
+    },
+    {
+      "number": 11,
+      "changed": true,
+      "old_start_sample": 2988175,
+      "old_end_sample": 3162080,
+      "start_sample": 2961768,
+      "end_sample": 3135691,
+      "shift_seconds": -0.550146,
+      "bar_offset_from_reference_02": 18,
+      "first_120ms_low_to_high_db": 17.31
+    },
+    {
+      "number": 12,
+      "changed": true,
+      "old_start_sample": 3247940,
+      "old_end_sample": 3422840,
+      "start_sample": 3221975,
+      "end_sample": 3396552,
+      "shift_seconds": -0.540938,
+      "bar_offset_from_reference_02": 21,
+      "first_120ms_low_to_high_db": 19.62
+    },
+    {
+      "number": 13,
+      "changed": true,
+      "old_start_sample": 4022961,
+      "old_end_sample": 4197763,
+      "start_sample": 4006549,
+      "end_sample": 4181205,
+      "shift_seconds": -0.341917,
+      "bar_offset_from_reference_02": 30,
+      "first_120ms_low_to_high_db": 22.48
+    },
+    {
+      "number": 14,
+      "changed": false,
+      "old_start_sample": 4442220,
+      "old_end_sample": 4617254,
+      "start_sample": 4442220,
+      "end_sample": 4617254,
+      "shift_seconds": 0.0,
+      "bar_offset_from_reference_02": 35,
+      "first_120ms_low_to_high_db": 24.57
+    },
+    {
+      "number": 15,
+      "changed": true,
+      "old_start_sample": 852255,
+      "old_end_sample": 1200362,
+      "start_sample": 869346,
+      "end_sample": 1217418,
+      "shift_seconds": 0.356063,
+      "bar_offset_from_reference_02": -6,
+      "first_120ms_low_to_high_db": 25.42
+    },
+    {
+      "number": 16,
+      "changed": true,
+      "old_start_sample": 2072110,
+      "old_end_sample": 2421179,
+      "start_sample": 2089102,
+      "end_sample": 2437523,
+      "shift_seconds": 0.354,
+      "bar_offset_from_reference_02": 8,
+      "first_120ms_low_to_high_db": 26.22
+    },
+    {
+      "number": 17,
+      "changed": true,
+      "old_start_sample": 3118298,
+      "old_end_sample": 3467046,
+      "start_sample": 3135691,
+      "end_sample": 3484831,
+      "shift_seconds": 0.362354,
+      "bar_offset_from_reference_02": 20,
+      "first_120ms_low_to_high_db": 16.88
+    },
+    {
+      "number": 18,
+      "changed": true,
+      "old_start_sample": 3701818,
+      "old_end_sample": 4050255,
+      "start_sample": 3745630,
+      "end_sample": 4093653,
+      "shift_seconds": 0.91275,
+      "bar_offset_from_reference_02": 27,
+      "first_120ms_low_to_high_db": 21.78
+    }
+  ],
+  "verification": {
+    "changed_wavs": 14,
+    "unchanged_wavs_and_op1_patches": [
+      2,
+      5,
+      7,
+      14
+    ],
+    "all_18_op1_patches_reimported": true,
+    "all_18_op1_pcm_checks_passed": true,
+    "max_downbeat_grid_deviation_ms": 25.551,
+    "human_listening_review": "User supplied reference feedback; revised cuts await audition."
+  }
+}

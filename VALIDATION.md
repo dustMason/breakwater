@@ -1,5 +1,12 @@
 # Validation
 
+## A Safe Balm downbeat revision — 2026-10-14
+
+- User identified pads 02 and 05 as preferred kick-led downbeats and 01 as a snare entry. Recut 14 pads from nearby source bar downbeats, retaining pad IDs, numbers and 1/2/4-bar lengths. WAVs and OP-1 patches for 02, 05, 07 and 14 are byte-identical to the previous version. Other songs are unchanged.
+- `Samples/Expedition/sb/downbeat-alignment.json` records source-frame edits and the reference phase. Low-frequency onset checks distinguish the selected kicks from the rejected snare entries. Internal timing and pitch remain untouched; the revised cuts await the user's listening review.
+- All 258 catalog/WAV checks pass. All 18 revised-pack OP-1 presets pass official-codec re-import and independent mono PCM/length/boundary checks. The static build succeeds, and muted browser playback of revised pad 01 was verified. The refreshed player is stopped on A Safe Balm at 132 BPM.
+- Regenerated offline looping player, numbered MP3, WAVs, indices and OP-1 patches; the Desktop A Safe Balm pack was checksum-verified against the output. Physical OP-1 playback remains untested.
+
 ## Percussion sample expansion — 2026-10-14
 
 - Added 198 loops from all twelve retained playlist recordings: ten sources × 18, Third Construction × 12, Locked Groove 022 × 6. Total catalog: 14 songs / 258 loops. Original Niagara entries and IDs are unchanged.
