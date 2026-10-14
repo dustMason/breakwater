@@ -139,12 +139,12 @@
       },
       {
         "loop": 9,
-        "sha256": "b90674bd607591401b9051e4fa1ff9eea6f853e619706cee799ddd960294c256",
-        "frames": 174658,
+        "sha256": "8c21c6f4252d33450f27ef3c9d86bcdcee786c1c64d2141bce28b968054f3fa0",
+        "frames": 174471,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -10.536,
+        "rms_dbfs": -10.762,
         "seam_jump": 0,
-        "rhythmic_score": 0.6977
+        "rhythmic_score": 0.67
       },
       {
         "loop": 10,

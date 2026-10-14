@@ -225,5 +225,6 @@
     "all_18_op1_pcm_checks_passed": true,
     "max_downbeat_grid_deviation_ms": 25.551,
     "human_listening_review": "User supplied reference feedback; revised cuts await audition."
-  }
+  },
+  "followup": "pad09-revision.json records the subsequent replacement of pad 09; the changes above preserve the earlier revision history."
 }

@@ -1,5 +1,11 @@
 # Validation
 
+## A Safe Balm pad 09 replacement — 2026-10-14
+
+- After the user reported an offset in 09, compared its local rhythm with approved pads 02/05. The opening includes an extra early snare and an ambiguous kick entry. Replaced it with the next full two-bar phrase, 00:39.888–00:43.523 (132.056 BPM), retaining its ID and number. This is a neighboring phrase replacement, not an internal timing adjustment; the revised cut awaits user audition.
+- All other 17 WAVs and OP-1 patches are byte-identical, and all other catalog pages are unchanged. All 252 catalog/WAV checks pass. The 18 OP-1 patches re-import through the official codec and pass independent PCM/format/length checks. The offline player's JavaScript and numbered MP3 validate; the Desktop pack is checksum-verified.
+- Static build passes. Muted browser playback loaded the new 09 and showed it playing with the revised timestamps. The player is stopped on A Safe Balm at 132 BPM with volume restored. Physical OP-1 playback remains untested.
+
 ## Can You See? phrase lengths — 2026-10-14
 
 - User listening feedback requires loops of at least two bars. Removed six one-bar cuts (01–06 / catalog IDs 240–245), retaining eight two-bar loops (07–14) and four four-bar loops (15–18). All retained WAVs and OP-1 patches are byte-identical; pad IDs, numbers, and every other song are unchanged.

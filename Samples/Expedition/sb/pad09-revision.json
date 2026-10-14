@@ -1,0 +1,33 @@
+{
+  "song": "sb",
+  "number": 9,
+  "reason": "User reported that A Safe Balm 09 feels offset after the earlier downbeat pass.",
+  "references": [
+    2,
+    5
+  ],
+  "method": "Compare local band envelopes with approved reference pads 02 and 05. The prior opening contains an extra early snare and an ambiguous kick entry. Replace it with the next complete two-bar phrase, beginning at a clearer transient, rather than applying a global tempo-grid shift. Keep contiguous source audio, original pitch and internal timing.",
+  "sample_rate": 48000,
+  "old_start_sample": 1827351,
+  "old_end_sample": 2002009,
+  "start_sample": 1914631,
+  "end_sample": 2089102,
+  "old_source_seconds": [
+    38.0698125,
+    41.70852083333333
+  ],
+  "source_seconds": [
+    39.88814583333333,
+    43.522958333333335
+  ],
+  "bars": 2,
+  "bpm": 132.05633027838428,
+  "start_shift_seconds": 1.8183333333333351,
+  "other_pads": "All 17 retained with identical audio and IDs.",
+  "human_listening_review": "Revised pad awaits user audition.",
+  "verification": {
+    "other_17_wavs_and_op1_patches_byte_identical": true,
+    "all_18_op1_patches_reimported": true,
+    "all_18_op1_pcm_checks_passed": true
+  }
+}
