@@ -1,5 +1,14 @@
 # Validation
 
+## Static browser player — 2026-10-14
+
+- `npm test`: 11 JavaScript tests passed. Covers next-bar replacements, complete 1/2/4-bar cycles, cross-song selection, smooth tempo changes, measured pitch scaling, disabled-pad removal/fade-out, cancellation of excluded pending pads, stop/restart, transition discontinuities, gesture ordering, and all 60 catalog records.
+- `node --check` passed for the page/controller/AudioWorklet modules.
+- `python3 Scripts/build_web.py` assembled the site. A local `/breakwater/` deployment layout served all 69 required assets (HTML, JavaScript, CSS, icon, catalog and 60 WAVs) with successful responses and JavaScript MIME types. The artifact excludes native source, repository metadata and development documents. Pages workflow YAML parsed; deployment depends on the tested build.
+- Browser UI checks exercised initial loading/decoding of all 60 samples into the AudioWorklet, playback, next-bar selection, Shift-click cycles, tempo entry, source tempo, switching song pages without stopping playback, and exclusions surviving reload. Both root and `/breakwater/` paths worked. Preview volume was zero; this was not an audible listening test. Browser error/warning logs were empty in the inspected session.
+- Dark-appearance screenshots inspected at 1440×900, 820×1180 and 390×844. Desktop/tablet grids and bottom transport fit; the narrow phone layout intentionally scrolls the grid while retaining transport. No horizontal overflow in the measured phone viewport. Small-screen touch behavior uses vertical pan and release-to-launch; physical multi-touch/scrolling remains unverified.
+- GitHub Pages deployment has **not** run. User will create/push and enable the GitHub Actions Pages source. Physical A12 iPad Safari, browser interruption/background behavior, light-appearance screenshots and audible quality still need hands-on validation.
+
 Validation date: 2026-10-14. Xcode 27.0 (27A266a), iPadOS deployment target 17.0.
 
 ## Automated audio and data checks

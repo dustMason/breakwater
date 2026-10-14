@@ -1,6 +1,6 @@
 # Breakwater
 
-A native iPad instrument for playing Niagara drum loops alongside a MIDI-synchronized synth jam. iPadOS 17+, designed for an A12 iPad. Includes 30 Sangandongo loops and 30 Malanga loops.
+A native iPad instrument and a static browser player for Niagara drum loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. Both versions include 30 Sangandongo loops and 30 Malanga loops.
 
 ![Breakwater on iPad](Docs/Design/tablet-landscape.png)
 
@@ -22,6 +22,40 @@ Select the MIDI source and enable external clock in Settings. Incoming MIDI Cloc
 Clock smoothing and a phase correction loop reject small timing jitter without jumping the sample cursor. Tempo changes slew over roughly 90 ms, in addition to the short incoming-clock measurement window. If clock vanishes, playback briefly freewheels; after two seconds it fades out and waits for transport restart. The latency offset advances playback for positive values. Physical timing should be calibrated against the actual audio output.
 
 The app requests a 256-frame audio buffer at 48 kHz; iPadOS chooses the available hardware configuration. All samples load before playback. Rendering uses owned in-memory PCM and a bounded single-producer command ring; the render callback performs no file I/O, locks, allocation, or Swift UI work. Audio can continue in the background. Audio interruptions stop playback; a disconnected output requires a deliberate restart.
+
+## Browser player
+
+Run locally with Python 3; no npm install or bundler is required:
+
+```sh
+python3 Scripts/serve_web.py
+# Open http://127.0.0.1:8765/
+```
+
+The browser version uses the same song pages, real waveform previews, next-bar replacements, full-length cycles, and persistent pad exclusions. Drag across pads or Shift-click to build a cycle with a mouse; on a tablet, hold one pad while touching more. Keyboard users can navigate pads with the arrow keys and activate with Enter/Space (Shift adds to the cycle). On small screens the grid scrolls vertically; touch taps launch on release so swiping does not trigger samples. The bottom transport stays visible.
+
+Enter a tempo, use **Tap tempo**, or **Use source**. Pitch follows speed, with smoothly changing tempo and short transition fades. There is no MIDI or Slice mode in this version. The first play gesture downloads and decodes the 64 MB sample library. Playback then runs in an AudioWorklet on the audio thread, independently of animation and main-thread timers. Browser interruptions require pressing Play again. Preferences belong to this browser and are separate from the native app.
+
+Use a current browser with AudioWorklet support. HTTPS or localhost is required; opening `index.html` as a local file does not work. Mobile browsers can suspend audio in the background or when the device locks. Physical iPad/browser background behavior remains unverified.
+
+### GitHub Pages
+
+1. Create/push this repository under your personal GitHub account, with `main` as the branch.
+2. In **Settings → Pages → Build and deployment → Source**, choose **GitHub Actions**.
+3. Push to `main`, or run **Deploy web player to GitHub Pages** in the Actions tab after enabling Pages.
+
+The workflow tests the JavaScript engine, builds `build/web`, uploads only the static site, and deploys it. For `dustMason/breakwater`, the expected address is `https://dustmason.github.io/breakwater/`. No custom domain or base-path configuration is needed: all module, icon, catalog and WAV URLs are relative. No credentials or environment secrets are needed beyond the workflow's scoped `GITHUB_TOKEN`.
+
+**Publishing scope:** this site includes the sample WAVs. A Pages site on a personal account is public even if the source repository is private. GitHub Pages from a private personal repository requires GitHub Pro. These files remain subject to the sample provenance described below. See [GitHub's Pages visibility guidance](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site) and [plan availability](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
+
+To build for another static host:
+
+```sh
+python3 Scripts/build_web.py --output build/web
+node --test Tests/Web/*.test.js
+```
+
+Serve the contents of `build/web` with JavaScript module MIME types. The web source is in `Web/`; samples are copied from `Samples/` and the favicon/touch icon is the existing native app icon. The build does not expose native source files, development briefs, or repository metadata.
 
 ## Build
 

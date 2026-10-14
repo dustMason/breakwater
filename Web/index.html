@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#004cc9">
+  <meta name="description" content="Breakwater: a playable grid of drum loops. Choose a song, build a cycle, and change the tempo.">
+  <title>Breakwater</title>
+  <link rel="icon" type="image/png" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <main class="instrument" aria-label="Breakwater loop player">
+    <header class="header">
+      <img class="app-icon" src="./icon.png" alt="Breakwater" width="36" height="36">
+      <div class="song-control">
+        <label class="sr-only" for="song">Source song</label>
+        <select id="song" disabled><option>Loading library…</option></select>
+        <span id="artist" class="artist"></span>
+      </div>
+      <div class="source-tempo"><span>Source BPM</span><strong id="source-bpm">—</strong></div>
+    </header>
+
+    <section id="grid" class="grid" aria-label="Loop pads" aria-busy="true"></section>
+
+    <div id="notice" class="notice" hidden>
+      <span id="notice-text" role="status"></span>
+      <button id="retry" hidden>Retry</button>
+      <progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress>
+    </div>
+    <p id="hint" class="hint">Tap a pad to play. Drag across pads, Shift-click, or hold several to make a cycle.</p>
+
+    <footer class="dock">
+      <button id="transport" class="transport" disabled aria-label="Play">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="transport-icon" d="M7 4 20 12 7 20Z"/></svg>
+        <span id="transport-label">Play</span>
+      </button>
+      <div class="tempo-control">
+        <label for="tempo">Tempo</label>
+        <div class="tempo-input"><input id="tempo" type="number" min="30" max="300" step="0.1" value="120" inputmode="decimal"><span>BPM</span></div>
+      </div>
+      <div class="tempo-actions">
+        <button id="tap-tempo">Tap tempo</button>
+        <button id="source-tempo" title="Set playback tempo to this song’s original tempo">Use source</button>
+      </div>
+      <div class="now-playing"><span id="playing-label">Pick a loop</span><div class="beat-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+      <label class="volume-control" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+      <button id="edit" class="edit" aria-pressed="false" disabled>Edit pads</button>
+    </footer>
+    <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
+  </main>
+  <noscript>Breakwater needs JavaScript enabled to play its drum loops.</noscript>
+</body>
+</html>
