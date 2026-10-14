@@ -1,5 +1,13 @@
 # Validation
 
+## Sniper Growl last kick and Swingland Hit second kick, build 5 — 2026-10-14
+
+- Following further listening feedback, all 12 Sniper Growl cuts now begin on the last kick of their preceding version, roughly one beat earlier in circular order. This supersedes the prior kick-kick-snare starting phase. All six Swingland Hit cuts now begin on the second close opening kick; the chosen transient is about 0.12–0.15 seconds after the original start. Preview-relative timestamps remain explicit. Both sets await user audition.
+- Circular rotations preserve exact lengths, BPM, beat counts, pad IDs and pitch. PCM is unchanged apart from rotation and 0.75 ms / 3 ms edge fades. Source spans correctly compose across Sniper Growl’s previous wrap; waveforms and slice markers follow the PCM. All 204 other WAVs are unchanged. Reports retain the earlier phase history.
+- All 222 catalog/WAV checks and 13 web tests pass. Static, Debug Simulator and unsigned Release device builds pass; all three catalogs and all WAV hashes match the canonical library. No playback/UI code changed and native UI tests were not repeated for this audio revision. Physical iPad playback remains unverified.
+- Both offline players embed the exact exported WAVs and pass JavaScript syntax checks; both numbered MP3 reels decode. Desktop packs are checksum-verified, with prior versions retained in Revision Backups. OP-1 files were not regenerated and retain their older starting phase.
+- Browser reload shows Sniper Growl's new timestamps and waveforms without autoplay. The page was left stopped for audition; the inspected console contains no warnings/errors. Digital checks do not establish listening approval.
+
 ## Sniper Growl kick-kick-snare phase, build 4 — 2026-10-14
 
 - Rotated all 12 existing cuts to the later kick pair before the snare, following the user's description. Two-bar cuts shift about 5.5 beats; four-bar cuts use the corresponding phase about 13.5 beats in. Local transient snapping follows the performance rather than a rigid beat grid. Pad 05 retains an overlapping fill. The new starts await listening feedback.

@@ -505,5 +505,6 @@
     "other_210_wavs_and_catalog_entries_unchanged": true,
     "op1_exports": "Not regenerated, per user request. Existing presets predate this rotation.",
     "listening_review": "Analysis-selected starts following the user description; awaiting audition."
-  }
+  },
+  "subsequent_revision": "Superseded starting phase: see last-kick-alignment.json / Last Kick Alignment.json for the latest user-requested kick start. Earlier cut and OP-1 checks describe the previous exports; OP-1 presets are no longer maintained."
 }

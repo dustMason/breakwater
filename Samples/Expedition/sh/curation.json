@@ -150,5 +150,6 @@
     "op1_pcm_checks_passed": true,
     "offline_embedded_audio_matches": true,
     "audition_mp3_decodes": true
-  }
+  },
+  "subsequent_revision": "Superseded starting phase: see second-kick-alignment.json / Second Kick Alignment.json for the latest user-requested kick start. Earlier cut and OP-1 checks describe the previous exports; OP-1 presets are no longer maintained."
 }

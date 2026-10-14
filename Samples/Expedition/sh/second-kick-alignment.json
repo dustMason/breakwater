@@ -1,0 +1,198 @@
+{
+  "song": "sh",
+  "date": "2026-10-14",
+  "sample_rate": 48000,
+  "request": "Start on the second opening kick in the current sample.",
+  "method": "Circular rotation of the existing PCM to the requested kick attack; compose source spans across any earlier wrap. Preserve pitch, duration and internal timing. Apply 0.75 ms / 3 ms seam fades.",
+  "changes": [
+    {
+      "number": 1,
+      "source_onset_frame": 151296,
+      "rotation_frames": 7225,
+      "rotation_beats": 0.25611031353574026,
+      "old_start_frame": 144071,
+      "old_end_frame": 369755,
+      "frames": 225684,
+      "beats": 8,
+      "bars": 2,
+      "previous_source_segments": [
+        {
+          "startFrame": 144071,
+          "endFrame": 369755
+        }
+      ],
+      "catalog_id": 294,
+      "source_segments": [
+        {
+          "startFrame": 151296,
+          "endFrame": 369755
+        },
+        {
+          "startFrame": 144071,
+          "endFrame": 151296
+        }
+      ],
+      "original_sha256": "7f04f61eb51634ecb1c91f74c59d094162124674667f2911c1ad9fb86e89f6e4",
+      "revised_sha256": "bd4a70e07aa8108f37f1e68b71c2dcb9ee19b6742138ee23d7bb7f2ae81f3d47"
+    },
+    {
+      "number": 2,
+      "source_onset_frame": 601728,
+      "rotation_frames": 6912,
+      "rotation_beats": 0.24535652482584194,
+      "old_start_frame": 594816,
+      "old_end_frame": 820186,
+      "frames": 225370,
+      "beats": 8,
+      "bars": 2,
+      "previous_source_segments": [
+        {
+          "startFrame": 594816,
+          "endFrame": 820186
+        }
+      ],
+      "catalog_id": 295,
+      "source_segments": [
+        {
+          "startFrame": 601728,
+          "endFrame": 820186
+        },
+        {
+          "startFrame": 594816,
+          "endFrame": 601728
+        }
+      ],
+      "original_sha256": "edeff6bc340e0c3af3efbf4bc3251fb83b0080eb03a48cf8035830684c6d5545",
+      "revised_sha256": "7d46d1ab65fb909dbda77ed5305080032b373eebeb491d84e4c8f27f82fdcaa6"
+    },
+    {
+      "number": 3,
+      "source_onset_frame": 827424,
+      "rotation_frames": 7238,
+      "rotation_beats": 0.2559620901684636,
+      "old_start_frame": 820186,
+      "old_end_frame": 1046407,
+      "frames": 226221,
+      "beats": 8,
+      "bars": 2,
+      "previous_source_segments": [
+        {
+          "startFrame": 820186,
+          "endFrame": 1046407
+        }
+      ],
+      "catalog_id": 296,
+      "source_segments": [
+        {
+          "startFrame": 827424,
+          "endFrame": 1046407
+        },
+        {
+          "startFrame": 820186,
+          "endFrame": 827424
+        }
+      ],
+      "original_sha256": "5b3ed07691dcd8c46e67c606f5198f10b1cf0a3f2dee212504308b6b748edd31",
+      "revised_sha256": "e9b25b4e632db9cced0efde96de94e04267ca92b4cf49b6994d7f2d1819412da"
+    },
+    {
+      "number": 4,
+      "source_onset_frame": 1052112,
+      "rotation_frames": 5705,
+      "rotation_beats": 0.2018852651181719,
+      "old_start_frame": 1046407,
+      "old_end_frame": 1272476,
+      "frames": 226069,
+      "beats": 8,
+      "bars": 2,
+      "previous_source_segments": [
+        {
+          "startFrame": 1046407,
+          "endFrame": 1272476
+        }
+      ],
+      "catalog_id": 297,
+      "source_segments": [
+        {
+          "startFrame": 1052112,
+          "endFrame": 1272476
+        },
+        {
+          "startFrame": 1046407,
+          "endFrame": 1052112
+        }
+      ],
+      "original_sha256": "88c2e3e5109cdb989142dd61d692f66b38bf839be0941254f1152326b0aa6dbf",
+      "revised_sha256": "28f0383c65b118696063840a8a25b017682a9451e306025d1afc9990314ea617"
+    },
+    {
+      "number": 5,
+      "source_onset_frame": 151296,
+      "rotation_frames": 7225,
+      "rotation_beats": 0.2564642979955407,
+      "old_start_frame": 144071,
+      "old_end_frame": 594816,
+      "frames": 450745,
+      "beats": 16,
+      "bars": 4,
+      "previous_source_segments": [
+        {
+          "startFrame": 144071,
+          "endFrame": 594816
+        }
+      ],
+      "catalog_id": 298,
+      "source_segments": [
+        {
+          "startFrame": 151296,
+          "endFrame": 594816
+        },
+        {
+          "startFrame": 144071,
+          "endFrame": 151296
+        }
+      ],
+      "original_sha256": "e0d517a25d310bcb60e2438f3f7029417a924bd0f17cc9b652c08e8dd244e50a",
+      "revised_sha256": "204f28aceb21d50bef1ccba8c6b9d3afafb0ce893837cb1c1e8480e79a1804aa"
+    },
+    {
+      "number": 6,
+      "source_onset_frame": 827424,
+      "rotation_frames": 7238,
+      "rotation_beats": 0.25604811072541955,
+      "old_start_frame": 820186,
+      "old_end_frame": 1272476,
+      "frames": 452290,
+      "beats": 16,
+      "bars": 4,
+      "previous_source_segments": [
+        {
+          "startFrame": 820186,
+          "endFrame": 1272476
+        }
+      ],
+      "catalog_id": 299,
+      "source_segments": [
+        {
+          "startFrame": 827424,
+          "endFrame": 1272476
+        },
+        {
+          "startFrame": 820186,
+          "endFrame": 827424
+        }
+      ],
+      "original_sha256": "5da6758193b071bc0a3488358a20d886d2b934d58aa6d24dd3b29bdcbc78a46a",
+      "revised_sha256": "d42ee5772a0ef403f429c2a430413425a3227907b82c7176837e46fa115b12c8"
+    }
+  ],
+  "verification": {
+    "unchanged_frames_beats_bpm_and_ids": true,
+    "pcm_unchanged_except_rotation_and_new_edge_fades": true,
+    "other_wavs_and_catalog_entries_unchanged": 216,
+    "op1_exports": "Unchanged, per user request; legacy starts predate this revision.",
+    "offline_embedded_audio_matches": true,
+    "numbered_reel_decodes": true,
+    "listening_review": "Analysis-selected starts following user description; awaiting audition."
+  }
+}
