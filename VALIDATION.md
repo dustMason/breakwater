@@ -1,5 +1,12 @@
 # Validation
 
+## Remaining Bumps downbeat revisions — 2026-10-14
+
+- Recut 15 Biotic Discussion pads and 13 Can You See? pads after the user reported wrong-beat starts. Source bar phase and low-frequency attacks guided nearby kick-led entries. IDs, pad numbers and 1/2/4-bar lengths remain stable; pitch and internal timing are unchanged. Per-pack `downbeat-alignment.json` records exact source-frame edits and distinguishes analysis-selected references from user-approved ones.
+- Biotic Discussion 01/02/05 and Can You See? 01/05/06/09/13 retain byte-identical WAVs and OP-1 patches. All other songs, including the preceding A Safe Balm correction, are unchanged.
+- All 258 catalog/WAV checks pass. The 36 OP-1 patches pass official-codec re-import and independent mono PCM, length and boundary checks. The regenerated offline players pass JavaScript syntax checks; numbered MP3 reels decode. Both updated Desktop packs are checksum-verified against the outputs.
+- Static build succeeds. Muted browser playback of revised Biotic Discussion 04 and Can You See? 02 was verified; the player is stopped on Can You See? at 158 BPM. These digital checks do not replace a listening review or physical OP-1 playback.
+
 ## A Safe Balm downbeat revision — 2026-10-14
 
 - User identified pads 02 and 05 as preferred kick-led downbeats and 01 as a snare entry. Recut 14 pads from nearby source bar downbeats, retaining pad IDs, numbers and 1/2/4-bar lengths. WAVs and OP-1 patches for 02, 05, 07 and 14 are byte-identical to the previous version. Other songs are unchanged.
