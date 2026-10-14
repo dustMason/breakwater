@@ -83,26 +83,45 @@ final class BreakwaterUITests: XCTestCase {
     func test05RevisedLibrary() {
         let pages: [(String, Int, Int)] = [
             ("A Safe Balm", 18, 74),
+            ("L'abeille", 18, 119),
+            ("Sobaka", 18, 221),
             ("Penguin", 18, 179),
             ("Biotic Discussion", 18, 222),
-            ("Can You See?", 12, 257)
+            ("Can You See?", 12, 257),
+            ("Sniper Growl", 12, 269),
+            ("Nashira", 12, 281),
+            ("Dawn At Dawn", 12, 293),
+            ("Swingland Hit", 6, 299)
         ]
-        for (name, count, pad) in pages {
+        for (index, page) in pages.enumerated() {
+            let (name, count, pad) = page
             app.buttons["songMenu"].tap()
-            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name + " ·")).firstMatch.tap()
+            let song = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name + " ·")).firstMatch
+            // The system menu lazily creates rows below the visible song list.
+            for _ in 0..<4 {
+                if song.exists { break }
+                app.collectionViews.firstMatch.swipeUp()
+            }
+            XCTAssertTrue(song.exists, "Missing song: \(name)")
+            song.tap()
             XCTAssertTrue(app.buttons["pad_\(pad)"].waitForExistence(timeout: 3))
             XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'pad_' ")).count, count)
             if name == "Can You See?" {
                 for removed in 240...245 { XCTAssertFalse(app.buttons["pad_\(removed)"].exists) }
                 for retained in 246...257 { XCTAssertTrue(app.buttons["pad_\(retained)"].exists) }
             }
+            // Exercise sample loading/playback in both modes. Select while stopped
+            // so this library check does not race continuous playback UI updates.
+            let mode = app.segmentedControls.buttons[index.isMultiple(of: 2) ? "Tape" : "Slice"]
+            if !mode.isSelected { mode.tap() }
+            expectation(for: NSPredicate(format: "selected == true"), evaluatedWith: mode)
+            waitForExpectations(timeout: 5)
             app.buttons["pad_\(pad)"].tap()
             waitForValue("pad_\(pad)", "Playing")
-            app.segmentedControls.buttons["Slice"].tap()
-            XCTAssertTrue(app.segmentedControls.buttons["Slice"].isSelected)
             app.buttons["transport"].tap()
-            app.segmentedControls.buttons["Tape"].tap()
+            expectation(for: NSPredicate(format: "label == 'Play'"), evaluatedWith: app.buttons["transport"])
+            waitForExpectations(timeout: 5)
         }
-        capture("revised-library-can-you-see")
+        capture("revised-library-swingland-hit")
     }
 }

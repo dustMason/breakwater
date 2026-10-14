@@ -1,19 +1,5 @@
 [
   {
-    "id": "lg",
-    "artist": "Julian Sartorius",
-    "title": "Locked Groove 022",
-    "folder": "Julian Sartorius - Locked Groove 022",
-    "loops": 6,
-    "source_url": "https://www.youtube.com/watch?v=m31dT-P7ADU",
-    "source_bpm": 133,
-    "bpm_range": [
-      133.3,
-      133.3
-    ],
-    "timing_note": "The original 1.8-second locked groove repeats throughout the record. These six pads are two entry phases at three lengths, not six different performances."
-  },
-  {
     "id": "sb",
     "artist": "Bumps",
     "title": "A Safe Balm",
@@ -28,20 +14,6 @@
     "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
   },
   {
-    "id": "ls",
-    "artist": "Guem & Zaka Percussion",
-    "title": "Le Serpent",
-    "folder": "Guem & Zaka Percussion - Le Serpent",
-    "loops": 18,
-    "source_url": "https://www.youtube.com/watch?v=FaAWReBMLC0",
-    "source_bpm": 128,
-    "bpm_range": [
-      123.0,
-      133.4
-    ],
-    "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
-  },
-  {
     "id": "ab",
     "artist": "Guem & Zaka Percussion",
     "title": "L'abeille",
@@ -50,22 +22,8 @@
     "source_url": "https://www.youtube.com/watch?v=YvhXCbeQ5Go",
     "source_bpm": 115,
     "bpm_range": [
-      109.0,
+      108.1,
       118.3
-    ],
-    "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
-  },
-  {
-    "id": "dv",
-    "artist": "Jlin & Third Coast Percussion",
-    "title": "Perspective: III. Derivative",
-    "folder": "Jlin & Third Coast Percussion - Perspective - III. Derivative",
-    "loops": 18,
-    "source_url": "https://www.youtube.com/watch?v=RTpRrvlPyF8",
-    "source_bpm": 161,
-    "bpm_range": [
-      159.8,
-      162.0
     ],
     "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
   },
@@ -84,20 +42,6 @@
     "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
   },
   {
-    "id": "rr",
-    "artist": "Doudou N’Diaye Rose",
-    "title": "Rose Rhythm",
-    "folder": "Doudou N’Diaye Rose - Rose Rhythm",
-    "loops": 18,
-    "source_url": "https://www.youtube.com/watch?v=bSxVJ06j9FI",
-    "source_bpm": 134,
-    "bpm_range": [
-      131.1,
-      137.2
-    ],
-    "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
-  },
-  {
     "id": "pg",
     "artist": "Okay Temiz",
     "title": "Penguin",
@@ -112,20 +56,6 @@
     "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
   },
   {
-    "id": "tc",
-    "artist": "John Cage & Third Coast Percussion",
-    "title": "Third Construction",
-    "folder": "John Cage & Third Coast Percussion - Third Construction",
-    "loops": 12,
-    "source_url": "https://www.youtube.com/watch?v=6jyoD-ZYSmw",
-    "source_bpm": 159,
-    "bpm_range": [
-      126.7,
-      199.2
-    ],
-    "timing_note": "This is a changing, asymmetrical composition. These are short rhythmic/texture excerpts arranged into playable four-pulse loop lengths; the BPM is an editing interpretation, not a claim about the score."
-  },
-  {
     "id": "so",
     "artist": "Valentina Magaletti & Julian Sartorius",
     "title": "Sobaka",
@@ -134,8 +64,8 @@
     "source_url": "https://www.youtube.com/watch?v=3YLmlkUojF8",
     "source_bpm": 121,
     "bpm_range": [
-      116.5,
-      126.4
+      116.6,
+      126.1
     ],
     "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
   },
@@ -166,5 +96,69 @@
       160.0
     ],
     "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4."
+  },
+  {
+    "id": "sn",
+    "artist": "Bumps",
+    "title": "Sniper Growl",
+    "folder": "Bumps - Sniper Growl",
+    "loops": 12,
+    "source_url": "https://www.youtube.com/watch?v=H-p_NFHIheU",
+    "source_bpm": 128,
+    "bpm_range": [
+      126.8,
+      128.3
+    ],
+    "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4.",
+    "source_extent": "full recording",
+    "source_timestamp_note": "Timestamps are relative to the full downloaded recording."
+  },
+  {
+    "id": "na",
+    "artist": "Bumps",
+    "title": "Nashira",
+    "folder": "Bumps - Nashira",
+    "loops": 12,
+    "source_url": "https://www.youtube.com/watch?v=p53XYbNu8lg",
+    "source_bpm": 116,
+    "bpm_range": [
+      115.7,
+      116.3
+    ],
+    "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4.",
+    "source_extent": "full recording",
+    "source_timestamp_note": "Timestamps are relative to the full downloaded recording."
+  },
+  {
+    "id": "dd",
+    "artist": "Bumps",
+    "title": "Dawn At Dawn",
+    "folder": "Bumps - Dawn At Dawn",
+    "loops": 12,
+    "source_url": "https://www.youtube.com/watch?v=xpOnx0LJM8E",
+    "source_bpm": 100,
+    "bpm_range": [
+      99.8,
+      100.8
+    ],
+    "timing_note": "Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4.",
+    "source_extent": "full recording",
+    "source_timestamp_note": "Timestamps are relative to the full downloaded recording."
+  },
+  {
+    "id": "sh",
+    "artist": "Bumps",
+    "title": "Swingland Hit",
+    "folder": "Bumps - Swingland Hit",
+    "loops": 6,
+    "source_url": "https://music.apple.com/us/album/swingland-hit/254274352?i=254275602",
+    "source_bpm": 102,
+    "bpm_range": [
+      101.8,
+      102.2
+    ],
+    "timing_note": "Public 30-second Apple Music preview only. Source timestamps are relative to the preview; its full-track offset is unknown. Bar labels use a practical four-pulse sampling interpretation; they do not claim the composition is in 4/4.",
+    "source_extent": "preview",
+    "source_timestamp_note": "Times are relative to the downloaded preview; full-track offset is unknown."
   }
 ]

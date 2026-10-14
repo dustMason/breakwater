@@ -1,8 +1,8 @@
 # Breakwater sample library
 
-252 stereo 48 kHz / 24-bit PCM WAV loops across 14 song pages. The initial 60 Niagara loops retain their original files and IDs (0–59). The October 14 percussion expedition contributes 192 loops with stable IDs in 60–257; IDs 240–245 were retired with the one-bar Can You See? cuts.
+222 stereo 48 kHz / 24-bit PCM WAV loops across 13 song pages. The initial 60 Niagara loops retain their original files and IDs (0–59). The October 14 percussion expedition contributes 162 active loops with stable IDs through 299. Retired IDs remain unused: 60–65, 84–101, 120–137, 156–173, 192–203 and 240–245.
 
-These are decoded exports of lossy YouTube streams, not lossless masters. Audio rights remain with their respective owners; the application source does not grant a separate sample license.
+These are decoded exports of lossy online streams (YouTube, plus a public Apple Music preview for Swingland Hit), not lossless masters. Audio rights remain with their respective owners; the application source does not grant a separate sample license.
 
 ## Original packs
 
@@ -13,20 +13,27 @@ These are decoded exports of lossy YouTube streams, not lossless masters. Audio 
 
 | Source | Loops | Approx. BPM | Source audio |
 |---|---:|---:|---|
-| Julian Sartorius — Locked Groove 022 | 6 | 133 | [Recording](https://www.youtube.com/watch?v=m31dT-P7ADU) |
 | Bumps — A Safe Balm | 18 | 132 | [Recording](https://www.youtube.com/watch?v=JRw1a9_jZR4) |
-| Guem & Zaka Percussion — Le Serpent | 18 | 128 | [Recording](https://www.youtube.com/watch?v=FaAWReBMLC0) |
 | Guem & Zaka Percussion — L'abeille | 18 | 115 | [Recording](https://www.youtube.com/watch?v=YvhXCbeQ5Go) |
-| Jlin & Third Coast Percussion — Perspective: III. Derivative | 18 | 161 | [Recording](https://www.youtube.com/watch?v=RTpRrvlPyF8) |
 | Steve Reich & Third Coast Percussion — Music for Pieces of Wood | 18 | 139 | [Recording](https://www.youtube.com/watch?v=DVV_D7EPPB4) |
-| Doudou N’Diaye Rose — Rose Rhythm | 18 | 134 | [Recording](https://www.youtube.com/watch?v=bSxVJ06j9FI) |
 | Okay Temiz — Penguin | 18 | 89 | [Recording](https://www.youtube.com/watch?v=wRuksYr1J0E) |
-| John Cage & Third Coast Percussion — Third Construction | 12 | 159 | [Recording](https://www.youtube.com/watch?v=6jyoD-ZYSmw) |
 | Valentina Magaletti & Julian Sartorius — Sobaka | 18 | 121 | [Recording](https://www.youtube.com/watch?v=3YLmlkUojF8) |
 | Bumps — Biotic Discussion | 18 | 126 | [Recording](https://www.youtube.com/watch?v=qdFC1eIBAMs) |
 | Bumps — Can You See? | 12 | 158 | [Recording](https://www.youtube.com/watch?v=57klyQWXC1U) |
+| Bumps — Sniper Growl | 12 | 128 | [Recording](https://www.youtube.com/watch?v=H-p_NFHIheU) |
+| Bumps — Nashira | 12 | 116 | [Recording](https://www.youtube.com/watch?v=p53XYbNu8lg) |
+| Bumps — Dawn At Dawn | 12 | 100 | [Recording](https://www.youtube.com/watch?v=xpOnx0LJM8E) |
+| Bumps — Swingland Hit | 6 | 102 | [Public preview](https://music.apple.com/us/album/swingland-hit/254274352?i=254275602) |
 
-BPM is measured per cut from its frame length and assigned beat count. Page BPM is the median of that page's loops. Four-pulse bars are a sampling convention for live and polyrhythmic material, not a statement about the original score. Third Construction includes changing, asymmetrical textures (approximately 127–199 interpreted BPM); use the per-pad BPM as the reference. Locked Groove 022 is one repeated 1.8-second performance: its six pads are two entry phases at 1-, 2- and 4-bar lengths.
+BPM is measured per cut from its frame length and assigned beat count. Page BPM is the median of that page's loops. Four-pulse bars are a sampling convention for live and polyrhythmic material, not a statement about the original score.
+
+**Library curation:** Locked Groove 022, Le Serpent, Rose Rhythm, Third Construction and Perspective III were removed at the user's request (72 loops). Their Desktop/output packs are archived under `Removed from Library`; web and native bundles omit their audio. `removed-songs.json` records their retired pad IDs.
+
+**L’abeille and Sobaka alignment:** 26 cuts were revised and 10 retained exactly. L’abeille follows the repeating low-drum phrase. Sobaka follows the kick pattern where present and other drums/local pulse where it is absent. Each pack's `pattern-alignment.json` records the reference, exact source frames, fallback anchors and changes. All pad IDs, numbers and bar lengths are preserved; the other 186 active WAVs and catalog entries are unchanged. Revised cuts await listening review.
+
+**Export scope:** future updates maintain the web player, iPad app, stereo WAV dumps and looping audition files. OP-1 exports are no longer maintained at the user's request; existing presets remain as legacy files in the sample dumps.
+
+**Four further Bumps pages:** Sniper Growl, Nashira and Dawn At Dawn each have eight two-bar and four four-bar cuts. Swingland Hit has four two-bar and two four-bar cuts from a public 30-second Apple Music preview; its timestamps are explicitly relative to the preview, whose full-track offset is unknown. New IDs are 258–299; existing active pad IDs are preserved. Kick-led starts share a per-song rhythmic reference. Each new pack’s `curation.json` records source frames and selection checks. The 42 new cuts await listening review.
 
 **Snare anchors for Penguin and Biotic Discussion:** use the backbeats on 2 and 4 to establish bar timing, including when kicks anticipate the beat. Penguin 06 is the user-approved reference and remains byte-identical. Twelve Penguin cuts and six further Biotic cuts were realigned; `backbeat-alignment.json` in each pack records source boundaries and snare timing. Internal swing and pitch are untouched. Web audio, offline auditions and OP-1 patches are synchronized; revised cuts await user audition.
 

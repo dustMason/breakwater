@@ -17,7 +17,7 @@ Jordan, playing a live synth jam with an external MIDI clock source and a CME U2
 Play the selected percussion loops continuously, at the jam's tempo, with fast musical selection and no gaps between phrases.
 
 ## Capabilities and Constraints
-- A scalable song dropdown selects a full-screen grid page per source song. 252 loops across 14 sources: Sangandongo and Malanga (30 each), nine expedition tracks (18 each), Third Construction (12), Can You See? (12 two- and four-bar loops), and Locked Groove 022 (six length/phase variants).
+- A scalable song dropdown selects a full-screen grid page per source song. 222 loops across 13 sources: Sangandongo and Malanga (30 each), six expedition tracks (18 each), Can You See? (12 two- and four-bar loops), Sniper Growl/Nashira/Dawn At Dawn (12 each), and Swingland Hit (six from a public preview).
 - Every pad shows a simple waveform; active playback is visually expressive; queued pads flash.
 - Tap queues a loop for the next bar. Multi-touch builds an ordered cycle that stays latched until replaced by another interaction.
 - Loops repeat indefinitely; disabled pads persist across launches and cannot enter playback queues. Browser persistence uses local storage, with visit-only exclusions if storage is unavailable.
@@ -29,7 +29,7 @@ Play the selected percussion loops continuously, at the jam's tempo, with fast m
 - Exact iPad model/iPadOS version and physical MIDI/audio routing remain unverified.
 
 ## Evidence on Hand
-252 trimmed stereo PCM WAV loops with source-time/beat-count indices. The twelve expedition packs also have offline looping auditions, numbered MP3 reels, and original OP-1 loop patches. Browser playback loads selected clips on demand. Existing standalone audition UI provides a visual baseline: dense grids, clear waveforms, blue active states, thin rules, minimal chrome.
+222 trimmed stereo PCM WAV loops with source-time/beat-count indices. The eleven active expedition packs also have offline looping auditions, numbered MP3 reels, and legacy original OP-1 loop patches (no longer maintained). Browser playback loads selected clips on demand. Existing standalone audition UI provides a visual baseline: dense grids, clear waveforms, blue active states, thin rules, minimal chrome.
 
 The browser adaptation retains the native design identity. `.impeccable/surfaces/web-index-html.md` records its platform-specific adaptations; `.impeccable/review/web-finish-review.md` records the scoped visual ship disposition. `VALIDATION.md` owns functional and hardware evidence; browser captures do not establish physical touch performance or publication.
 

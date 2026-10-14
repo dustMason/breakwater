@@ -3,12 +3,13 @@
 from pathlib import Path
 import json,struct,wave
 r=Path(__file__).resolve().parents[1];songs=json.loads((r/'Samples/catalog.json').read_text());seen=set()
-assert len(songs)==14
-expected_counts={'sg':30,'ml':30,'lg':6,'tc':12,'cy':12}
+assert len(songs)==13
+assert not {'lg','ls','rr','tc','dv'} & {song['id'] for song in songs}
+expected_counts={'sg':30,'ml':30,'cy':12,'sn':12,'na':12,'dd':12,'sh':6}
 for song in songs:
  assert len(song['loops'])==expected_counts.get(song['id'],18)
  for loop in song['loops']:
-  if song['id']=='cy':assert loop['bars']>=2
+  if song['id'] in {'cy','sn','na','dd','sh'}:assert loop['bars']>=2
   assert loop['id'] not in seen;seen.add(loop['id'])
   with wave.open(str(r/'Samples'/loop['file'])) as f:
    assert f.getnchannels()==2 and f.getframerate()==48000 and f.getsampwidth()==3
@@ -18,5 +19,7 @@ for song in songs:
   assert loop['sliceFrames'][0]==0 and loop['sliceFrames']==sorted(set(loop['sliceFrames']))
   assert all(0<=s<loop['frames'] for s in loop['sliceFrames'])
   assert len(loop['waveform'])==100 and all(0<=x<=1 for x in loop['waveform'])
-assert seen==set(range(258))-set(range(240,246))
-print('PASS: all 252 bundled WAVs, stable IDs, source timing, beat counts, waveform data, and transient markers')
+retired=set(range(60,66))|set(range(84,102))|set(range(120,138))|set(range(156,174))|set(range(192,204))|set(range(240,246))
+assert seen==set(range(300))-retired
+assert len(list((r/'Samples').rglob('*.wav')))==len(seen)
+print('PASS: all 222 bundled WAVs, stable IDs, source timing, beat counts, waveform data, and transient markers')
