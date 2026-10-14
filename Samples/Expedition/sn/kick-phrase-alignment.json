@@ -1,0 +1,509 @@
+{
+  "song": "sn",
+  "date": "2026-10-14",
+  "sample_rate": 48000,
+  "request": "Starts should be a beat or two past halfway in the current sample, going kick-kick-snare.",
+  "method": "Circular PCM rotation to the first of two close kicks preceding the snare: approximately +5.5 beats for two-bar cuts and +13.5 beats for four-bar cuts. Snap to local attacks; preserve original pitch, duration and internal timing. Apply 0.75 ms / 3 ms seam fades.",
+  "changes": [
+    {
+      "number": 1,
+      "source_onset_frame": 566640,
+      "rotation_frames": 123349,
+      "rotation_beats": 5.470659001324988,
+      "old_start_frame": 443291,
+      "old_end_frame": 623670,
+      "frames": 180379,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 1.0058,
+          "high": 0.6335
+        },
+        {
+          "beat": 0.5,
+          "low": 1.1042,
+          "high": 0.3816
+        },
+        {
+          "beat": 1,
+          "low": 0.6764,
+          "high": 0.8893
+        }
+      ],
+      "catalog_id": 258,
+      "source_segments": [
+        {
+          "startFrame": 566640,
+          "endFrame": 623670
+        },
+        {
+          "startFrame": 443291,
+          "endFrame": 566640
+        }
+      ],
+      "original_sha256": "0f94829020fa83746a5b376a832df7a1b3bdf3677a7143775e16f44636e7cd56",
+      "revised_sha256": "40ffeb9b00c8c72b8edbbf513496360d65fbe91b40f8515d8422702cd8932e81"
+    },
+    {
+      "number": 2,
+      "source_onset_frame": 1106688,
+      "rotation_frames": 123951,
+      "rotation_beats": 5.509453670624448,
+      "old_start_frame": 982737,
+      "old_end_frame": 1162720,
+      "frames": 179983,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 0.857,
+          "high": 0.7156
+        },
+        {
+          "beat": 0.5,
+          "low": 1.214,
+          "high": 0.3613
+        },
+        {
+          "beat": 1,
+          "low": 0.7276,
+          "high": 0.998
+        }
+      ],
+      "catalog_id": 259,
+      "source_segments": [
+        {
+          "startFrame": 1106688,
+          "endFrame": 1162720
+        },
+        {
+          "startFrame": 982737,
+          "endFrame": 1106688
+        }
+      ],
+      "original_sha256": "5fef662df83eff6b12301c980b14a3d23a0821762f55e0c6e02aab75c80c7379",
+      "revised_sha256": "5f6676ecd6e7db9e537946c4e4cba29e7a2146386e513b3e22e309c0b2e5aa1c"
+    },
+    {
+      "number": 3,
+      "source_onset_frame": 1286064,
+      "rotation_frames": 123344,
+      "rotation_beats": 5.491657483776895,
+      "old_start_frame": 1162720,
+      "old_end_frame": 1342402,
+      "frames": 179682,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 0.9552,
+          "high": 0.5263
+        },
+        {
+          "beat": 0.5,
+          "low": 0.7363,
+          "high": 0.0521
+        },
+        {
+          "beat": 1,
+          "low": 0.3224,
+          "high": 0.9545
+        }
+      ],
+      "catalog_id": 260,
+      "source_segments": [
+        {
+          "startFrame": 1286064,
+          "endFrame": 1342402
+        },
+        {
+          "startFrame": 1162720,
+          "endFrame": 1286064
+        }
+      ],
+      "original_sha256": "5beb41ea375c4beab21744f0e8d10991e042de1452a6515472b3ac94feceeca3",
+      "revised_sha256": "beae400f5e992e2d4ba7103632ca8dbfec107a204fcf3cb3b5e1beca92bf31a7"
+    },
+    {
+      "number": 4,
+      "source_onset_frame": 1827168,
+      "rotation_frames": 126496,
+      "rotation_beats": 5.588852868243598,
+      "old_start_frame": 1700672,
+      "old_end_frame": 1881741,
+      "frames": 181069,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 1.1323,
+          "high": 0.7093
+        },
+        {
+          "beat": 0.5,
+          "low": 0.8824,
+          "high": 0.0245
+        },
+        {
+          "beat": 1,
+          "low": 0.3729,
+          "high": 1.0438
+        }
+      ],
+      "catalog_id": 261,
+      "source_segments": [
+        {
+          "startFrame": 1827168,
+          "endFrame": 1881741
+        },
+        {
+          "startFrame": 1700672,
+          "endFrame": 1827168
+        }
+      ],
+      "original_sha256": "16783b031dc39b4d2e284c25c42149380a6879d498d114e3090ee9c68722def8",
+      "revised_sha256": "9eae0bd97124dd67c497da81c7d29e56225baa8c3e4b86ae2287a91396bc72f1"
+    },
+    {
+      "number": 5,
+      "source_onset_frame": 2186784,
+      "rotation_frames": 124699,
+      "rotation_beats": 5.512654450608961,
+      "old_start_frame": 2062085,
+      "old_end_frame": 2243049,
+      "frames": 180964,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 1.0377,
+          "high": 1.8617
+        },
+        {
+          "beat": 0.5,
+          "low": 0.6388,
+          "high": 1.5348
+        },
+        {
+          "beat": 1,
+          "low": 0.3315,
+          "high": 1.5531
+        }
+      ],
+      "catalog_id": 262,
+      "source_segments": [
+        {
+          "startFrame": 2186784,
+          "endFrame": 2243049
+        },
+        {
+          "startFrame": 2062085,
+          "endFrame": 2186784
+        }
+      ],
+      "original_sha256": "ec3eb0c74a104fb46f0502d1ddc79d536df85a49b71002e806ec9c26c6cf57a4",
+      "revised_sha256": "3acbb23864783d8312406532fabaa030a61f55d631b3e4720e4d21813c760108"
+    },
+    {
+      "number": 6,
+      "source_onset_frame": 2548944,
+      "rotation_frames": 125845,
+      "rotation_beats": 5.542001541340967,
+      "old_start_frame": 2423099,
+      "old_end_frame": 2604759,
+      "frames": 181660,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 1.071,
+          "high": 0.8831
+        },
+        {
+          "beat": 0.5,
+          "low": 0.827,
+          "high": 0.0634
+        },
+        {
+          "beat": 1,
+          "low": 0.4121,
+          "high": 0.9572
+        }
+      ],
+      "catalog_id": 263,
+      "source_segments": [
+        {
+          "startFrame": 2548944,
+          "endFrame": 2604759
+        },
+        {
+          "startFrame": 2423099,
+          "endFrame": 2548944
+        }
+      ],
+      "original_sha256": "04b099a0e8946af1b9aafb981830f66f6c55e1f7fef1f23ead367e8555486ed8",
+      "revised_sha256": "a51e582311079b0f68f9ee211b012b8ecd7d75b5b194d5b0ae3f3271cafc359b"
+    },
+    {
+      "number": 7,
+      "source_onset_frame": 2728656,
+      "rotation_frames": 123897,
+      "rotation_beats": 5.502620358855925,
+      "old_start_frame": 2604759,
+      "old_end_frame": 2784887,
+      "frames": 180128,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 0.9631,
+          "high": 0.8822
+        },
+        {
+          "beat": 0.5,
+          "low": 1.263,
+          "high": 0.4194
+        },
+        {
+          "beat": 1,
+          "low": 0.7594,
+          "high": 0.9912
+        }
+      ],
+      "catalog_id": 264,
+      "source_segments": [
+        {
+          "startFrame": 2728656,
+          "endFrame": 2784887
+        },
+        {
+          "startFrame": 2604759,
+          "endFrame": 2728656
+        }
+      ],
+      "original_sha256": "140c13e1c91b826fd6ea923ec2f91acf7d3523dae1d5a7aa79f98e656ea60b6f",
+      "revised_sha256": "8babf22f659bdb575064cc807cf94f314103598e03e65782407e87dcd537febe"
+    },
+    {
+      "number": 8,
+      "source_onset_frame": 3448560,
+      "rotation_frames": 124254,
+      "rotation_beats": 5.50070278346522,
+      "old_start_frame": 3324306,
+      "old_end_frame": 3505016,
+      "frames": 180710,
+      "beats": 8,
+      "bars": 2,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 0.8616,
+          "high": 0.8309
+        },
+        {
+          "beat": 0.5,
+          "low": 1.2414,
+          "high": 0.4014
+        },
+        {
+          "beat": 1,
+          "low": 0.6916,
+          "high": 1.0481
+        }
+      ],
+      "catalog_id": 265,
+      "source_segments": [
+        {
+          "startFrame": 3448560,
+          "endFrame": 3505016
+        },
+        {
+          "startFrame": 3324306,
+          "endFrame": 3448560
+        }
+      ],
+      "original_sha256": "6caf9eebd3531cdec03d1eb97d64154288b75bf60b93fe73d813fbd0e86e0457",
+      "revised_sha256": "681d980c5b9043cedadd08a0688a6f3b45ba957096c47731631d7908a2f41329"
+    },
+    {
+      "number": 9,
+      "source_onset_frame": 1106688,
+      "rotation_frames": 303140,
+      "rotation_beats": 13.50394796921809,
+      "old_start_frame": 803548,
+      "old_end_frame": 1162720,
+      "frames": 359172,
+      "beats": 16,
+      "bars": 4,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 0.857,
+          "high": 0.7156
+        },
+        {
+          "beat": 0.5,
+          "low": 1.214,
+          "high": 0.3613
+        },
+        {
+          "beat": 1,
+          "low": 0.7276,
+          "high": 0.998
+        }
+      ],
+      "catalog_id": 266,
+      "source_segments": [
+        {
+          "startFrame": 1106688,
+          "endFrame": 1162720
+        },
+        {
+          "startFrame": 803548,
+          "endFrame": 1106688
+        }
+      ],
+      "original_sha256": "914f6ce88cbed2593ebf4ee13c615620363aa9742d4c2446cc285e813718bfae",
+      "revised_sha256": "65cf2d8e73c891db4d6fec445b3c21ee8def1630ee1fc91f0f7370cb81f49beb"
+    },
+    {
+      "number": 10,
+      "source_onset_frame": 2007696,
+      "rotation_frames": 307024,
+      "rotation_beats": 13.592161875748797,
+      "old_start_frame": 1700672,
+      "old_end_frame": 2062085,
+      "frames": 361413,
+      "beats": 16,
+      "bars": 4,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 1.0739,
+          "high": 0.7275
+        },
+        {
+          "beat": 0.5,
+          "low": 0.7207,
+          "high": 0.0636
+        },
+        {
+          "beat": 1,
+          "low": 0.2912,
+          "high": 1.1005
+        }
+      ],
+      "catalog_id": 267,
+      "source_segments": [
+        {
+          "startFrame": 2007696,
+          "endFrame": 2062085
+        },
+        {
+          "startFrame": 1700672,
+          "endFrame": 2007696
+        }
+      ],
+      "original_sha256": "634d0e37b3d3c07dc3b370b9282d54025040603083e242a0f708e8e485326c1b",
+      "revised_sha256": "42d1a44baedf997e5dd829022d1dea9c6066b1d881dbcc177e3fee76dba3ee22"
+    },
+    {
+      "number": 11,
+      "source_onset_frame": 2366976,
+      "rotation_frames": 304891,
+      "rotation_beats": 13.512650478928794,
+      "old_start_frame": 2062085,
+      "old_end_frame": 2423099,
+      "frames": 361014,
+      "beats": 16,
+      "bars": 4,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 1.0768,
+          "high": 0.5755
+        },
+        {
+          "beat": 0.5,
+          "low": 0.7408,
+          "high": 0.0565
+        },
+        {
+          "beat": 1,
+          "low": 0.3828,
+          "high": 0.9207
+        }
+      ],
+      "catalog_id": 268,
+      "source_segments": [
+        {
+          "startFrame": 2366976,
+          "endFrame": 2423099
+        },
+        {
+          "startFrame": 2062085,
+          "endFrame": 2366976
+        }
+      ],
+      "original_sha256": "2ee773f1a29f89f2ae77fba1e464352f6c293ad2c971de1695e9fd8a0e6ce1c3",
+      "revised_sha256": "56ae12cf72c58c5528188c23d07b439660e26be18653421f2b941df774664677"
+    },
+    {
+      "number": 12,
+      "source_onset_frame": 3448560,
+      "rotation_frames": 303402,
+      "rotation_beats": 13.489854331430731,
+      "old_start_frame": 3145158,
+      "old_end_frame": 3505016,
+      "frames": 359858,
+      "beats": 16,
+      "bars": 4,
+      "opening_attack_checks": [
+        {
+          "beat": 0,
+          "low": 0.8616,
+          "high": 0.8309
+        },
+        {
+          "beat": 0.5,
+          "low": 1.2414,
+          "high": 0.4014
+        },
+        {
+          "beat": 1,
+          "low": 0.6916,
+          "high": 1.0481
+        }
+      ],
+      "catalog_id": 269,
+      "source_segments": [
+        {
+          "startFrame": 3448560,
+          "endFrame": 3505016
+        },
+        {
+          "startFrame": 3145158,
+          "endFrame": 3448560
+        }
+      ],
+      "original_sha256": "fa3208819e85cec3d3f013f8658b0e33c0e0484cd8741e1724df0bd629d06c9b",
+      "revised_sha256": "d2023f6eaa4cda8fdbf1c3c2f012480167437f8507dda267dfd49694c5593ea9"
+    }
+  ],
+  "variation_note": "Pad 05 has an overlapping fill; its original drum content is preserved.",
+  "verification": {
+    "unchanged_frames_beats_bpm_and_ids": true,
+    "pcm_unchanged_except_rotation_and_new_edge_fades": true,
+    "other_210_wavs_and_catalog_entries_unchanged": true,
+    "op1_exports": "Not regenerated, per user request. Existing presets predate this rotation.",
+    "listening_review": "Analysis-selected starts following the user description; awaiting audition."
+  }
+}

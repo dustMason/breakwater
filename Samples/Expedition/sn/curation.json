@@ -282,5 +282,6 @@
     "op1_pcm_checks_passed": true,
     "offline_embedded_audio_matches": true,
     "audition_mp3_decodes": true
-  }
+  },
+  "subsequent_revision": "All 12 cuts were circularly rotated to the kick-kick-snare opening after user feedback. See kick-phrase-alignment.json / Kick Phrase Alignment.json. The cuts and OP-1 checks here describe the original exports; OP-1 presets are no longer maintained."
 }

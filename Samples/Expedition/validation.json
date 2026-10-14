@@ -1135,7 +1135,7 @@
     "loops": [
       {
         "loop": 1,
-        "sha256": "0f94829020fa83746a5b376a832df7a1b3bdf3677a7143775e16f44636e7cd56",
+        "sha256": "40ffeb9b00c8c72b8edbbf513496360d65fbe91b40f8515d8422702cd8932e81",
         "frames": 180379,
         "peak_dbfs": -1.0,
         "rms_dbfs": -12.129,
@@ -1144,16 +1144,16 @@
       },
       {
         "loop": 2,
-        "sha256": "5fef662df83eff6b12301c980b14a3d23a0821762f55e0c6e02aab75c80c7379",
+        "sha256": "5f6676ecd6e7db9e537946c4e4cba29e7a2146386e513b3e22e309c0b2e5aa1c",
         "frames": 179983,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.505,
+        "rms_dbfs": -11.506,
         "seam_jump": 0,
         "rhythmic_score": 0.7313
       },
       {
         "loop": 3,
-        "sha256": "5beb41ea375c4beab21744f0e8d10991e042de1452a6515472b3ac94feceeca3",
+        "sha256": "beae400f5e992e2d4ba7103632ca8dbfec107a204fcf3cb3b5e1beca92bf31a7",
         "frames": 179682,
         "peak_dbfs": -1.0,
         "rms_dbfs": -11.777,
@@ -1162,43 +1162,43 @@
       },
       {
         "loop": 4,
-        "sha256": "16783b031dc39b4d2e284c25c42149380a6879d498d114e3090ee9c68722def8",
+        "sha256": "9eae0bd97124dd67c497da81c7d29e56225baa8c3e4b86ae2287a91396bc72f1",
         "frames": 181069,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.886,
+        "rms_dbfs": -11.887,
         "seam_jump": 0,
         "rhythmic_score": 0.424
       },
       {
         "loop": 5,
-        "sha256": "ec3eb0c74a104fb46f0502d1ddc79d536df85a49b71002e806ec9c26c6cf57a4",
+        "sha256": "3acbb23864783d8312406532fabaa030a61f55d631b3e4720e4d21813c760108",
         "frames": 180964,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.401,
+        "rms_dbfs": -11.403,
         "seam_jump": 0,
         "rhythmic_score": 0.4314
       },
       {
         "loop": 6,
-        "sha256": "04b099a0e8946af1b9aafb981830f66f6c55e1f7fef1f23ead367e8555486ed8",
+        "sha256": "a51e582311079b0f68f9ee211b012b8ecd7d75b5b194d5b0ae3f3271cafc359b",
         "frames": 181660,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -12.257,
+        "rms_dbfs": -12.263,
         "seam_jump": 0,
         "rhythmic_score": 0.5234
       },
       {
         "loop": 7,
-        "sha256": "140c13e1c91b826fd6ea923ec2f91acf7d3523dae1d5a7aa79f98e656ea60b6f",
+        "sha256": "8babf22f659bdb575064cc807cf94f314103598e03e65782407e87dcd537febe",
         "frames": 180128,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.896,
+        "rms_dbfs": -11.897,
         "seam_jump": 0,
         "rhythmic_score": 0.3548
       },
       {
         "loop": 8,
-        "sha256": "6caf9eebd3531cdec03d1eb97d64154288b75bf60b93fe73d813fbd0e86e0457",
+        "sha256": "681d980c5b9043cedadd08a0688a6f3b45ba957096c47731631d7908a2f41329",
         "frames": 180710,
         "peak_dbfs": -1.0,
         "rms_dbfs": -11.649,
@@ -1207,7 +1207,7 @@
       },
       {
         "loop": 9,
-        "sha256": "914f6ce88cbed2593ebf4ee13c615620363aa9742d4c2446cc285e813718bfae",
+        "sha256": "65cf2d8e73c891db4d6fec445b3c21ee8def1630ee1fc91f0f7370cb81f49beb",
         "frames": 359172,
         "peak_dbfs": -1.0,
         "rms_dbfs": -12.056,
@@ -1216,16 +1216,16 @@
       },
       {
         "loop": 10,
-        "sha256": "634d0e37b3d3c07dc3b370b9282d54025040603083e242a0f708e8e485326c1b",
+        "sha256": "42d1a44baedf997e5dd829022d1dea9c6066b1d881dbcc177e3fee76dba3ee22",
         "frames": 361413,
         "peak_dbfs": -1.0,
-        "rms_dbfs": -11.87,
+        "rms_dbfs": -11.872,
         "seam_jump": 0,
         "rhythmic_score": 0.4854
       },
       {
         "loop": 11,
-        "sha256": "2ee773f1a29f89f2ae77fba1e464352f6c293ad2c971de1695e9fd8a0e6ce1c3",
+        "sha256": "56ae12cf72c58c5528188c23d07b439660e26be18653421f2b941df774664677",
         "frames": 361014,
         "peak_dbfs": -1.0,
         "rms_dbfs": -12.038,
@@ -1234,7 +1234,7 @@
       },
       {
         "loop": 12,
-        "sha256": "fa3208819e85cec3d3f013f8658b0e33c0e0484cd8741e1724df0bd629d06c9b",
+        "sha256": "d2023f6eaa4cda8fdbf1c3c2f012480167437f8507dda267dfd49694c5593ea9",
         "frames": 359858,
         "peak_dbfs": -1.0,
         "rms_dbfs": -11.535,

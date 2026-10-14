@@ -1,5 +1,13 @@
 # Validation
 
+## Sniper Growl kick-kick-snare phase, build 4 — 2026-10-14
+
+- Rotated all 12 existing cuts to the later kick pair before the snare, following the user's description. Two-bar cuts shift about 5.5 beats; four-bar cuts use the corresponding phase about 13.5 beats in. Local transient snapping follows the performance rather than a rigid beat grid. Pad 05 retains an overlapping fill. The new starts await listening feedback.
+- Exact frame counts, BPM, beat counts and pad IDs are preserved. PCM is unchanged except for circular rotation and 0.75 ms / 3 ms edge fades. Waveforms, transient markers, wrapped source spans and quality hashes follow the audio. All 210 other WAVs and catalog entries are unchanged.
+- All 222 catalog/WAV checks and 13 web tests pass. Static, Debug Simulator and unsigned Release device builds pass; all three catalogs and every WAV match the canonical library. No playback/UI code changed. Native UI tests were not repeated for this audio-only revision; physical iPad playback remains unverified.
+- The offline player's embedded WAVs match the exported files, its JavaScript passes syntax checks, and the regenerated numbered MP3 decodes. The Desktop pack is checksum-verified and its prior version backed up. OP-1 presets were left unchanged, per the user's request to discontinue those exports.
+- Browser reload shows the revised timestamps/waveforms. Pads 01 and 02 were observed playing while the user auditioned; no warnings/errors appeared in the inspected console. Ongoing user playback was left alone. This observation does not establish listening approval.
+
 ## Curated library, build 3 — 2026-10-14
 
 - Final library: 13 song pages / 222 stereo WAVs. Added 42 Bumps cuts: Sniper Growl, Nashira and Dawn At Dawn have 12 each; Swingland Hit has six from its public 30-second Apple Music preview, with preview-relative timestamps. Removed Locked Groove 022, Le Serpent, Rose Rhythm, Third Construction and Perspective III (72 cuts). Removed pad IDs remain retired. Desktop/output packs are archived under `Removed from Library`.
