@@ -1,5 +1,12 @@
 # Validation
 
+## iPad song picker and source tempo, build 6 — 2026-10-14
+
+- Replaced the song menu with a scrollable song sheet. Playback snapshots now update the grid and status views separately from navigation, so the picker is not rebuilt on each playback refresh. Song selection preserves the playing loop; tapping a pad queues the replacement for the next bar.
+- Added **Use source** beside the source BPM. It sets the manual tempo, and is disabled while following an external MIDI clock. The Tempo sheet explains how to switch back to manual control.
+- The muted iPad Simulator UI checks passed for scrolling to the last song and making single-tap selections with a simulated MIDI clock, using source tempo for two songs, normal playback and mode switching, drag cycles in portrait, and selecting and playing pads across ten revised song pages. The audio-core sanitizer tests pass, including a new external-clock next-bar replacement check. MIDI/parser and all 222 WAV/catalog checks pass. The unsigned Release device build succeeds, with the catalog and all 222 bundled samples matching the source files.
+- Simulator and software-clock tests do not establish how the changes behave with the user's physical iPad, USB MIDI adapter, or live master clock. No physical iPad was connected for this build.
+
 ## Sniper Growl last kick and Swingland Hit second kick, build 5 — 2026-10-14
 
 - Following further listening feedback, all 12 Sniper Growl cuts now begin on the last kick of their preceding version, roughly one beat earlier in circular order. This supersedes the prior kick-kick-snare starting phase. All six Swingland Hit cuts now begin on the second close opening kick; the chosen transient is about 0.12–0.15 seconds after the original start. Preview-relative timestamps remain explicit. Both sets await user audition.

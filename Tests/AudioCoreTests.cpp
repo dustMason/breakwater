@@ -35,4 +35,19 @@ void queuedExclusion(){Rig r;r.queue({0});r.seconds(.3);r.queue({1});bw_enable(r
 void midiContinue(){Rig r;bw_external(r.e,1);r.queue({1});bw_midi(r.e,0xfa,0,r.now);r.seconds(.7);bw_midi(r.e,0xfc,0,r.now);r.frames(1);auto a=r.snapshot();r.seconds(.2);bw_midi(r.e,0xfb,0,r.now);r.frames(1);auto b=r.snapshot();assert(std::abs(b.loopProgress-a.loopProgress)<.001);assert(std::abs(b.beat-a.beat)<.001);bw_midi(r.e,0xf2,32,r.now);r.frames(1);assert(std::abs(r.snapshot().beat-8)<.001);puts("PASS MIDI Continue keeps phrase phase; Song Position Pointer seeks correctly");}
 void missingFirstClock(){Rig r;bw_external(r.e,1);r.queue({0});bw_midi(r.e,0xfa,0,r.now);r.seconds(2.1);assert(!r.snapshot().playing&&r.snapshot().clockState==4);puts("PASS external Start without any clocks times out safely");}
 void positionWithinPhrase(){Rig r;bw_external(r.e,1);r.queue({1});bw_midi(r.e,0xfa,0,r.now);r.frames(1);bw_midi(r.e,0xf2,20,r.now);r.frames(1);assert(std::abs(r.snapshot().loopProgress-.625)<.001);puts("PASS Song Position Pointer preserves position inside a multi-bar phrase");}
-int main(){missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}
+void midiBarReplacement(){
+ Rig r;bw_external(r.e,1);r.queue({0});bw_midi(r.e,0xfa,0,r.now);double next=r.now;
+ bool firstQueued=false,firstPlayed=false,secondQueued=false,secondPlayed=false;
+ for(int tick=0;tick<24*10;tick++){
+  r.seconds(std::max(0.0,next-r.now));bw_midi(r.e,0xf8,0,next);r.frames(1);auto s=r.snapshot();
+  if(!firstQueued&&s.beat>1){r.queue({1});firstQueued=true;}
+  if(firstQueued&&s.beat<3.9)assert(r.snapshot().activeLoop==0);
+  if(firstQueued&&s.beat>4.1&&!firstPlayed){assert(s.activeLoop==1);firstPlayed=true;}
+  if(firstPlayed&&!secondQueued&&s.beat>5){r.queue({2});secondQueued=true;}
+  if(secondQueued&&s.beat<7.9)assert(r.snapshot().activeLoop==1);
+  if(secondQueued&&s.beat>8.1&&!secondPlayed){assert(s.activeLoop==2);secondPlayed=true;}
+  next+=60.0/(24*120);
+ }
+ assert(firstPlayed&&secondPlayed);puts("PASS single-tap replacements reach the next bar while MIDI clock stays locked");
+}
+int main(){missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}

@@ -3,6 +3,12 @@ import AVFoundation
 import CoreMIDI
 import Darwin
 
+/// Fast playback snapshots have their own publisher so they do not rebuild
+/// navigation and modal controls thirty times per second.
+final class PlaybackMonitor: ObservableObject {
+    @Published var state = PlaybackState()
+}
+
 final class AudioModel: ObservableObject {
     @Published var songs: [Song] = []
     @Published var selectedSong = 0 {
@@ -12,7 +18,8 @@ final class AudioModel: ObservableObject {
             control.async { [weak self] in self?.midiPads = ids; self?.heldNotes.removeAll(); self?.midiChord.removeAll() }
         }
     }
-    @Published var state = PlaybackState()
+    let playback = PlaybackMonitor()
+    var state: PlaybackState { playback.state }
     @Published var ready = false
     @Published var loadProgress = 0.0
     @Published var error: String?
@@ -31,6 +38,9 @@ final class AudioModel: ObservableObject {
     private var node: AVAudioSourceNode?
     private var midi: MIDIInput?
     private var timer: Timer?
+    #if DEBUG
+    private var testClockTimer: Timer?
+    #endif
     private var observers: [NSObjectProtocol] = []
     private var midiPads: [Int32: Int32] = [:]
     private var heldNotes: Set<Int32> = []
@@ -129,6 +139,16 @@ final class AudioModel: ObservableObject {
             self.stop(); self.retryAudio()
         })
         #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--test-midi-clock") {
+            setExternal(true)
+            control.async { [dsp, hostScale] in bw_midi(dsp, 0xFA, 0, Double(mach_absolute_time()) * hostScale) }
+            testClockTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 48.0, repeats: true) { [weak self] _ in
+                guard let self else { return }
+                let time = Double(mach_absolute_time()) * self.hostScale
+                self.control.async { [dsp = self.dsp] in bw_midi(dsp, 0xF8, 0, time) }
+            }
+            RunLoop.main.add(testClockTimer!, forMode: .common)
+        }
         if ProcessInfo.processInfo.arguments.contains("--snapshot-demo") {
             setExternal(false)
             queue([5])
@@ -191,11 +211,14 @@ final class AudioModel: ObservableObject {
         var s=BWSnapshot(); bw_snapshot(dsp,&s)
         let count=Int(s.queueCount)
         let ids=withUnsafePointer(to:&s.queue) { pointer in pointer.withMemoryRebound(to:Int32.self,capacity:64) { Array(UnsafeBufferPointer(start:$0,count:count)) } }
-        state=PlaybackState(beat:s.beat,bpm:s.bpm,progress:s.loopProgress,playing:s.playing != 0,active:s.activeLoop,pending:s.pending != 0,queue:ids,clockState:Int(s.clockState))
+        playback.state=PlaybackState(beat:s.beat,bpm:s.bpm,progress:s.loopProgress,playing:s.playing != 0,active:s.activeLoop,pending:s.pending != 0,queue:ids,clockState:Int(s.clockState))
         if s.droppedCommands>0 && !warnedOverflow { warnedOverflow=true; error="MIDI input overflowed. Check for a MIDI feedback loop, then restart the app."; stop() }
     }
     deinit {
         timer?.invalidate(); observers.forEach(NotificationCenter.default.removeObserver)
+        #if DEBUG
+        testClockTimer?.invalidate()
+        #endif
         engine.stop(); midi=nil
         let handle=dsp
         control.async { bw_destroy(handle) }

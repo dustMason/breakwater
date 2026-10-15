@@ -6,6 +6,7 @@ final class BreakwaterUITests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = ["--reset-preferences", "--mute-audio"]
+        if name.contains("test06") { app.launchArguments.append("--test-midi-clock") }
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
         XCTAssertTrue(app.buttons["pad_0"].waitForExistence(timeout: 20))
@@ -25,6 +26,17 @@ final class BreakwaterUITests: XCTestCase {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
+    func selectSong(_ id: String) {
+        app.buttons["songMenu"].tap()
+        let song = app.buttons["song_\(id)"]
+        XCTAssertTrue(app.navigationBars["Songs"].waitForExistence(timeout: 3))
+        for _ in 0..<5 {
+            if song.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(song.isHittable, "Song \(id) must be reachable by scrolling")
+        song.tap()
+    }
     func test01LaunchQueueAndDropdown() {
         app.buttons["pad_5"].tap()
         waitForValue("pad_5", "Playing")
@@ -34,8 +46,7 @@ final class BreakwaterUITests: XCTestCase {
         waitForValue("pad_8", "Playing")
         app.buttons["pad_13"].tap()
         capture("tablet-landscape")
-        app.buttons["songMenu"].tap()
-        app.buttons.matching(NSPredicate(format: "label CONTAINS 'Malanga'")).firstMatch.tap()
+        selectSong("ml")
         XCTAssertTrue(app.buttons["pad_30"].waitForExistence(timeout: 3))
         XCTAssertEqual(app.buttons["transport"].label, "Stop")
         app.buttons["pad_30"].tap()
@@ -81,29 +92,21 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["pad_29"].isHittable)
     }
     func test05RevisedLibrary() {
-        let pages: [(String, Int, Int)] = [
-            ("A Safe Balm", 18, 74),
-            ("L'abeille", 18, 119),
-            ("Sobaka", 18, 221),
-            ("Penguin", 18, 179),
-            ("Biotic Discussion", 18, 222),
-            ("Can You See?", 12, 257),
-            ("Sniper Growl", 12, 269),
-            ("Nashira", 12, 281),
-            ("Dawn At Dawn", 12, 293),
-            ("Swingland Hit", 6, 299)
+        let pages: [(String, String, Int, Int)] = [
+            ("sb", "A Safe Balm", 18, 74),
+            ("ab", "L'abeille", 18, 119),
+            ("so", "Sobaka", 18, 221),
+            ("pg", "Penguin", 18, 179),
+            ("bd", "Biotic Discussion", 18, 222),
+            ("cy", "Can You See?", 12, 257),
+            ("sn", "Sniper Growl", 12, 269),
+            ("na", "Nashira", 12, 281),
+            ("dd", "Dawn At Dawn", 12, 293),
+            ("sh", "Swingland Hit", 6, 299)
         ]
         for (index, page) in pages.enumerated() {
-            let (name, count, pad) = page
-            app.buttons["songMenu"].tap()
-            let song = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name + " ·")).firstMatch
-            // The system menu lazily creates rows below the visible song list.
-            for _ in 0..<4 {
-                if song.exists { break }
-                app.collectionViews.firstMatch.swipeUp()
-            }
-            XCTAssertTrue(song.exists, "Missing song: \(name)")
-            song.tap()
+            let (id, name, count, pad) = page
+            selectSong(id)
             XCTAssertTrue(app.buttons["pad_\(pad)"].waitForExistence(timeout: 3))
             XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'pad_' ")).count, count)
             if name == "Can You See?" {
@@ -123,5 +126,37 @@ final class BreakwaterUITests: XCTestCase {
             waitForExpectations(timeout: 5)
         }
         capture("revised-library-swingland-hit")
+    }
+
+    func test06SongPickerDuringMIDIClock() {
+        let locked = NSPredicate(format: "label CONTAINS 'LOCKED'")
+        expectation(for: locked, evaluatedWith: app.buttons["clockStatus"])
+        waitForExpectations(timeout: 10)
+        XCTAssertFalse(app.buttons["useSourceTempo"].isEnabled)
+        app.buttons["pad_0"].tap()
+        waitForValue("pad_0", "Playing")
+
+        // Reach the last song by scrolling, select it once, and queue a pad
+        // while the synthetic MIDI clock continues to run.
+        selectSong("sh")
+        XCTAssertTrue(app.buttons["pad_294"].waitForExistence(timeout: 3))
+        XCTAssertEqual(app.buttons["transport"].label, "Stop")
+        app.buttons["pad_294"].tap()
+        waitForValue("pad_294", "Playing")
+        selectSong("sg")
+        XCTAssertTrue(app.buttons["pad_0"].waitForExistence(timeout: 3))
+        app.buttons["pad_0"].tap()
+        waitForValue("pad_0", "Playing")
+        XCTAssertEqual(app.buttons["transport"].label, "Stop")
+    }
+
+    func test07UseSourceTempo() {
+        app.buttons["useSourceTempo"].tap()
+        expectation(for: NSPredicate(format: "label CONTAINS '105.0'"), evaluatedWith: app.buttons["tempo"])
+        waitForExpectations(timeout: 8)
+        selectSong("ml")
+        app.buttons["useSourceTempo"].tap()
+        expectation(for: NSPredicate(format: "label CONTAINS '150.0'"), evaluatedWith: app.buttons["tempo"])
+        waitForExpectations(timeout: 8)
     }
 }

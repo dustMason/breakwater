@@ -6,7 +6,8 @@ A native iPad instrument and a static browser player for percussion loops. The n
 
 ## Performance behavior
 
-- The song dropdown opens each source song’s page of waveform pads. Browsing pages never stops the audio.
+- The song picker opens a scrollable list of sources. Selecting a page never stops the audio; tap a pad to queue a loop from that song.
+- **Use source** sets the internal tempo to the selected song’s approximate BPM. It is disabled while following MIDI clock, because the external device controls the tempo.
 - Tap a pad to replace the current loop on the next four-beat bar boundary. With internal clock stopped, tapping starts that pad immediately.
 - Hold one pad and touch additional pads to form an ordered cycle. The cycle stays latched when you release your fingers. Each selected sample plays its full one-, two-, or four-bar length, then the next sample plays. The next fresh gesture replaces the cycle at the next bar.
 - `Edit pads` toggles persistent exclusions. Disabled pads remain visible so they can be restored. They cannot be launched by touch or MIDI and are removed from cycles. Disabling the playing pad changes to the next valid selection on a bar boundary; if none remains, playback fades out.
