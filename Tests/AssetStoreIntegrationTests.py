@@ -30,10 +30,12 @@ with tempfile.TemporaryDirectory(prefix="breakwater-assets-test-") as temporary:
     data = b"fixture audio data; the store validates hashes independently of audio decoding"
     path = "objects/" + hashlib.sha256(data).hexdigest() + ".wav"
     (objects / Path(path).name).write_bytes(data)
-    song = json.loads((ROOT / "Samples/catalog.json").read_text())[0]
+    song = json.loads((ROOT / "Tests/Fixtures/catalog.json").read_text())[0]
     song["loops"] = song["loops"][:1]
+    song["loops"][0]["sourceFile"] = song["loops"][0]["file"]
     song["loops"][0]["file"] = path
     if song["loops"][0].get("parts"):
+        song["loops"][0]["parts"]["sourceFiles"] = song["loops"][0]["parts"]["files"]
         song["loops"][0]["parts"]["files"] = [path] * 4
     (root / "server/catalog.json").write_text(json.dumps([song]))
 

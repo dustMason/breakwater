@@ -9,6 +9,8 @@ Separation runs offline. The iPad and browser load only prepared AAC files. Part
 Use Python 3.12 with an isolated environment and install ffmpeg/ffprobe. From the repository:
 
 ```sh
+./Scripts/library pull             # Editable catalog, if not already present
+python3 Scripts/fetch_assets.py    # Restore source audio when needed
 uv venv build/parts-venv --python 3.12
 uv pip install --python build/parts-venv/bin/python -r Scripts/requirements-parts.txt
 mkdir -p build/models
@@ -32,7 +34,7 @@ python3 Tests/PartsCatalogTests.py
 
 The first migration requires all loops of each selected song, since labels belong to a whole song. Later runs skip a loop only when its source, recipe, and all four encoded-file hashes match. A small per-loop `parts.json` receipt also lets an interrupted batch resume before the catalog has been published. `--force` recomputes; `--threads` controls CPU inference threads per worker (default four). `--jobs` starts independent worker processes (default one), each loading its own checkpoint. For a larger machine, `--jobs 4 --threads 2` uses up to eight inference threads and requires memory for four model instances.
 
-New files are written beneath `Stems/drumsep-v1`, with content hashes in their filenames. Existing NMF files and source WAVs are retained. Once every selected output is validated, the catalog is atomically replaced. If the original audio or catalog changed during processing, publication aborts rather than overwriting concurrent curation. The new stems can then be published through the configured asset workflow (`Scripts/publish_assets.py`); a local build can use `Scripts/build_web.py --local-assets`. The publisher uploads immutable objects before replacing the remote catalog. Do not commit the model or generated audio.
+New files are written beneath `Stems/drumsep-v1`, with content hashes in their filenames. Existing NMF files and source WAVs are retained. Once every selected output is validated, the local catalog is atomically replaced. If the original audio or catalog changed during processing, publication aborts rather than overwriting concurrent curation. Publish the new stems with `./Scripts/library publish`; a local build can use `Scripts/build_web.py --local-assets`. The publisher uploads immutable objects before replacing the remote catalog. Do not commit the model or generated audio.
 
 ## Audio behavior and provenance
 

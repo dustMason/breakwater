@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
-"""Validate shipped audio metadata independently of the app's importer."""
+"""Validate catalog metadata; optionally check a local working audio library."""
+import argparse
+import json
+import math
 from pathlib import Path
-import json,struct,wave
-r=Path(__file__).resolve().parents[1];songs=json.loads((r/'Samples/catalog.json').read_text());seen=set()
-audio_paths=[r/'Samples'/loop['file'] for song in songs for loop in song['loops']]
-available=sum(path.exists() for path in audio_paths)
-assert available in (0,len(audio_paths)), 'Local audio library is incomplete'
-have_audio=available==len(audio_paths)
-assert len(songs)==13
-assert not {'lg','ls','rr','tc','dv'} & {song['id'] for song in songs}
-expected_counts={'sg':30,'ml':30,'cy':12,'sn':12,'na':12,'dd':12,'sh':6}
+import wave
+
+root = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--catalog", type=Path, default=root / "Tests/Fixtures/catalog.json")
+parser.add_argument("--audio-root", type=Path, help="Also inspect referenced WAV files")
+args = parser.parse_args()
+songs = json.loads(args.catalog.read_text())
+assert songs
+seen = set()
 for song in songs:
- assert len(song['loops'])==expected_counts.get(song['id'],18)
- for loop in song['loops']:
-  if song['id'] in {'cy','sn','na','dd','sh'}:assert loop['bars']>=2
-  assert loop['id'] not in seen;seen.add(loop['id'])
-  if have_audio:
-   with wave.open(str(r/'Samples'/loop['file'])) as f:
-    assert f.getnchannels()==2 and f.getframerate()==48000 and f.getsampwidth()==3
-    assert f.getnframes()==loop['frames'];frames=f.readframes(f.getnframes())
-    assert frames[:6]==frames[-6:]==bytes(6)
-  assert abs(loop['bpm']-60*loop['beats']*48000/loop['frames'])<1e-6
-  assert loop['sliceFrames'][0]==0 and loop['sliceFrames']==sorted(set(loop['sliceFrames']))
-  assert all(0<=s<loop['frames'] for s in loop['sliceFrames'])
-  assert len(loop['waveform'])==100 and all(0<=x<=1 for x in loop['waveform'])
-retired=set(range(60,66))|set(range(84,102))|set(range(120,138))|set(range(156,174))|set(range(192,204))|set(range(240,246))
-assert seen==set(range(300))-retired
-if have_audio: assert len([p for p in (r/'Samples').rglob('*.wav') if p in audio_paths])==len(seen)
-print('PASS: catalog metadata and stable IDs' + ('; all 222 local WAVs verified' if have_audio else '; local WAVs not present'))
+    assert song["loops"]
+    for loop in song["loops"]:
+        assert loop["id"] not in seen and 0 <= loop["id"] < 1024
+        seen.add(loop["id"])
+        assert loop["beats"] == loop["bars"] * 4
+        assert abs(loop["bpm"] - 60 * loop["beats"] * 48000 / loop["frames"]) < 1e-6
+        assert loop["sliceFrames"][0] == 0 and loop["sliceFrames"] == sorted(set(loop["sliceFrames"]))
+        assert all(0 <= value < loop["frames"] for value in loop["sliceFrames"])
+        assert len(loop["waveform"]) == 100 and all(math.isfinite(value) and 0 <= value <= 1 for value in loop["waveform"])
+        if args.audio_root:
+            with wave.open(str(args.audio_root / loop["file"])) as audio:
+                assert audio.getnchannels() == 2 and audio.getframerate() == 48000 and audio.getsampwidth() == 3
+                assert audio.getnframes() == loop["frames"]
+                frames = audio.readframes(audio.getnframes())
+                assert frames[:6] == frames[-6:] == bytes(6)
+print(f"PASS: catalog metadata and {len(seen)} unique IDs" + ("; local WAVs verified" if args.audio_root else ""))

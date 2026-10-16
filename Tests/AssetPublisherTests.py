@@ -11,10 +11,10 @@ import threading
 import unittest
 
 root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root / "Scripts"))
 spec = importlib.util.spec_from_file_location("publish_assets", root / "Scripts/publish_assets.py")
 publisher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(publisher)
-sys.path.insert(0, str(root / "Scripts"))
 import build_web
 
 

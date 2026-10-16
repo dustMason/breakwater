@@ -25,9 +25,12 @@ def base_url(value):
 
 def restore(source, base):
     source = source.resolve()
-    local = json.loads((source / "catalog.json").read_text())
     with urlopen(urljoin(base, "catalog.json"), timeout=30) as response:
         published = json.load(response)
+    if not (source / "catalog.json").exists():
+        from library import pull
+        pull(source, published)
+    local = json.loads((source / "catalog.json").read_text())
     if not isinstance(local, list) or len(local) != len(published):
         raise ValueError("Local and published catalogs differ; update the catalog before restoring")
     expected = copy.deepcopy(local)
@@ -50,6 +53,8 @@ def restore(source, base):
                 raise ValueError("Loop counts differ")
             for local_loop, remote_loop in zip(local_song["loops"], remote_song["loops"]):
                 register(local_loop["file"], remote_loop["file"])
+                if "sourceFile" in remote_loop:
+                    local_loop["sourceFile"] = local_loop["file"]
                 local_loop["file"] = remote_loop["file"]
                 if local_loop.get("parts"):
                     local_paths, remote_paths = local_loop["parts"]["files"], remote_loop["parts"]["files"]
@@ -57,6 +62,8 @@ def restore(source, base):
                         raise ValueError("Part counts differ")
                     for relative, key in zip(local_paths, remote_paths):
                         register(relative, key)
+                    if "sourceFiles" in remote_loop["parts"]:
+                        local_loop["parts"]["sourceFiles"] = list(local_paths)
                     local_loop["parts"]["files"] = remote_paths
     except (KeyError, TypeError) as error:
         raise ValueError("Local and published catalogs differ") from error
@@ -101,5 +108,7 @@ def restore(source, base):
 
 
 if __name__ == "__main__":
+    from library import load_config
+    load_config()
     count = restore(ROOT / "Samples", base_url(os.environ.get("BREAKWATER_ASSET_BASE_URL", "")))
     print(f"Restored {count} audio files; existing matching files were left intact.")

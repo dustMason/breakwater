@@ -1,6 +1,6 @@
 # Breakwater
 
-A native iPad instrument and a static browser player for percussion loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. The sample library has 222 loops in 13 song folders: the original 60 Niagara cuts plus 162 loops from the percussion audition shortlist. See [the sample catalog](Samples/README.md) for sources and counts.
+A native iPad instrument and a static browser player for percussion loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. See [the sample notes](Samples/README.md) for sources and provenance.
 
 ## Performance behavior
 
@@ -69,18 +69,22 @@ Serve the contents of `build/web` with JavaScript module and WebAssembly MIME ty
 
 ### Publishing the sample library
 
-The catalog source and preparation scripts live in the repository; WAV and M4A audio files do not. Keep the working audio library in `Samples/` locally, or restore the exact files for the current catalog from the published library with `python3 Scripts/fetch_assets.py` after setting `BREAKWATER_ASSET_BASE_URL`. Restoration verifies hashes and never overwrites different local files. Set `BREAKWATER_ASSET_BUCKET`, `BREAKWATER_AWS_ACCOUNT_ID`, `BREAKWATER_AWS_REGION`, and `BREAKWATER_ASSET_BASE_URL` in an ignored `.asset.env` file or your shell environment. The AWS account ID is checked against the active credentials before publication. Do not store credentials in this file or in Git.
+The public S3 `catalog.json` is the source of truth for both players. It contains the song and loop metadata, immutable audio-object hashes, and relative source paths needed to recreate an editable catalog. The bucket URL, working catalog, and audio stay out of the repository. A fresh clone can build the app and site once the asset URL is configured; no catalog or audio is required to build.
+
+Set `BREAKWATER_ASSET_BUCKET`, `BREAKWATER_AWS_ACCOUNT_ID`, `BREAKWATER_AWS_REGION`, and `BREAKWATER_ASSET_BASE_URL` in the ignored `.asset.env` file or your shell environment. To let the update command retrieve your keys from 1Password, optionally set `BREAKWATER_1PASSWORD_ITEM` to the item ID and `BREAKWATER_1PASSWORD_ACCOUNT` to the account domain. The item needs `ACCESS_KEY_ID` and `SECRET_ACCESS_KEY` fields (the standard `AWS_`-prefixed names also work). Unlock 1Password before publishing. Otherwise the normal AWS credential provider chain is used. Never put credential values in `.asset.env` or Git.
 
 ```sh
-source .asset.env
 python3 -m venv .venv
 .venv/bin/pip install boto3
-# Authenticate to the personal AWS account using your normal credential provider.
-.venv/bin/python Scripts/publish_assets.py
-python3 Scripts/configure_assets.py
+# Get the current editable catalog without downloading audio:
+./Scripts/library pull
+# After editing the local catalog or preparing audio:
+./Scripts/library publish
 ```
 
-The publisher hashes each audio file, uploads only new immutable objects, and publishes the catalog after all uploads succeed. Old objects are intentionally retained so older clients and cached catalogs continue to work; unused old objects continue to incur storage charges until manually cleaned up. `Scripts/provision_assets.py` can create a new dedicated bucket when needed; it refuses to reconfigure an existing one and does not support creating buckets in `us-east-1`. If using 1Password CLI, inject the standard AWS environment variables with `op run --env-file /path/to/private-aws.env -- .venv/bin/python Scripts/publish_assets.py`; keep that file outside the repository and use 1Password secret references rather than literal credentials. The generated `App/Config.local.xcconfig` and `.asset.env` are ignored by Git. A fresh clone can build the app and site without local audio once the asset URL is configured.
+Both commands automatically read the local `.asset.env` settings; values already exported in the shell take precedence. `pull` downloads only metadata into ignored `Samples/catalog.json`. To restore all referenced audio too, run `python3 Scripts/fetch_assets.py`; it verifies hashes and refuses to overwrite different files. For a metadata-only edit, `publish` can reuse existing S3 objects even if their audio isn't downloaded locally. It hashes locally present files, uploads new objects first, then conditionally replaces the manifest. It refuses to overwrite local edits or a newer remote catalog: back up the local work, pull, and reconcile it before publishing. Newly added audio must exist locally.
+
+The AWS account is checked before any upload. A publication does not deploy the website or commit anything. Old objects are intentionally retained so older clients and cached catalogs continue to work; they continue to incur storage charges until manually cleaned up. `Scripts/provision_assets.py` can create a new dedicated bucket when needed; it refuses to reconfigure an existing one and does not support creating buckets in `us-east-1`. `python3 Scripts/configure_assets.py` creates the ignored iPad build configuration after the asset URL is exported.
 
 Decoded original loops remain in memory for the current session, so visiting very large numbers of loops can still increase memory use. Restarting the player releases them; bounded in-memory loop eviction is future work.
 
@@ -100,7 +104,7 @@ Scripts/test_differential.sh
 Scripts/test_interactions.sh
 ```
 
-The first runs Rust ownership/concurrency and output-dynamics tests, and tests bar-boundary changes, layered steps, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, per-clip muting and filters. The differential test compares transport throughout and settled single-layer audio against the former C++ engine at 44.1 and 48 kHz; stacked audio intentionally differs because the old mixer used averaging. Its C++ reference and harness are instrumented with AddressSanitizer and UndefinedBehaviorSanitizer, but the linked Rust library is not. The interaction test checks MIDI parsing, catalog metadata, and the native online/offline cache; it also verifies sample formats when local files are present. `npm test` tests the actual WebAssembly module, layer mixing, and worklet loading protocol. `python3 Tests/AssetPublisherTests.py` and `python3 Tests/AssetRecoveryTests.py` test publication and restoration without AWS. Run `python3 Tests/PartsCatalogTests.py` (requires ffprobe and local audio) to verify prepared parts.
+The first runs Rust ownership/concurrency and output-dynamics tests, and tests bar-boundary changes, layered steps, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, per-clip muting and filters. The differential test compares transport throughout and settled single-layer audio against the former C++ engine at 44.1 and 48 kHz; stacked audio intentionally differs because the old mixer used averaging. Its C++ reference and harness are instrumented with AddressSanitizer and UndefinedBehaviorSanitizer, but the linked Rust library is not. The interaction test checks MIDI parsing, synthetic catalog metadata, and the native online/offline cache. `npm test` tests the actual WebAssembly module, layer mixing, and worklet loading protocol. `python3 Tests/LibraryTests.py`, `python3 Tests/AssetPublisherTests.py`, and `python3 Tests/AssetRecoveryTests.py` test publication and restoration without AWS. To validate the working library and its WAVs, run `python3 Tests/ClockAndCatalogTests.py --catalog Samples/catalog.json --audio-root Samples`. `python3 Tests/PartsCatalogTests.py` also requires ffprobe and local audio.
 
 The engine boundary, threading rules, and migration checks are described in [Docs/audio-core.md](Docs/audio-core.md).
 

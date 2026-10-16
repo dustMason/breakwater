@@ -1,5 +1,12 @@
 # Validation
 
+## S3-owned catalog and library command — 2026-10-16
+
+- The existing public S3 catalog now includes relative source paths as backward-compatible metadata. Both players continue to consume the same manifest and immutable audio keys. The 3 MB editable catalog is no longer tracked in the current Git tree; the working catalog and publication baseline remain ignored locally.
+- The guarded library command pulls metadata, reuses existing remote objects, supports metadata-only changes without local audio, and publishes via a conditional manifest update after any new audio. Local edits, concurrent remote changes, mismatched local audio, unsafe paths, and upload failures are covered by local tests. The configured 1Password item is referenced only in ignored local settings.
+- All 42 web tests, 9 library tests, 4 publisher tests, 4 recovery tests, 6 DrumSep preparation tests, and the Swift interaction and online/offline asset-store tests pass. A clean exported checkout built the web player and passed its tests without the real catalog or audio.
+- The personal S3 update reused all 1,110 previously published audio objects. A fresh public pull recovered 13 folders and 222 loops with metadata identical to the local source; a repeat publish reported no changes. The native asset-loader integration decoded the live manifest and verified one hashed audio download. The local web player loaded the live manifest and played one sample with output muted. Physical iPad playback was not retested.
+
 ## Header and source-tempo shortcut removal — 2026-10-16
 
 - The iPad and web workspaces no longer have a global header or a Use source shortcut. Manual and tap tempo remain available, as does MIDI clock on iPad. Browsing the library continues to select the source used for MIDI and the empty-stack playback fallback.

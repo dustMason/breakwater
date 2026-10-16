@@ -175,13 +175,12 @@ test('sample boundaries use short fades instead of discontinuous jumps', () => {
 });
 
 test('catalog samples have unique IDs and valid waveform/phrase metadata', () => {
-  const catalog = JSON.parse(readFileSync(new URL('../../Samples/catalog.json', import.meta.url)));
+  const catalog = JSON.parse(readFileSync(new URL('../Fixtures/catalog.json', import.meta.url)));
   const all = catalog.flatMap(song => song.loops);
-  assert.equal(catalog.length, 13);
-  assert.equal(all.length, 222);
-  assert.ok(catalog.every(song => !['lg', 'ls', 'rr', 'tc', 'dv'].includes(song.id)));
+  assert.equal(catalog.length, 2);
+  assert.equal(all.length, 4);
   assert.ok(catalog.find(song => song.id === 'cy').loops.every(sample => sample.bars >= 2));
-  assert.deepEqual(catalog.slice(0,2).flatMap(song => song.loops.map(sample => sample.id)), Array.from({length:60}, (_,i) => i));
+  assert.deepEqual(all.map(sample => sample.id), [0, 1, 246, 257]);
   assert.equal(new Set(all.map(sample => sample.id)).size, all.length);
   for (const sample of all) {
     assert.ok(!sample.file.startsWith('/') && !sample.file.split('/').includes('..'));

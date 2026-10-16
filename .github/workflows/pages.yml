@@ -35,6 +35,7 @@ jobs:
           Scripts/test_differential.sh
           python3 Tests/AssetPublisherTests.py
           python3 Tests/AssetRecoveryTests.py
+          python3 Tests/LibraryTests.py
       - name: Test browser audio engine
         run: npm test
       - name: Build static site

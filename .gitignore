@@ -14,5 +14,7 @@ Rust/target/
 .asset.env
 App/Config.local.xcconfig
 Samples/Stems/drumsep-v1/
+Samples/catalog.json
+Samples/.catalog-*
 Samples/**/*.wav
 Samples/**/*.m4a

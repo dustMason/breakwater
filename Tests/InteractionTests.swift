@@ -8,7 +8,7 @@ import Foundation
   assert(events.contains{$0.0==0x90 && $0.1==(61|90<<8)})
   assert(events.contains{$0.0==0xF2 && $0.1==132})
   assert(events.suffix(3).map{$0.0}==[0xFA,0xFC,0xFB])
-  let songs = try! JSONDecoder().decode([Song].self, from: Data(contentsOf: URL(fileURLWithPath: "Samples/catalog.json")))
+  let songs = try! JSONDecoder().decode([Song].self, from: Data(contentsOf: URL(fileURLWithPath: "Tests/Fixtures/catalog.json")))
   for song in songs {
    for loop in song.loops { assert(song.midiPads[Int32(35 + loop.number)] == loop.id) }
   }
