@@ -15,6 +15,7 @@ struct GridView: View {
                 header
                 PlaybackContent(audio: audio, playback: audio.playback, song: song,
                                 compact: geometry.size.width < 900 || typeSize.isAccessibilitySize,
+                                availableHeight: geometry.size.height,
                                 showSettings: $showSettings, showTempo: $showTempo, tray: $tray)
             }
             .background(Color(uiColor: .systemBackground))
@@ -186,6 +187,7 @@ private struct PlaybackContent: View {
     @ObservedObject var playback: PlaybackMonitor
     let song: Song?
     let compact: Bool
+    let availableHeight: CGFloat
     @Binding var showSettings: Bool
     @Binding var showTempo: Bool
     @Binding var tray: Int
@@ -195,11 +197,14 @@ private struct PlaybackContent: View {
             HStack(spacing: 0) {
                 LibrarySidebar(audio: audio).frame(width: compact ? 180 : 220)
                 Divider()
-                ArrangementTray(audio: audio, playback: playback, tray: $tray)
-                if tray != 0 {
-                    Divider()
-                    SoundTray(audio: audio, tray: $tray).frame(width: compact ? 220 : 250)
-                }
+                VStack(spacing: 0) {
+                    ArrangementTray(audio: audio, playback: playback, tray: $tray)
+                    if tray != 0 {
+                        Divider()
+                        SoundTray(audio: audio, tray: $tray)
+                            .frame(height: min(225, max(140, availableHeight * 0.35)))
+                    }
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
             if !audio.ready && audio.error == nil { ProgressView("Loading library").padding(8).accessibilityIdentifier("loading") }
             Divider()
@@ -489,6 +494,8 @@ private struct ClipWaveform: View {
 private struct SoundTray: View {
     @ObservedObject var audio: AudioModel
     @Binding var tray: Int
+    @Environment(\.dynamicTypeSize) private var typeSize
+    private var deviceHeight: CGFloat { typeSize.isAccessibilitySize ? 230 : 150 }
     private var slider: Binding<Double> {
         Binding(get: { log((audio.selectedClip?.filterCutoff ?? 1200) / 40) / log(18000 / 40) },
                 set: { audio.setClipFilter(type: audio.selectedClip?.filterType ?? 0, cutoff: 40 * pow(18000 / 40, $0)) })
@@ -506,61 +513,88 @@ private struct SoundTray: View {
         return hz >= 1000 ? String(format: "%.1f kHz", hz / 1000) : "\(Int(hz.rounded())) Hz"
     }
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Sound").font(.headline)
-                    Spacer()
-                    Button { tray = 0 } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
-                        .accessibilityLabel("Close sound controls")
-                }
-                Text("Parts").font(.subheadline.weight(.semibold))
-                if let song = audio.selectedClipSong, let sample = audio.selectedSample, let clip = audio.selectedClip {
-                    Text("\(song.name) · \(sample.label) · approximate layers may overlap.")
-                        .font(.caption).foregroundStyle(Palette.secondary).lineLimit(2)
-                    HStack {
-                        Button("All off") { audio.setPartsMask(0) }
-                        Spacer()
-                        Button("All on") { audio.setPartsMask(15) }
-                    }.font(.caption).frame(minHeight: 36)
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 4) {
-                      ForEach(Array((song.partLabels ?? []).enumerated()), id: \.offset) { index, label in
-                        let isOn = clip.mask & (1 << index) != 0
-                        Button { audio.togglePart(index) } label: {
-                            HStack(spacing: 3) { Text(label).lineLimit(1); Spacer(minLength: 0); Text(isOn ? "ON" : "OFF").font(.caption2.weight(.semibold)) }
-                                .font(.caption).padding(.horizontal, 7).frame(maxWidth: .infinity, minHeight: 44)
-                                .foregroundStyle(Palette.accent)
-                                .background(Capsule().fill(isOn ? Palette.accent.opacity(0.18) : Color.clear))
-                                .overlay(Capsule().strokeBorder(Palette.accent, lineWidth: isOn ? 0 : 1))
-                                .contentShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityValue(isOn ? "On" : "Off")
-                        .accessibilityIdentifier("part_\(index)")
-                      }
-                    }
-                    if let status = audio.partStatus {
-                        Text(status).font(.caption).foregroundStyle(Palette.secondary).accessibilityIdentifier("partStatus")
-                        if status.hasPrefix("Parts unavailable") { Button("Retry parts") { audio.retryParts() } }
-                    }
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Text("Sound").font(.headline)
+                if let song = audio.selectedClipSong, let sample = audio.selectedSample {
+                    Text("\(song.name) · \(sample.label)").font(.caption).foregroundStyle(Palette.secondary).lineLimit(1)
                 } else {
-                    Text("Tap a sample in the sequence to edit its parts.").font(.caption).foregroundStyle(Palette.secondary)
+                    Text("Select a clip in the timeline.").font(.caption).foregroundStyle(Palette.secondary).lineLimit(1)
                 }
-                Divider().padding(.vertical, 5)
-                Text("Clip filter").font(.subheadline.weight(.semibold))
-                Picker("Clip filter type", selection: Binding(get: { audio.selectedClip?.filterType ?? 0 }, set: { audio.setClipFilter(type: $0, cutoff: audio.selectedClip?.filterCutoff ?? 1200) })) {
-                    Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
-                }.pickerStyle(.segmented).disabled(audio.selectedClip == nil).accessibilityIdentifier("filterMode")
-                HStack { Text("Cutoff"); Spacer(); Text(cutoffLabel).monospacedDigit() }.font(.subheadline)
-                Slider(value: slider, in: 0...1).disabled(audio.selectedClip == nil).accessibilityLabel("Clip filter cutoff").accessibilityValue(cutoffLabel).accessibilityIdentifier("filterCutoff")
-                Divider().padding(.vertical, 5)
-                Text("Master filter").font(.subheadline.weight(.semibold))
-                Picker("Master filter type", selection: Binding(get: { audio.filterType }, set: { audio.setFilter(type: $0, cutoff: audio.filterCutoff) })) {
-                    Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
-                }.pickerStyle(.segmented).accessibilityIdentifier("masterFilterMode")
-                HStack { Text("Cutoff"); Spacer(); Text(masterCutoffLabel).monospacedDigit() }.font(.subheadline)
-                Slider(value: masterSlider, in: 0...1).accessibilityLabel("Master filter cutoff").accessibilityValue(masterCutoffLabel)
-            }.padding(.horizontal, 14).padding(.bottom, 12)
-        }.accessibilityIdentifier("soundTray")
+                Spacer(minLength: 0)
+                Button { tray = 0 } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                    .accessibilityLabel("Close sound controls")
+            }.padding(.horizontal, 12)
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                HStack(alignment: .top, spacing: 8) {
+                    device("Parts", width: 140) {
+                        ScrollView(.vertical) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 12) {
+                                    Button { audio.setPartsMask(0) } label: { Text("All off").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
+                                    Button { audio.setPartsMask(15) } label: { Text("All on").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
+                                }.font(.caption).disabled(audio.selectedClip == nil)
+                                Text("Approximate layers may overlap.").font(.caption2).foregroundStyle(Palette.secondary)
+                                if let status = audio.partStatus {
+                                    Text(status).font(.caption2).foregroundStyle(Palette.secondary).accessibilityIdentifier("partStatus")
+                                    if status.hasPrefix("Parts unavailable") { Button("Retry parts") { audio.retryParts() }.frame(minHeight: 44) }
+                                }
+                            }
+                        }
+                    }
+                    if let song = audio.selectedClipSong, let clip = audio.selectedClip {
+                        ForEach(Array((song.partLabels ?? []).enumerated()), id: \.offset) { index, label in
+                            partDevice(index: index, label: label, isOn: clip.mask & (1 << index) != 0)
+                        }
+                    }
+                    device("Clip filter", width: 210) {
+                        Picker("Clip filter type", selection: Binding(get: { audio.selectedClip?.filterType ?? 0 }, set: { audio.setClipFilter(type: $0, cutoff: audio.selectedClip?.filterCutoff ?? 1200) })) {
+                            Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
+                        }.pickerStyle(.segmented).disabled(audio.selectedClip == nil).accessibilityIdentifier("filterMode")
+                        HStack { Text("Cutoff"); Spacer(); Text(cutoffLabel).monospacedDigit() }.font(.caption)
+                        Slider(value: slider, in: 0...1).disabled(audio.selectedClip == nil).accessibilityLabel("Clip filter cutoff").accessibilityValue(cutoffLabel).accessibilityIdentifier("filterCutoff")
+                    }
+                    device("Master filter", width: 210) {
+                        Picker("Master filter type", selection: Binding(get: { audio.filterType }, set: { audio.setFilter(type: $0, cutoff: audio.filterCutoff) })) {
+                            Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
+                        }.pickerStyle(.segmented).accessibilityIdentifier("masterFilterMode")
+                        HStack { Text("Cutoff"); Spacer(); Text(masterCutoffLabel).monospacedDigit() }.font(.caption)
+                        Slider(value: masterSlider, in: 0...1).accessibilityLabel("Master filter cutoff").accessibilityValue(masterCutoffLabel)
+                    }.padding(.leading, 8)
+                }.padding(.horizontal, 12).padding(.bottom, 10)
+            }.accessibilityIdentifier("soundDevices").accessibilityHint("Scroll to see more sound devices.")
+        }.accessibilityElement(children: .contain).accessibilityIdentifier("soundTray")
+    }
+
+    private func device<Content: View>(_ title: String, width: CGFloat, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption.weight(.semibold)).lineLimit(1)
+            Divider()
+            content()
+            Spacer(minLength: 0)
+        }
+        .padding(8).frame(width: typeSize.isAccessibilitySize ? width * 1.5 : width, height: deviceHeight, alignment: .topLeading)
+        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 5))
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color(uiColor: .separator).opacity(0.5)))
+    }
+
+    private func partDevice(index: Int, label: String, isOn: Bool) -> some View {
+        Button { audio.togglePart(index) } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(label).font(.caption.weight(.semibold)).lineLimit(1)
+                Divider()
+                Spacer(minLength: 0)
+                Text(isOn ? "ON" : "OFF").font(.caption.weight(.bold)).foregroundStyle(isOn ? Palette.accent : Palette.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).padding(.horizontal, 8)
+                    .background(isOn ? Palette.accent.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(isOn ? Palette.accent : Color(uiColor: .separator).opacity(0.5)))
+            }
+            .padding(8).frame(width: typeSize.isAccessibilitySize ? 141 : 94, height: deviceHeight, alignment: .topLeading)
+            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 5))
+            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color(uiColor: .separator).opacity(0.5)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).accessibilityLabel(label).accessibilityValue(isOn ? "On" : "Off")
+        .accessibilityIdentifier("part_\(index)")
     }
 }

@@ -108,8 +108,8 @@ function paintPartButtons() {
   $('part-buttons').replaceChildren(...(source?.partLabels || []).map((name, index) => {
     const button = document.createElement('button'); const on = !!(clip.mask & (1 << index));
     button.type = 'button'; button.dataset.part = index; button.setAttribute('aria-pressed', String(on));
-    const label = document.createElement('span'); label.textContent = name;
-    const state = document.createElement('span'); state.textContent = on ? 'ON' : 'OFF'; button.append(label, state);
+    const label = document.createElement('span'); label.className = 'device-name'; label.textContent = name;
+    const state = document.createElement('span'); state.className = 'device-state'; state.textContent = on ? 'ON' : 'OFF'; button.append(label, state);
     return button;
   }));
   for (const button of $('filter-modes').querySelectorAll('button')) {
@@ -428,7 +428,7 @@ $('grid').addEventListener('keydown', event => {
 });
 
 $('show-sound').addEventListener('click', () => setTray(!tray));
-$('close-tray').addEventListener('click', () => setTray(false));
+$('close-tray').addEventListener('click', () => { setTray(false); $('show-sound').focus(); });
 $('arrangement-items').addEventListener('click', event => {
   const choose = event.target.closest('[data-select]'), remove = event.target.closest('[data-remove]');
   if (choose) {

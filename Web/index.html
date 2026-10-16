@@ -27,33 +27,39 @@
         <p class="library-help">Drag a loop onto the timeline</p>
         <div id="grid" class="library-list" aria-label="Loop folders" aria-busy="true"></div>
       </aside>
-      <section id="arrangement" class="arrangement" aria-label="Playback timeline">
-        <div class="arrangement-heading">
-          <div><h2>Timeline</h2><span id="sequence-detail">Drop loops here to build a sequence</span></div>
-          <div class="timeline-actions"><button id="zoom-out" aria-label="Zoom out timeline">−</button><button id="zoom-fit" title="Fit the full sequence">Fit</button><button id="zoom-in" aria-label="Zoom in timeline">+</button><button id="clear-arrangement">Clear</button></div>
-        </div>
-        <div id="notice" class="notice" hidden><span id="notice-text" role="status"></span><button id="retry" hidden>Retry</button><progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress></div>
-        <div id="arrangement-items" class="arrangement-items" aria-label="Timeline steps"></div>
-        <p id="hint" class="hint">Drop at a step edge to insert; drop beneath a clip to layer.</p>
-      </section>
-      <aside id="tray" class="tray" aria-label="Sound controls" hidden>
-        <div class="tray-heading"><h2>Sound</h2><button id="close-tray" aria-label="Close sound controls">×</button></div>
-        <section id="parts-controls">
-          <h3>Selected clip</h3><p id="part-target" class="tray-description">Select a clip in the timeline.</p>
-          <div class="section-label"><strong>Parts</strong><div class="part-actions"><button id="parts-off">All off</button><button id="parts-on">All on</button></div></div>
-          <div id="part-buttons" class="part-buttons"></div><p id="part-message" class="tray-description" role="status"></p><button id="retry-parts" hidden>Retry parts</button>
+      <div class="editor">
+        <section id="arrangement" class="arrangement" aria-label="Playback timeline">
+          <div class="arrangement-heading">
+            <div><h2>Timeline</h2><span id="sequence-detail">Drop loops here to build a sequence</span></div>
+            <div class="timeline-actions"><button id="zoom-out" aria-label="Zoom out timeline">−</button><button id="zoom-fit" title="Fit the full sequence">Fit</button><button id="zoom-in" aria-label="Zoom in timeline">+</button><button id="clear-arrangement">Clear</button></div>
+          </div>
+          <div id="notice" class="notice" hidden><span id="notice-text" role="status"></span><button id="retry" hidden>Retry</button><progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress></div>
+          <div id="arrangement-items" class="arrangement-items" aria-label="Timeline steps"></div>
+          <p id="hint" class="hint">Drop at a step edge to insert; drop beneath a clip to layer.</p>
         </section>
-        <section id="fx-controls">
-          <h3>Clip filter</h3>
-          <div id="filter-modes" class="filter-modes" aria-label="Selected clip filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
-          <label class="cutoff-control" for="cutoff"><span>Cutoff <output id="cutoff-value">1.2 kHz</output></span><input id="cutoff" type="range" min="0" max="1000" value="558" aria-label="Selected clip filter cutoff"></label>
-        </section>
-        <section id="master-controls">
-          <h3>Master filter</h3>
-          <div id="master-filter-modes" class="filter-modes" aria-label="Master filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
-          <label class="cutoff-control" for="master-cutoff"><span>Cutoff <output id="master-cutoff-value">1.2 kHz</output></span><input id="master-cutoff" type="range" min="0" max="1000" value="558" aria-label="Master filter cutoff"></label>
-        </section>
-      </aside>
+        <aside id="tray" class="tray" aria-label="Sound controls" hidden>
+          <div class="tray-heading"><h2>Sound</h2><p id="part-target" class="tray-description">Select a clip in the timeline.</p><button id="close-tray" aria-label="Close sound controls">×</button></div>
+          <div class="device-rack" aria-label="Sound devices" tabindex="0">
+            <section id="parts-controls" class="device parts-summary">
+              <h3>Parts</h3>
+              <div class="part-actions"><button id="parts-off">All off</button><button id="parts-on">All on</button></div>
+              <p id="part-message" class="tray-description" role="status"></p><button id="retry-parts" hidden>Retry parts</button>
+              <p class="parts-explanation">Approximate layers may overlap.</p>
+            </section>
+            <div id="part-buttons" class="part-buttons" aria-label="Clip parts"></div>
+            <section id="fx-controls" class="device filter-device">
+              <h3>Clip filter</h3>
+              <div id="filter-modes" class="filter-modes" aria-label="Selected clip filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
+              <label class="cutoff-control" for="cutoff"><span>Cutoff <output id="cutoff-value">1.2 kHz</output></span><input id="cutoff" type="range" min="0" max="1000" value="558" aria-label="Selected clip filter cutoff"></label>
+            </section>
+            <section id="master-controls" class="device filter-device master-device">
+              <h3>Master filter</h3>
+              <div id="master-filter-modes" class="filter-modes" aria-label="Master filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
+              <label class="cutoff-control" for="master-cutoff"><span>Cutoff <output id="master-cutoff-value">1.2 kHz</output></span><input id="master-cutoff" type="range" min="0" max="1000" value="558" aria-label="Master filter cutoff"></label>
+            </section>
+          </div>
+        </aside>
+      </div>
     </div>
     <p id="keyboard-help" class="sr-only">Activate a loop to add it to the end. Alt and Enter adds a layer to the selected step. Alt and Left or Right inserts before or after the selected step. Use Edit to exclude loops.</p>
     <div id="drag-preview" class="drag-preview" hidden aria-hidden="true"></div>

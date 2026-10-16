@@ -1,5 +1,11 @@
 # Validation
 
+## Bottom sound device rack — 2026-10-15
+
+- Sound now opens beneath the timeline in the iPad and web players, with separate part devices, the selected clip's filter and the master filter in a horizontally scrollable rack. The library, timeline and transport remain visible. Clip and master filter settings retain their separate scopes.
+- The 28 web tests pass. A muted local browser check covered independent clip settings, the empty selection, the master filter, focus return on close, and the scrollable rack at desktop and narrow widths; tablet sizing was also checked.
+- The five muted iPad (A16) Simulator UI tests passed, including layered clips, source tempo and synthetic MIDI-clock browsing. After the final touch-target refinement, the focused timeline-and-sound test passed again, checking the empty state, rack placement, per-clip settings and device reachability in landscape and portrait. The user's physical iPad, actual USB MIDI clock and audible output have not been tested for this change.
+
 ## Timeline editor and per-clip filters — 2026-10-15
 
 - The iPad and web players now use a folder library, a fit-to-sequence timeline with sequence/layer drop targets, and a selected-clip inspector. Clip instances have independent parts and filters; the master filter remains separate. The catalog and external sample objects are unchanged.

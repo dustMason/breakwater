@@ -29,6 +29,10 @@ final class BreakwaterUITests: XCTestCase {
         folder.tap()
     }
     func testTimelineLayersAndIndependentSound() {
+        app.buttons["showSound"].tap()
+        XCTAssertFalse(app.segmentedControls["filterMode"].buttons["LPF"].isEnabled, "A clip must be selected before editing its filter")
+        XCTAssertTrue(app.segmentedControls["masterFilterMode"].buttons["LPF"].isEnabled, "The master filter remains available without a clip")
+        app.buttons["showSound"].tap()
         app.buttons["pad_0"].tap()
         XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 15))
         waitForValue("clip_1", "Playing")
@@ -40,8 +44,12 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["clip_3"].label.contains("step 1"), "Dragging onto a clip should add a layer to its step")
         app.buttons["clip_1"].tap()
         XCTAssertTrue(app.buttons["part_0"].waitForExistence(timeout: 8))
+        XCTAssertGreaterThan(app.otherElements["soundTray"].frame.minY, app.buttons["clip_1"].frame.maxY, "Sound should sit below the timeline")
         app.buttons["part_0"].tap(); waitForValue("part_0", "Off")
         let filter = app.segmentedControls["filterMode"]
+        let devices = app.scrollViews["soundDevices"]
+        for _ in 0..<4 where !filter.buttons["LPF"].isHittable { devices.swipeLeft() }
+        XCTAssertTrue(filter.buttons["LPF"].isHittable)
         filter.buttons["LPF"].tap()
         XCTAssertTrue(filter.buttons["LPF"].isSelected)
         app.buttons["clip_3"].tap(); waitForValue("part_0", "On")
@@ -54,6 +62,10 @@ final class BreakwaterUITests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.buttons["transport"].isHittable)
         XCTAssertTrue(app.buttons["nudgeEarlier"].isHittable)
+        for _ in 0..<4 where !app.buttons["part_0"].isHittable { devices.swipeRight() }
+        XCTAssertTrue(app.buttons["part_0"].isHittable, "Parts remain reachable in portrait")
+        for _ in 0..<4 where !app.segmentedControls["masterFilterMode"].buttons["LPF"].isHittable { devices.swipeLeft() }
+        XCTAssertTrue(app.segmentedControls["masterFilterMode"].buttons["LPF"].isHittable, "Master filter remains reachable in portrait")
         capture("timeline-portrait")
     }
     func testExclusionsPersistAndRestore() {

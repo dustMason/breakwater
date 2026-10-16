@@ -12,7 +12,7 @@ A native iPad instrument and a static browser player for percussion loops. The n
 - **Edit** in the library toggles persistent exclusions. Disabled loops remain visible so they can be restored. They cannot be launched by touch or MIDI and are removed from cycles. Disabling a playing loop changes the arrangement on a bar boundary; if none remains, playback fades out.
 - **Tape** follows tempo by changing playback rate and pitch together.
 - **Slice** schedules precomputed drum transients against the beat clock, plays their attacks at original pitch, and uses short crossfades / decaying tail extension. It preserves the original internal swing, rather than quantizing every hit to a rigid subdivision. Extreme tempo changes can reveal slicing artifacts.
-- **Sound** shows the selected clip's parts and filter alongside a separate master filter. Both filters offer Off, low-pass, band-pass and high-pass with a smoothed cutoff; the clip filter affects only that instance in the sequence.
+- **Sound** opens a bottom device rack beneath the timeline. Its part switches and clip filter affect only the selected clip; the separate master filter affects the output. Scroll the rack horizontally to reach devices on narrower screens. Both filters offer Off, low-pass, band-pass and high-pass with a smoothed cutoff.
 - Parts offers four DrumSep estimates: **Kick, Snare, Toms and Cymbals** (including hi-hats). Use **All off** and bring them in one by one, or switch individual parts while playing. Waveform lanes dim when their parts are muted. Separation can contain bleed or artifacts; hand percussion may be assigned to the nearest kit category. The unmodified original plays when all four parts are on.
 
 ## MIDI and audio
