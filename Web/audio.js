@@ -138,6 +138,7 @@ export class AudioPlayer {
   arrange(items) { this.command({ type: 'arrange', items }); }
   setClipMask(token, mask) { this.command({ type: 'clip-mask', token, mask }); }
   setClipFilter(token, mode, hz) { this.command({ type: 'clip-filter', token, mode, hz }); }
+  setClipLevel(token, level) { this.command({ type: 'clip-level', token, level }); }
   stop() { this.command({ type: 'stop' }); }
   enable(id, enabled) { this.command({ type: 'enable', id, enabled }); }
   setTempo(bpm) { this.tempo = bpm; this.command({ type: 'tempo', bpm }); }

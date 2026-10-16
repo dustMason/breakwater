@@ -27,6 +27,11 @@ test('worklet stages samples in bounded pieces, acknowledges publication and kee
   send(p, { type: 'arrange', items: [{ id: 4, token: 17, step: 0, mask: 15 }] });
   for (let i = 0; i < 10; i++) block(p);
   assert.ok(block(p).some(value => value > .1));
+  send(p, { type: 'clip-level', token: 17, level: .2 });
+  for (let i = 0; i < 5; i++) block(p);
+  assert.ok(block(p).every(value => Math.abs(value - .05) < 1e-5), 'worklet applies per-clip level changes');
+  send(p, { type: 'clip-level', token: 17, level: 1 });
+  for (let i = 0; i < 5; i++) block(p);
   const parts = Array.from({ length: 4 }, () => [new Float32Array(frames).fill(.0625), new Float32Array(frames).fill(.0625)]);
   send(p, { type: 'parts', id: 4, parts, request: 2 });
   for (let i = 0; i < 24; i++) { assert.ok(block(p).some(value => value > .1)); assert.ok(!p.messages.some(m => m.request === 2)); }

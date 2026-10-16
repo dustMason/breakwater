@@ -34,6 +34,8 @@ pub struct Voice {
     gains: [f32; 4],
     blend: f32,
     audible: f32,
+    level: f32,
+    target_level: f32,
     last: Stereo,
     wrap_tail: Stereo,
     wrap_fade: i32,
@@ -55,6 +57,8 @@ impl Default for Voice {
             gains: [1.; 4],
             blend: 0.,
             audible: 1.,
+            level: 1.,
+            target_level: 1.,
             last: Stereo::default(),
             wrap_tail: Stereo::default(),
             wrap_fade: 0,
@@ -71,7 +75,13 @@ impl Voice {
         self.filter.set(kind, hz);
     }
     pub fn filter_sample(&mut self, sample: Stereo) -> Stereo {
-        self.filter.process(sample)
+        self.filter.process(sample).scale(self.level as f64)
+    }
+    pub fn set_level(&mut self, level: f32, immediate: bool) {
+        self.target_level = level.clamp(0., 1.);
+        if immediate {
+            self.level = self.target_level;
+        }
     }
     pub fn mask(&mut self, m: i32, immediate: bool) {
         self.mask = m & 15;
@@ -85,6 +95,7 @@ impl Voice {
     pub fn advance_parts(&mut self, bank: &Bank, sr: f64) {
         let Some(s) = bank.get(self.id) else { return };
         let step = (1. / (sr * 0.008)) as f32;
+        self.level += (self.target_level - self.level).clamp(-step, step);
         for p in 0..4 {
             let wanted = if self.mask & (1 << p) != 0 { 1. } else { 0. };
             self.gains[p] += (wanted - self.gains[p]).clamp(-step, step);

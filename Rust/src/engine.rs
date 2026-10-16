@@ -12,6 +12,7 @@ pub struct Clip {
     pub mask: i32,
     pub filter_type: i32,
     pub filter_hz: i32,
+    pub level_milli: i32,
 }
 #[derive(Clone, Copy)]
 pub struct Command {
@@ -52,6 +53,7 @@ pub const FILTER: u8 = 12;
 pub const WEB_STOP: u8 = 13;
 pub const WEB_TEMPO: u8 = 14;
 pub const CLIP_FILTER: u8 = 15;
+pub const CLIP_LEVEL: u8 = 16;
 
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -267,6 +269,7 @@ impl Core {
             v.token = c.token;
             v.mask(c.mask, true);
             v.prepare_filter(self.sr, c.filter_type, c.filter_hz as f64);
+            v.set_level(c.level_milli as f32 / 1000., true);
             v.begin(
                 b,
                 c.loop_id,
@@ -324,6 +327,7 @@ impl Core {
                         if self.layers[v].token == c.token && self.layers[v].id == c.loop_id {
                             self.layers[v].mask(c.mask, false);
                             self.layers[v].set_filter(c.filter_type, c.filter_hz as f64);
+                            self.layers[v].set_level(c.level_milli as f32 / 1000., false);
                             matches = true;
                             break;
                         }
@@ -565,6 +569,7 @@ impl Core {
                         clip.mask &= 15;
                         clip.filter_type = clip.filter_type.clamp(0, 3);
                         clip.filter_hz = clip.filter_hz.clamp(40, 18000);
+                        clip.level_milli = clip.level_milli.clamp(0, 1000);
                         self.pending_arrangement[self.pending_arrangement_count] = clip;
                         self.pending_arrangement_count += 1;
                         per_step[clip.step as usize] += 1;
@@ -749,6 +754,32 @@ impl Core {
                     for layer in &mut self.old_layers[..self.old_layer_count] {
                         if layer.token == c.value {
                             layer.set_filter(kind, hz);
+                        }
+                    }
+                }
+            }
+            CLIP_LEVEL => {
+                if c.number.is_finite() {
+                    let level = c.number.clamp(0., 1.);
+                    let milli = (level * 1000.).round() as i32;
+                    for clip in &mut self.arrangement[..self.arrangement_count] {
+                        if clip.token == c.value {
+                            clip.level_milli = milli;
+                        }
+                    }
+                    for clip in &mut self.pending_arrangement[..self.pending_arrangement_count] {
+                        if clip.token == c.value {
+                            clip.level_milli = milli;
+                        }
+                    }
+                    for layer in &mut self.layers[..self.layer_count] {
+                        if layer.token == c.value {
+                            layer.set_level(level as f32, false);
+                        }
+                    }
+                    for layer in &mut self.old_layers[..self.old_layer_count] {
+                        if layer.token == c.value {
+                            layer.set_level(level as f32, false);
                         }
                     }
                 }

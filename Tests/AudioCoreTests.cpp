@@ -169,6 +169,19 @@ void independentClipParts(){
  bw_clip_mask(e,202,0);bw_clip_mask(e,201,1);bw_render(e,l.data(),r.data(),48000,12);assert(amplitude(180)>.035&&amplitude(600)<.002);
  bw_destroy(e);puts("PASS repeated copies have independent part controls");
 }
+void independentClipLevels(){
+ constexpr int frames=96000;int32_t slice=0;
+ std::vector<float> pcm(frames*2,.4f),l(5000),r(5000);
+ auto e=bw_create(48000);assert(bw_load_loop(e,7,pcm.data(),frames,4,&slice,1));
+ BWClipWithLevel clips[]={{7,201,0,15,0,1200,1000},{7,202,0,15,0,1200,250}};
+ bw_arrange_with_levels(e,clips,2);bw_render(e,l.data(),r.data(),5000,10);
+ assert(std::abs(l.back()-.2f)<1e-5f&&std::abs(r.back()-.2f)<1e-5f);
+ float before=l.back();bw_clip_level(e,201,0);bw_render(e,l.data(),r.data(),5000,10+5000.0/48000);
+ assert(std::abs(l.front()-before)<.001f&&std::abs(l.back()-.04f)<1e-5f);
+ bw_clip_level(e,202,1);bw_render(e,l.data(),r.data(),5000,10+10000.0/48000);
+ assert(std::abs(l.back()-.16f)<1e-5f);
+ bw_destroy(e);puts("PASS per-clip levels are independent and change smoothly");
+}
 void layeredWrapFade(){
  auto e=bw_create(48000);int32_t slice=0;std::vector<float> shortPCM(96000*2),longPCM(192000*2,0);
  for(int i=0;i<96000;i++)shortPCM[i*2]=shortPCM[i*2+1]=i<48000?.6f:-.6f;
@@ -191,4 +204,4 @@ void layeredMidi(){
  }
  assert(advanced&&r.snapshot().clockState==2&&std::abs(r.snapshot().bpm-145)<1);puts("PASS layered sequence follows MIDI tempo and nudge");
 }
-int main(){layeredArrangement();futureStepPreservesCurrentPhrase();editingStoppedArrangement();independentClipParts();layeredWrapFade();layeredMidi();nudgeInternal();nudgeAgainstMidi();partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}
+int main(){layeredArrangement();futureStepPreservesCurrentPhrase();editingStoppedArrangement();independentClipParts();independentClipLevels();layeredWrapFade();layeredMidi();nudgeInternal();nudgeAgainstMidi();partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}

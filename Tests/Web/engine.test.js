@@ -292,6 +292,40 @@ test('layered copies keep independent clip filters across live edits and later s
   e.destroy();
 });
 
+test('clip levels are independent, smooth and retained for queued arrangement edits', () => {
+  const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.4);
+  e.load(7, [data, data], 4);
+  const clips = [{id:7,token:201,step:0,mask:15,level:1},
+                 {id:7,token:202,step:0,mask:15,level:.25},
+                 {id:7,token:203,step:1,mask:15,level:.7}];
+  e.arrange(clips); let audio = advance(e, .15);
+  assert.ok(Math.abs(audio.at(-1) - .25) < 1e-4, 'initial levels are mixed per instance');
+  const before = audio.at(-1);
+  e.setClipLevel(201, 0); audio = advance(e, .02);
+  assert.ok(Math.abs(audio[0] - before) < .001, 'level updates ramp rather than jump');
+  assert.ok(Math.abs(audio.at(-1) - .05) < 1e-4, 'muting one layer leaves the other unchanged');
+  clips[0].level = 0;
+  e.arrange(clips); // The change to a future step is queued until the next bar.
+  e.setClipLevel(203, .3); // Must also update the pending copy, not only the current one.
+  advance(e, 2);
+  assert.deepEqual(e.snapshot().activeTokens, [203]);
+  assert.ok(Math.abs(advance(e, .05).at(-1) - .12) < 1e-4, 'queued clip keeps its edited level');
+  e.setClipLevel(203, NaN); advance(e, .03);
+  assert.ok(Math.abs(advance(e, .01).at(-1) - .12) < 1e-4, 'non-finite control is ignored');
+  e.setClipLevel(203, -1); advance(e, .03);
+  assert.ok(Math.abs(advance(e, .01).at(-1)) < 1e-6, 'level is clamped to silence');
+  e.destroy();
+});
+
+test('legacy filtered clip descriptors still default to unity level', () => {
+  const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.4);
+  e.load(7, [data, data], 4);
+  e.refresh(); e.controlInts.set([7, 201, 0, 15, 0, 1200]);
+  e.exports.bw_arrange_with_filters(e.handle, e.control, 1);
+  assert.ok(Math.abs(advance(e, .15).at(-1) - .4) < 1e-4);
+  e.destroy();
+});
+
 test('a short layer crossfades when it wraps underneath a longer one', () => {
   const e = new LoopEngine(rate);
   const short = Float32Array.from({length:rate*2}, (_, i) => i < rate ? .6 : -.6);

@@ -1,5 +1,11 @@
 # Validation
 
+## Timeline clip levels — 2026-10-15
+
+- Each timeline clip has an independent 0–100% linear level on iPad and web. Live changes ramp over 8 ms; edits to pending steps retain the chosen level. Narrow iPad steps expose the control in a popover. The arrangement's existing layer averaging and output headroom are unchanged.
+- `Scripts/test_core.sh`, `Scripts/test_differential.sh`, `Scripts/test_interactions.sh`, strict Rust Clippy and all 30 web tests pass. The new audio checks cover independent repeated clips, smooth adjustments, queued edits, clamping, the legacy clip ABI and the web worklet. The static local-assets build and an unsigned Release device build succeeded.
+- Two focused muted iPad (A16) Simulator UI tests passed: adjusting one of two layered clips independently, and opening and adjusting a level control in a crowded timeline. Landscape and portrait captures were inspected. A muted local browser check covered layered controls and retention after editing the sequence. Physical iPad, USB MIDI and audible output have not been tested.
+
 ## Bottom sound device rack — 2026-10-15
 
 - Sound now opens beneath the timeline in the iPad and web players, with separate part devices, the selected clip's filter and the master filter in a horizontally scrollable rack. The library, timeline and transport remain visible. Clip and master filter settings retain their separate scopes.

@@ -42,6 +42,14 @@ final class BreakwaterUITests: XCTestCase {
         app.buttons["pad_2"].press(forDuration: 0.8, thenDragTo: app.buttons["clip_1"])
         XCTAssertTrue(app.buttons["clip_3"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["clip_3"].label.contains("step 1"), "Dragging onto a clip should add a layer to its step")
+        let firstLevel = app.sliders["clipLevel_1"], layeredLevel = app.sliders["clipLevel_3"]
+        XCTAssertTrue(firstLevel.waitForExistence(timeout: 5))
+        XCTAssertTrue(layeredLevel.exists)
+        let unchangedLevel = layeredLevel.value as? String
+        firstLevel.adjust(toNormalizedSliderPosition: 0)
+        let firstValue = (firstLevel.value as? String ?? "").replacingOccurrences(of: "%", with: "")
+        XCTAssertLessThan(Int(firstValue) ?? 100, 15, "Dragging the fader lowers this clip")
+        XCTAssertEqual(layeredLevel.value as? String, unchangedLevel, "Each timeline instance has an independent level")
         app.buttons["clip_1"].tap()
         XCTAssertTrue(app.buttons["part_0"].waitForExistence(timeout: 8))
         XCTAssertGreaterThan(app.otherElements["soundTray"].frame.minY, app.buttons["clip_1"].frame.maxY, "Sound should sit below the timeline")
@@ -67,6 +75,16 @@ final class BreakwaterUITests: XCTestCase {
         for _ in 0..<4 where !app.segmentedControls["masterFilterMode"].buttons["LPF"].isHittable { devices.swipeLeft() }
         XCTAssertTrue(app.segmentedControls["masterFilterMode"].buttons["LPF"].isHittable, "Master filter remains reachable in portrait")
         capture("timeline-portrait")
+    }
+    func testNarrowTimelineLevelPopover() {
+        for index in 0..<8 { app.buttons["pad_\(index)"].tap() }
+        let control = app.buttons["clipLevelButton_1"]
+        XCTAssertTrue(control.waitForExistence(timeout: 15))
+        control.tap()
+        let slider = app.sliders["clipLevel_1"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 5))
+        slider.adjust(toNormalizedSliderPosition: 0.4)
+        XCTAssertNotEqual(slider.value as? String, "100%")
     }
     func testExclusionsPersistAndRestore() {
         app.buttons["editPads"].tap(); app.buttons["pad_2"].tap(); waitForValue("pad_2", "Excluded")

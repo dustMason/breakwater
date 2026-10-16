@@ -39,6 +39,7 @@ struct ArrangementClip: Identifiable {
     var mask: Int
     var filterType: Int = 0
     var filterCutoff: Double = 1200
+    var level: Double = 1
 }
 struct ArrangementStep: Identifiable {
     let id = UUID()

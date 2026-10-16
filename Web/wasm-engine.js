@@ -9,7 +9,7 @@ export class WasmEngine {
     this.handle = this.exports.bw_create_web(sampleRate);
     if (!this.handle) throw new Error('Could not create the audio engine');
     this.audio = this.exports.bw_scratch_alloc(MAX_FRAMES);
-    this.control = this.exports.bw_scratch_alloc(MAX_CLIPS * 3);
+    this.control = this.exports.bw_scratch_alloc(MAX_CLIPS * 4);
     this.snapshotBuffer = this.exports.bw_scratch_alloc(Math.ceil(this.exports.bw_snapshot_size() / 8));
     this.offsets = Array.from({ length: 14 }, (_, i) => this.exports.bw_snapshot_offset(i));
     this.clockFrames = 0;
@@ -21,14 +21,14 @@ export class WasmEngine {
     this.buffer = this.memory.buffer;
     this.left = new Float32Array(this.buffer, this.audio, MAX_FRAMES);
     this.right = new Float32Array(this.buffer, this.audio + MAX_FRAMES * 4, MAX_FRAMES);
-    this.controlInts = new Int32Array(this.buffer, this.control, MAX_CLIPS * 6);
+    this.controlInts = new Int32Array(this.buffer, this.control, MAX_CLIPS * 7);
     this.view = new DataView(this.buffer, this.snapshotBuffer, this.exports.bw_snapshot_size());
   }
   destroy() {
     if (!this.handle) return;
     this.exports.bw_destroy(this.handle);
     this.exports.bw_scratch_free(this.audio, MAX_FRAMES);
-    this.exports.bw_scratch_free(this.control, MAX_CLIPS * 3);
+    this.exports.bw_scratch_free(this.control, MAX_CLIPS * 4);
     this.exports.bw_scratch_free(this.snapshotBuffer, Math.ceil(this.exports.bw_snapshot_size() / 8));
     this.handle = 0;
   }
@@ -91,12 +91,13 @@ export class WasmEngine {
     this.refresh(); const count = Math.min(MAX_CLIPS, items.length);
     for (let i = 0; i < count; i++) {
       const clip = items[i];
-      this.controlInts.set([clip.id, clip.token, clip.step, clip.mask, clip.filterType ?? 0, Math.round(clip.filterHz ?? 1200)], i * 6);
+      this.controlInts.set([clip.id, clip.token, clip.step, clip.mask, clip.filterType ?? 0, Math.round(clip.filterHz ?? 1200), Math.round((clip.level ?? 1) * 1000)], i * 7);
     }
-    this.exports.bw_arrange_with_filters(this.handle, this.control, count);
+    this.exports.bw_arrange_with_levels(this.handle, this.control, count);
   }
   setClipMask(token, mask) { this.exports.bw_clip_mask(this.handle, token, mask); }
   setClipFilter(token, mode, hz) { this.exports.bw_clip_filter(this.handle, token, mode, hz); }
+  setClipLevel(token, level) { this.exports.bw_clip_level(this.handle, token, level); }
   setPartMask(id, mask) { this.exports.bw_part_mask(this.handle, id, mask); }
   enable(id, enabled) { this.exports.bw_enable(this.handle, id, Number(enabled)); }
   setTempo(bpm) { this.exports.bw_web_tempo(this.handle, bpm); }

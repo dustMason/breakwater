@@ -10,6 +10,8 @@ typedef void* BWParts;
 typedef struct { int32_t loop, token, step, mask; } BWClip;
 // Extended clip descriptor. Filter cutoff is expressed in whole Hz.
 typedef struct { int32_t loop, token, step, mask, filterType, filterHz; } BWClipWithFilter;
+// Level is linear thousandths: 0 is silence, 1000 is unity.
+typedef struct { int32_t loop, token, step, mask, filterType, filterHz, levelMilli; } BWClipWithLevel;
 typedef struct {
  double beat, bpm, loopProgress;
  int32_t playing, activeLoop, mode, externalClock, clockState, pending, queueCount;
@@ -31,8 +33,11 @@ void bw_arrange(BWEngine engine,const BWClip* clips,int32_t count);
 void bw_edit_arrangement(BWEngine engine,const BWClip* clips,int32_t count);
 void bw_arrange_with_filters(BWEngine engine,const BWClipWithFilter* clips,int32_t count);
 void bw_edit_arrangement_with_filters(BWEngine engine,const BWClipWithFilter* clips,int32_t count);
+void bw_arrange_with_levels(BWEngine engine,const BWClipWithLevel* clips,int32_t count);
+void bw_edit_arrangement_with_levels(BWEngine engine,const BWClipWithLevel* clips,int32_t count);
 void bw_clip_mask(BWEngine engine,int32_t token,int32_t mask);
 void bw_clip_filter(BWEngine engine,int32_t token,int32_t type,double cutoffHz);
+void bw_clip_level(BWEngine engine,int32_t token,double level);
 void bw_enable(BWEngine engine,int32_t id,int32_t enabled);
 void bw_tempo(BWEngine engine,double bpm);
 void bw_mode(BWEngine engine,int32_t mode);

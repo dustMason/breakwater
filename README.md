@@ -51,6 +51,8 @@ Use a current browser with AudioWorklet support. HTTPS or localhost is required;
 
 The workflow tests the shared Rust engine and its WebAssembly host, builds `build/web`, uploads only the static site, and deploys it. For `dustMason/breakwater`, the expected address is `https://dustmason.github.io/breakwater/`. Modules and icons use relative paths; the separate asset URL is inserted into the generated site from the repository variable. No AWS credentials are needed to build or deploy Pages.
 
+Each clip in the timeline has its own level control, from silence to its original level. Copies of the same loop can be adjusted independently, including while they are playing. Level settings stay with the clips while editing the current arrangement; the existing stacking headroom still applies.
+
 **Publishing scope:** the S3 catalog and audio objects are publicly readable; their URL is visible to anyone using the app or site, even though it is not committed here. The dedicated bucket does not permit anonymous listing or writes. The source and derivatives remain subject to the sample provenance described below.
 
 To build for another static host:

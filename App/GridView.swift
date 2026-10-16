@@ -325,7 +325,7 @@ private struct ArrangementTray: View {
                 let gaps = CGFloat(max(0, audio.arrangement.count - 1)) * gapWidth + 72
                 let musicalWidth = max(0, width - gaps)
                 let layers = audio.arrangement.map { $0.clips.count }.max() ?? 1
-                let height = max(geometry.size.height, CGFloat(layers) * 80 + 85)
+                let height = max(geometry.size.height, CGFloat(layers) * 124 + 85)
                 ScrollView([.horizontal, .vertical]) {
                     HStack(alignment: .top, spacing: 0) {
                         if audio.arrangement.isEmpty {
@@ -388,7 +388,7 @@ private struct SequenceCard: View {
                             progress: index.flatMap { playback.state.activeProgress.indices.contains($0) ? playback.state.activeProgress[$0] : nil } ?? 0,
                             stepBeats: step.clips.map { audio.sample($0.sampleID)?.beats ?? 4 }.max() ?? 4,
                             stepNumber: self.index + 1,
-                            tray: $tray).frame(height: 74).padding(.horizontal, 4)
+                            tray: $tray).frame(height: 118).padding(.horizontal, 4)
                 }
             }
             Text("+ Drop a layer").font(.caption2).foregroundStyle(targetPosition == -1 ? Palette.accent : Palette.secondary)
@@ -435,23 +435,60 @@ private struct ClipRow: View {
     let stepBeats: Int
     let stepNumber: Int
     @Binding var tray: Int
+    @State private var showLevel = false
+    private var level: Binding<Double> {
+        Binding(get: { audio.arrangement.flatMap(\.clips).first { $0.id == clip.id }?.level ?? clip.level },
+                set: { audio.setClipLevel(clip.id, level: $0) })
+    }
+    private var levelSlider: some View {
+        Slider(value: level, in: 0...1, step: 0.01)
+            .tint(active ? .white : Palette.accent)
+            .accessibilityLabel("Level for \(song.name), loop \(sample.label), step \(stepNumber)")
+            .accessibilityIdentifier("clipLevel_\(clip.id)")
+    }
     var body: some View {
-        HStack(spacing: 0) {
-            Button { audio.selectedClipID = clip.id; tray = 1 } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(sample.label) · \(song.name)").font(.caption.weight(.semibold)).lineLimit(1)
-                    ClipWaveform(sample: sample, mask: clip.mask, active: active, repeatInBeats: stepBeats).frame(maxHeight: .infinity)
-                }.padding(6).frame(maxWidth: .infinity, minHeight: 74, alignment: .leading).contentShape(Rectangle())
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
+                    Button { audio.selectedClipID = clip.id; tray = 1 } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(sample.label) · \(song.name)").font(.caption.weight(.semibold)).lineLimit(1)
+                            ClipWaveform(sample: sample, mask: clip.mask, active: active, repeatInBeats: stepBeats).frame(maxHeight: .infinity)
+                        }.padding(6).frame(maxWidth: .infinity, minHeight: 70, alignment: .leading).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).accessibilityLabel("Edit \(song.name), loop \(sample.label), step \(stepNumber)")
+                    .accessibilityValue(active ? "Playing" : "Ready").accessibilityIdentifier("clip_\(clip.id)")
+                    Button { audio.removeClip(clip.id) } label: { Image(systemName: "xmark").font(.caption).frame(width: 44, height: 44) }
+                        .buttonStyle(.plain).accessibilityLabel("Remove \(song.name), loop \(sample.label)")
+                        .accessibilityIdentifier("removeClip_\(clip.id)")
+                }.frame(height: 70)
+                if geometry.size.width >= 140 {
+                    HStack(spacing: 4) {
+                        Text("Level").font(.caption2)
+                        levelSlider
+                        Text("\(Int((clip.level * 100).rounded()))%").font(.caption2.monospacedDigit()).frame(width: 34, alignment: .trailing)
+                    }.padding(.horizontal, 6).frame(height: 44)
+                } else {
+                    Button { showLevel = true } label: {
+                        Text("Level \(Int((clip.level * 100).rounded()))%")
+                            .font(.caption2.monospacedDigit()).lineLimit(1).minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Adjust level for \(song.name), loop \(sample.label), step \(stepNumber)")
+                    .accessibilityIdentifier("clipLevelButton_\(clip.id)")
+                    .popover(isPresented: $showLevel) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Clip level · \(Int((clip.level * 100).rounded()))%").font(.headline)
+                            levelSlider.tint(Palette.accent)
+                        }.padding().frame(width: 250).presentationCompactAdaptation(.popover)
+                    }
+                }
             }
-            .buttonStyle(.plain).accessibilityLabel("Edit \(song.name), loop \(sample.label), step \(stepNumber)")
-            .accessibilityValue(active ? "Playing" : "Ready").accessibilityIdentifier("clip_\(clip.id)")
-            Button { audio.removeClip(clip.id) } label: { Image(systemName: "xmark").font(.caption).frame(width: 44, height: 44) }
-                .buttonStyle(.plain).accessibilityLabel("Remove \(song.name), loop \(sample.label)")
-                .accessibilityIdentifier("removeClip_\(clip.id)")
         }
         .foregroundStyle(active ? Color.white : Color(uiColor: .label))
         .background(RoundedRectangle(cornerRadius: 4).fill(active ? Color(uiColor: Palette.playing) : Palette.accent.opacity(0.13)))
-        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(clip.id == audio.selectedClipID ? (active ? Color.white : Palette.accent) : Color(uiColor: .separator).opacity(0.5), lineWidth: clip.id == audio.selectedClipID ? 2 : 1))
+        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(clip.id == audio.selectedClipID ? (active ? Color.white : Palette.accent) : Color(uiColor: .separator).opacity(0.5), lineWidth: clip.id == audio.selectedClipID ? 2 : 1).allowsHitTesting(false))
         .overlay {
             if active { GeometryReader { geometry in Rectangle().fill(Color.white).frame(width: 2).offset(x: geometry.size.width * min(1, max(0, progress))) }.allowsHitTesting(false) }
         }

@@ -192,7 +192,14 @@ function paintArrangement() {
       choose.append(label, svg);
       const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'clip-remove'; remove.dataset.remove = clip.token;
       remove.setAttribute('aria-label', `Remove ${sample.songName}, loop ${sample.number}, from step ${index + 1}`); remove.textContent = '×';
-      row.append(choose, remove); group.append(row);
+      const main = document.createElement('div'); main.className = 'clip-main'; main.append(choose, remove);
+      const level = document.createElement('label'); level.className = 'clip-level';
+      const levelLabel = document.createElement('span'); levelLabel.className = 'clip-level-label'; levelLabel.textContent = 'Level';
+      const slider = document.createElement('input'); slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.step = '1';
+      slider.value = Math.round((clip.level ?? 1) * 100); slider.dataset.level = clip.token;
+      slider.setAttribute('aria-label', `Level for ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+      const value = document.createElement('output'); value.className = 'clip-level-value'; value.textContent = `${slider.value}%`;
+      level.append(levelLabel, slider, value); row.append(main, level); group.append(row);
     }
     const target = document.createElement('div'); target.className = 'layer-target'; target.textContent = '+ Drop a layer'; group.append(target);
     content.append(group);
@@ -267,7 +274,7 @@ async function submitArrangement(start = true) {
 
 function newClip(id) {
   const sample = sampleFor(id);
-  return { id, token: nextToken++, mask: songMask({ id: sample?.songID }), filterType: 0, filterHz: 1200 };
+  return { id, token: nextToken++, mask: songMask({ id: sample?.songID }), filterType: 0, filterHz: 1200, level: 1 };
 }
 function addSample(id, index, layer = false, replace = false) {
   if (disabled.has(id) || !sampleFor(id)) return;
@@ -441,6 +448,13 @@ $('arrangement-items').addEventListener('click', event => {
     if (selectedToken === token) selectedToken = null;
     paintArrangement(); paintPartButtons(); paintWaveforms(); submitArrangement(false);
   }
+});
+$('arrangement-items').addEventListener('input', event => {
+  const slider = event.target.closest('input[data-level]'); if (!slider) return;
+  const clip = allClips().find(item => item.token === Number(slider.dataset.level)); if (!clip) return;
+  clip.level = Number(slider.value) / 100;
+  slider.closest('.clip-level').querySelector('output').textContent = `${slider.value}%`;
+  audio.setClipLevel(clip.token, clip.level);
 });
 $('clear-arrangement').addEventListener('click', () => {
   arrangement = []; selectedToken = null; paintArrangement(); paintPartButtons(); paintWaveforms(); submitArrangement(false);

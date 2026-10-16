@@ -335,6 +335,16 @@ pub struct BasicClip {
     step: i32,
     mask: i32,
 }
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct FilteredClip {
+    loop_id: i32,
+    token: i32,
+    step: i32,
+    mask: i32,
+    filter_type: i32,
+    filter_hz: i32,
+}
 
 unsafe fn arrange(p: *mut Handle, clips: *const Clip, count: i32, start: bool) {
     let Some(h) = handle(p) else { return };
@@ -378,6 +388,38 @@ unsafe fn arrange_basic(p: *mut Handle, clips: *const BasicClip, count: i32, sta
                 mask: clip.mask,
                 filter_type: 0,
                 filter_hz: 1200,
+                level_milli: 1000,
+            };
+        }
+    }
+    h.commands.push(c)
+}
+unsafe fn arrange_filtered(p: *mut Handle, clips: *const FilteredClip, count: i32, start: bool) {
+    let Some(h) = handle(p) else { return };
+    let n = if clips.is_null() {
+        0
+    } else {
+        count.clamp(0, MAX_QUEUE as i32) as usize
+    };
+    let mut c = Command {
+        kind: ARRANGE,
+        value: start as i32,
+        count: n as i32,
+        ..Command::default()
+    };
+    if n > 0 {
+        for (out, clip) in c.clips[..n]
+            .iter_mut()
+            .zip(std::slice::from_raw_parts(clips, n))
+        {
+            *out = Clip {
+                loop_id: clip.loop_id,
+                token: clip.token,
+                step: clip.step,
+                mask: clip.mask,
+                filter_type: clip.filter_type,
+                filter_hz: clip.filter_hz,
+                level_milli: 1000,
             };
         }
     }
@@ -398,13 +440,33 @@ pub unsafe extern "C" fn bw_edit_arrangement(p: *mut Handle, clips: *const Basic
 /// # Safety
 /// The handle must be live; the clips pointer must contain count readable extended clips.
 #[no_mangle]
-pub unsafe extern "C" fn bw_arrange_with_filters(p: *mut Handle, clips: *const Clip, count: i32) {
-    arrange(p, clips, count, true)
+pub unsafe extern "C" fn bw_arrange_with_filters(
+    p: *mut Handle,
+    clips: *const FilteredClip,
+    count: i32,
+) {
+    arrange_filtered(p, clips, count, true)
 }
 /// # Safety
 /// The handle must be live; the clips pointer must contain count readable extended clips.
 #[no_mangle]
 pub unsafe extern "C" fn bw_edit_arrangement_with_filters(
+    p: *mut Handle,
+    clips: *const FilteredClip,
+    count: i32,
+) {
+    arrange_filtered(p, clips, count, false)
+}
+/// # Safety
+/// The handle must be live; the clips pointer must contain count readable level descriptors.
+#[no_mangle]
+pub unsafe extern "C" fn bw_arrange_with_levels(p: *mut Handle, clips: *const Clip, count: i32) {
+    arrange(p, clips, count, true)
+}
+/// # Safety
+/// The handle must be live; the clips pointer must contain count readable level descriptors.
+#[no_mangle]
+pub unsafe extern "C" fn bw_edit_arrangement_with_levels(
     p: *mut Handle,
     clips: *const Clip,
     count: i32,
@@ -434,6 +496,19 @@ pub unsafe extern "C" fn bw_clip_filter(p: *mut Handle, token: i32, kind: i32, h
             value: token,
             count: kind,
             number: hz,
+            ..Command::default()
+        });
+    }
+}
+/// # Safety
+/// The handle must be live, and calls must come from its one serialized control producer.
+#[no_mangle]
+pub unsafe extern "C" fn bw_clip_level(p: *mut Handle, token: i32, level: f64) {
+    if let Some(h) = handle(p) {
+        h.commands.push(Command {
+            kind: CLIP_LEVEL,
+            value: token,
+            number: level,
             ..Command::default()
         });
     }
@@ -782,14 +857,16 @@ mod tests {
                 mask: 15,
                 filter_type: 0,
                 filter_hz: 1200,
+                level_milli: 1000,
             }];
-            bw_arrange_with_filters(h, clips.as_ptr(), 1);
+            bw_arrange_with_levels(h, clips.as_ptr(), 1);
             let mut left = [0.; 128];
             let mut right = [0.; 128];
             ALLOCATIONS.with(|count| count.set(0));
             COUNT_ALLOCATIONS.with(|enabled| enabled.set(true));
             for block in 0..200 {
                 bw_clip_filter(h, 1, block % 4, 200. + block as f64 * 10.);
+                bw_clip_level(h, 1, block as f64 / 200.);
                 bw_render(
                     h,
                     left.as_mut_ptr(),
