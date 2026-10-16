@@ -6,7 +6,7 @@ final class BreakwaterUITests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = ["--reset-preferences", "--mute-audio"]
-        if name.contains("test06") { app.launchArguments.append("--test-midi-clock") }
+        if name.contains("test06") || name.contains("test09") { app.launchArguments.append("--test-midi-clock") }
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
         XCTAssertTrue(app.buttons["pad_0"].waitForExistence(timeout: 20))
@@ -158,5 +158,44 @@ final class BreakwaterUITests: XCTestCase {
         app.buttons["useSourceTempo"].tap()
         expectation(for: NSPredicate(format: "label CONTAINS '150.0'"), evaluatedWith: app.buttons["tempo"])
         waitForExpectations(timeout: 8)
+    }
+
+    func test08PartsAndFilterTray() {
+        app.buttons["pad_0"].tap()
+        waitForValue("pad_0", "Playing")
+        let width = app.otherElements["padGrid"].frame.width
+        app.buttons["showParts"].tap()
+        XCTAssertTrue(app.buttons["part_0"].waitForExistence(timeout: 3))
+        XCTAssertLessThan(app.otherElements["padGrid"].frame.width, width)
+        app.buttons["All off"].tap()
+        waitForValue("part_0", "Off")
+        app.buttons["part_0"].tap()
+        waitForValue("part_0", "On")
+        app.buttons["All on"].tap()
+        app.buttons["part_0"].tap()
+        waitForValue("part_0", "Off")
+        expectation(for: NSPredicate { _, _ in !self.app.staticTexts["partStatus"].exists }, evaluatedWith: nil)
+        waitForExpectations(timeout: 20)
+        capture("tablet-parts-landscape")
+        app.buttons["showFX"].tap()
+        XCTAssertTrue(app.sliders["filterCutoff"].waitForExistence(timeout: 3))
+        app.segmentedControls.buttons["BPF"].tap()
+        XCTAssertTrue(app.segmentedControls.buttons["BPF"].isSelected)
+        app.sliders["filterCutoff"].adjust(toNormalizedSliderPosition: 0.7)
+        XCUIDevice.shared.orientation = .portrait
+        capture("tablet-filter-portrait")
+        XCTAssertTrue(app.buttons["pad_29"].isHittable)
+        XCTAssertEqual(app.buttons["transport"].label, "Stop")
+    }
+
+    func test09PartsDuringMIDIClock() {
+        expectation(for: NSPredicate(format: "label CONTAINS 'LOCKED'"), evaluatedWith: app.buttons["clockStatus"])
+        waitForExpectations(timeout: 10)
+        app.buttons["pad_0"].tap(); waitForValue("pad_0", "Playing")
+        app.buttons["showParts"].tap(); app.buttons["part_0"].tap()
+        expectation(for: NSPredicate { _, _ in !self.app.staticTexts["partStatus"].exists }, evaluatedWith: nil)
+        waitForExpectations(timeout: 20)
+        app.buttons["pad_1"].tap(); waitForValue("pad_1", "Playing")
+        XCTAssertEqual(app.buttons["transport"].label, "Stop")
     }
 }

@@ -9,6 +9,8 @@ const bounded = (value, fallback, min, max) => Number.isFinite(value) ? Math.min
 let tempo = bounded(saved.tempo, 120, 30, 300);
 let volume = bounded(saved.volume, .8, 0, 1);
 const disabled = new Set(Array.isArray(saved.disabled) ? saved.disabled.filter(Number.isInteger) : []);
+const partMasks = saved.partMasks && typeof saved.partMasks === 'object' ? saved.partMasks : {};
+let tray = null, filterMode = 0, filterHz = 1200, partError = '';
 let songs = [], samples = [], song = null;
 let editing = false, loading = false, desired = [], request = 0;
 let state = { playing: false, active: null, beat: 0, progress: 0, pending: false, queue: [] };
@@ -19,7 +21,7 @@ const scrollTouches = new Map();
 const taps = [];
 
 function persist() {
-  try { localStorage.setItem(storageKey, JSON.stringify({ tempo, volume, song: song?.id, disabled: [...disabled] })); }
+  try { localStorage.setItem(storageKey, JSON.stringify({ tempo, volume, song: song?.id, disabled: [...disabled], partMasks })); }
   catch { announce('Browser storage is unavailable. Pad exclusions will last for this visit.'); }
 }
 function announce(text) { if (text !== lastAnnouncement) { $('announcer').textContent = text; lastAnnouncement = text; } }
@@ -33,6 +35,7 @@ function notice(text = '', retry = false, progress = false) {
 const audio = new AudioPlayer(next => {
   state = next;
   paint();
+  prepareUpcoming();
 }, (done, total) => {
   if (!loading) return;
   $('loading-progress').max = total;
@@ -51,9 +54,9 @@ audio.setVolume(volume);
 $('tempo').value = tempo;
 $('volume').value = volume;
 
-function waveform(values) {
-  const upper = values.map((value, i) => `${i * 100 / (values.length - 1)},${50 - value * 47}`);
-  const lower = values.map((value, i) => `${i * 100 / (values.length - 1)},${50 + value * 47}`).reverse();
+function waveform(values, middle = 50, scale = 47) {
+  const upper = values.map((value, i) => `${i * 100 / (values.length - 1)},${middle - value * scale}`);
+  const lower = values.map((value, i) => `${i * 100 / (values.length - 1)},${middle + value * scale}`).reverse();
   return `M${upper.join(' L')} L${lower.join(' L')} Z`;
 }
 
@@ -80,6 +83,8 @@ function showSong(id) {
     fragment.append(pad);
   }
   $('grid').replaceChildren(fragment);
+  paintPartButtons();
+  paintWaveforms();
   layout();
   paint();
   persist();
@@ -88,13 +93,61 @@ function showSong(id) {
 function layout() {
   const grid = $('grid');
   const width = grid.clientWidth;
-  const columns = width < 460 ? 3 : width < 650 ? 4 : width > grid.clientHeight * 1.12 ? 6 : 5;
+  const columns = width < 260 ? 2 : width < 460 ? 3 : width < 650 ? 4 : width > grid.clientHeight * 1.12 ? 6 : 5;
   grid.style.setProperty('--columns', columns);
   grid.style.setProperty('--rows', Math.ceil((song?.loops.length || 30) / columns));
   grid.classList.toggle('scrollable', grid.scrollHeight > grid.clientHeight + 1);
   updateHint();
 }
 new ResizeObserver(layout).observe($('grid'));
+
+function songMask(item = song) { return (Number.isInteger(partMasks[item?.id]) ? partMasks[item.id] : 15) & 15; }
+function paintPartButtons() {
+  if (!song) return;
+  $('part-buttons').replaceChildren(...(song.partLabels || []).map((name, index) => {
+    const button = document.createElement('button');
+    const on = !!(songMask() & (1 << index));
+    button.type = 'button'; button.dataset.part = index; button.setAttribute('aria-pressed', String(on));
+    button.innerHTML = `<span>${name}</span><span>${on ? 'ON' : 'OFF'}</span>`;
+    return button;
+  }));
+}
+function paintWaveforms() {
+  const mask = songMask();
+  for (const { element, sample } of pads.values()) {
+    const svg = element.querySelector('.waveform');
+    if (sample.parts && (tray === 'parts' || mask !== 15)) {
+      svg.innerHTML = sample.parts.waveforms.map((values, index) => `<path class="${mask & (1 << index) ? '' : 'muted-part'}" d="${waveform(values, 12.5 + index * 25, 11)}"/>`).join('');
+    } else svg.innerHTML = `<path d="${waveform(sample.waveform)}"/>`;
+  }
+}
+function setTray(next) {
+  tray = tray === next ? null : next;
+  $('tray').hidden = !tray;
+  $('parts-controls').hidden = tray !== 'parts'; $('fx-controls').hidden = tray !== 'fx';
+  $('tray-title').textContent = tray === 'fx' ? 'Filter' : 'Parts';
+  $('show-parts').setAttribute('aria-expanded', String(tray === 'parts'));
+  $('show-fx').setAttribute('aria-expanded', String(tray === 'fx'));
+  paintWaveforms();
+  layout();
+}
+function prepareUpcoming() {
+  if (!state.playing) return;
+  const ids = [...new Set([state.active, ...state.queue.slice(0, 3)])];
+  audio.pinParts(loading ? [state.active, ...desired.slice(0, 3)] : ids);
+  for (const id of ids) {
+    const sample = samples.find(item => item.id === id);
+    if (!sample || songMask({ id: sample.songID }) === 15 || !audio.loaded.has(id) || audio.partCache.has(id) || audio.partInFlight.has(id)) continue;
+    if (partError) continue;
+    if (id === state.active) $('part-message').textContent = songMask({ id: sample.songID }) === 0 ? 'Preparing parts · all layers are off' : 'Preparing parts · full mix plays until ready';
+    audio.loadParts(sample).then(() => {
+      if (id === state.active) $('part-message').textContent = '';
+    }).catch(error => {
+      partError = `Parts could not load (${error.message}). The full mix remains available.`;
+      $('part-message').textContent = partError; $('retry-parts').hidden = false;
+    });
+  }
+}
 
 function updateHint() {
   $('hint').textContent = editing ? 'Tap pads to exclude or restore them. Changes are saved on this browser.'
@@ -142,7 +195,8 @@ async function select(ids) {
   if (!desired.length) return;
   const attempt = ++request;
   const selected = samples.filter(sample => desired.includes(sample.id));
-  loading = selected.some(sample => !audio.loaded.has(sample.id));
+  audio.pinParts([state.active, ...desired.slice(0, 3)]);
+  loading = selected.some(sample => !audio.loaded.has(sample.id) || (songMask({ id: sample.songID }) !== 15 && !audio.partCache.has(sample.id)));
   paint();
   try {
     await audio.unlock();
@@ -152,6 +206,9 @@ async function select(ids) {
       $('loading-progress').value = done;
       notice(`Loading loops · ${done} / ${total}`, false, true);
     });
+    const needsParts = selected.filter(sample => songMask({ id: sample.songID }) !== 15).slice(0, 3);
+    if (attempt === request && needsParts.some(sample => !audio.partCache.has(sample.id))) notice('Preparing drum parts…', false, true);
+    await Promise.all(needsParts.map(sample => audio.loadParts(sample)));
     if (attempt !== request) return;
     loading = false;
     desired = desired.filter(id => !disabled.has(id));
@@ -255,6 +312,34 @@ $('grid').addEventListener('keydown', event => {
 });
 
 $('song').addEventListener('change', () => showSong($('song').value));
+$('show-parts').addEventListener('click', () => setTray('parts'));
+$('show-fx').addEventListener('click', () => setTray('fx'));
+$('close-tray').addEventListener('click', () => setTray(tray));
+function setPartsMask(mask) {
+  if (!song) return;
+  partMasks[song.id] = mask & 15;
+  audio.setPartMask(song.loops.map(sample => sample.id), songMask());
+  partError = ''; $('retry-parts').hidden = true; $('part-message').textContent = '';
+  paintPartButtons(); paintWaveforms(); persist(); prepareUpcoming();
+}
+$('part-buttons').addEventListener('click', event => {
+  const button = event.target.closest('button[data-part]'); if (!button || !song) return;
+  setPartsMask(songMask() ^ (1 << Number(button.dataset.part)));
+});
+$('parts-off').addEventListener('click', () => setPartsMask(0));
+$('parts-on').addEventListener('click', () => setPartsMask(15));
+$('retry-parts').addEventListener('click', () => { partError = ''; $('retry-parts').hidden = true; $('part-message').textContent = ''; prepareUpcoming(); });
+$('filter-modes').addEventListener('click', event => {
+  const button = event.target.closest('button[data-mode]'); if (!button) return;
+  filterMode = Number(button.dataset.mode); audio.setFilter(filterMode, filterHz);
+  for (const item of $('filter-modes').querySelectorAll('button')) item.setAttribute('aria-pressed', String(item === button));
+});
+$('cutoff').value = Math.round(1000 * Math.log(filterHz / 40) / Math.log(18000 / 40));
+$('cutoff').addEventListener('input', event => {
+  filterHz = 40 * (18000 / 40) ** (Number(event.target.value) / 1000);
+  $('cutoff-value').textContent = filterHz >= 1000 ? `${(filterHz / 1000).toFixed(1)} kHz` : `${Math.round(filterHz)} Hz`;
+  audio.setFilter(filterMode, filterHz);
+});
 $('transport').addEventListener('click', () => {
   if (state.playing || loading) { stop(); return; }
   const cycle = state.queue.filter(id => !disabled.has(id));
@@ -311,7 +396,8 @@ async function loadCatalog() {
     const catalog = await response.json();
     if (!Array.isArray(catalog) || !catalog.length || catalog.some(item => !Array.isArray(item.loops) || !item.loops.length)) throw new Error('Empty sample catalog');
     songs = catalog;
-    samples = songs.flatMap(item => item.loops.map(sample => ({ ...sample, songName: item.name })));
+    samples = songs.flatMap(item => item.loops.map(sample => ({ ...sample, songName: item.name, songID: item.id })));
+    for (const item of songs) audio.setPartMask(item.loops.map(sample => sample.id), songMask(item));
     $('song').replaceChildren(...songs.map(item => new Option(`${item.name}`, item.id)));
     $('song').disabled = $('transport').disabled = $('edit').disabled = false;
     $('grid').setAttribute('aria-busy', 'false');

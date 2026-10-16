@@ -31,3 +31,8 @@ The documentation pass checked `Web/index.html`, `Web/style.css`, `Web/app.js`, 
 
 ## Sample-library expansion
 The October 14 percussion pass adds twelve song pages without changing the composition or CSS. Playback fetches only selected clips and shares in-flight decodes between rapid gestures. Per-song timing ranges and interpretation notes are available on the source-BPM tooltip. `VALIDATION.md` records the catalog, audio, OP-1 and browser checks.
+
+## Parts and filter extension — 2026-10-15
+Parts and FX open a closeable side tray beside the reflowing grid. Parts offers four per-song approximate layers, individual ON/OFF controls and All on / All off; the copy notes possible overlap. Opening Parts, or leaving a layer off, shows four waveform lanes per pad, with muted lanes dimmed. Filter provides Off, LPF, BPF and HPF choices and a labeled cutoff slider. These controls use the existing neutral surfaces, blue states, thin borders and system type. When the tray narrows the grid below 260px, the browser uses two columns.
+
+The documentation pass checked `Web/index.html`, `Web/style.css` and `Web/app.js`, and opened `build/features-final/web-desktop.png` and `build/features-final/web-mobile.png`, which show the Parts tray and grid at desktop and phone sizes. `VALIDATION.md` records the additional browser and audio checks. The captures do not establish audible separation quality or physical-touch performance.

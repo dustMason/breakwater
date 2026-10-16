@@ -49,6 +49,8 @@ New cuts follow detected transient entries and score neighboring rhythm/phrase s
 
 `catalog.json` includes stable IDs, source timestamps, measured BPM, frame/beat counts, waveform envelopes and transient indices. `Expedition/sources.json` lists source recordings and timing caveats; `Expedition/validation.json` records hashes, PCM lengths, levels and seam checks. All new WAVs pass decode/format/boundary checks. These remain audition candidates except where a specific user-approved reference is noted above.
 
+**Experimental layers:** Each active loop also has four compressed stereo components in `Stems/`, generated from its own nonnegative spectrogram factorization and grouped by spectral character. Their names are approximate; they are not verified isolated kick, snare or other instrument recordings. The four tracks retain the original loop duration and shared stereo phase. They are lossy AAC and may contain bleed or artifacts. The original WAV remains the full-mix reference. These derivatives have the same source-provenance caveats as the loops above and await listening review.
+
 The native app supports Tape and Slice modes. The browser uses whole-loop pitch/rate scaling and downloads only selected loops, caching them for the visit. Only the trimmed WAVs and catalog ship in the Pages artifact. Source recordings, MP3 reels and OP-1 patches are in the separate sample dumps.
 
-`Scripts/prepare_samples.py` refreshes the original Niagara packs while preserving subsequent catalog entries and IDs. The catalog is already prepared; no Python audio-analysis dependencies are needed to build or run the app.
+`Scripts/prepare_samples.py` refreshes the original Niagara packs while preserving subsequent catalog entries and IDs. After changing any WAV, run `Scripts/separate_parts.py` to regenerate its experimental layers and metadata. The catalog is already prepared; no Python audio-analysis dependencies are needed to build or run the app.

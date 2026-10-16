@@ -1,5 +1,9 @@
 import Foundation
 
+struct LoopParts: Codable {
+    let files: [String]
+    let waveforms: [[Float]]
+}
 struct LoopSample: Codable, Identifiable {
     let id: Int32
     let number: Int
@@ -13,6 +17,7 @@ struct LoopSample: Codable, Identifiable {
     let sourceEnd: String
     let waveform: [Float]
     let sliceFrames: [Int32]
+    let parts: LoopParts?
     var label: String { String(format: "%02d", number) }
 }
 struct Song: Codable, Identifiable {
@@ -22,6 +27,7 @@ struct Song: Codable, Identifiable {
     let sourceBPM: Int
     let sourceURL: URL
     let loops: [LoopSample]
+    let partLabels: [String]?
     var midiPads: [Int32: Int32] {
         Dictionary(uniqueKeysWithValues: loops.filter { (1...30).contains($0.number) }
             .map { (Int32(35 + $0.number), $0.id) })

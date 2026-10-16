@@ -1,5 +1,12 @@
 # Validation
 
+## Experimental output filters and layers — 2026-10-15
+
+- Both the iPad app and static player have side trays for an output LPF, BPF or HPF and four per-song layer switches. The grid reflows beside the tray and shows the layer waveforms, with muted lanes faded. All-on playback uses the original mix. All-off fades to silence; other layer changes ramp smoothly. The prepared components are exploratory spectral groupings, not verified clean instrument stems, and require listening review.
+- All 222 loops have four prepared 48 kHz stereo AAC components. `Tests/PartsCatalogTests.py` checks all 888 files, unique paths, durations and waveform metadata. The components add approximately 80 MiB to the repository. PCM reconstruction was spot-checked on one loop per song; that is a numerical check, not approval of separation quality.
+- `Scripts/test_core.sh` passes under AddressSanitizer and UndefinedBehaviorSanitizer, including synthetic layer mute/restore/silence and LPF/BPF/HPF attenuation checks. `Scripts/test_interactions.sh` passes the MIDI, gesture and original catalog checks; all 16 browser tests pass, including on-demand layer loading, bounded cache, layer fades, phase continuity and filter behavior.
+- On the iPad (A16) Simulator, muted UI tests passed for both trays, layer controls, grid resizing in landscape and portrait, and playback with a synthetic MIDI clock. An unsigned Release device build succeeded. Its catalog and all 888 layer files match the source, as do those in the static build. The local browser was checked with parts enabled, muted and restored, and with the filter tray open. These tests do not establish audible separation quality, performance on the A12 iPad, real USB MIDI timing, or hardware output behavior.
+
 ## iPad song picker and source tempo, build 6 — 2026-10-14
 
 - Replaced the song menu with a scrollable song sheet. Playback snapshots now update the grid and status views separately from navigation, so the picker is not rebuilt on each playback refresh. Song selection preserves the playing loop; tapping a pad queues the replacement for the next bar.

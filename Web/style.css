@@ -36,13 +36,35 @@ select { max-width: 100%; min-height: 44px; border: 0; border-radius: 4px; paddi
 .source-tempo { display: grid; text-align: right; font-variant-numeric: tabular-nums; }
 .source-tempo span, .tempo-control > label, .volume-control > span { color: var(--secondary); font-size: .75rem; text-transform: uppercase; }
 .source-tempo strong { font-size: 1.5rem; font-weight: 400; }
-.grid { --columns: 6; --rows: 5; display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(88px, 1fr)); gap: var(--gap); flex: 1; min-height: 0; margin: 0 12px; overflow: auto; overscroll-behavior: contain; scrollbar-color: var(--line) var(--surface); }
+.tray-actions { display: flex; gap: 4px; }
+.tray-actions button { padding: 0 10px; color: var(--accent); font-weight: 600; }
+.tray-actions button[aria-expanded="true"] { background: var(--queued); }
+.workspace { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.grid { --columns: 6; --rows: 5; display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(88px, 1fr)); gap: var(--gap); flex: 1; min-height: 0; min-width: 0; margin: 0 12px; overflow: auto; overscroll-behavior: contain; scrollbar-color: var(--line) var(--surface); }
+.tray { width: clamp(180px, 23vw, 270px); flex: 0 0 auto; overflow-y: auto; border-left: 1px solid var(--line); padding: 2px 14px 14px; background: var(--surface); }
+.tray-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tray-heading h2 { margin: 0; font-size: 1.1rem; }
+.tray-heading button { width: 44px; color: var(--accent); font-size: 1.5rem; }
+.tray-description { font-size: .8rem; color: var(--secondary); line-height: 1.4; margin: 4px 0 12px; }
+.part-buttons { display: grid; gap: 7px; }
+.part-actions { display: flex; justify-content: space-between; gap: 4px; }
+.part-actions button { padding: 0 4px; color: var(--accent); font-size: .85rem; }
+.part-buttons button { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-color: var(--line); text-align: left; }
+.part-buttons button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--queued); }
+.part-buttons button span:last-child { font-size: .7rem; font-weight: 600; }
+.filter-modes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.filter-modes button { border-color: var(--line); }
+.filter-modes button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--queued); }
+.cutoff-control { display: grid; gap: 12px; margin-top: 20px; font-size: .85rem; }
+.cutoff-control span { display: flex; justify-content: space-between; gap: 4px; }
+.cutoff-control input { width: 100%; accent-color: var(--accent); }
 .pad { position: relative; display: flex; flex-direction: column; justify-content: space-between; width: 100%; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); padding: 8px 10px; text-align: left; user-select: none; -webkit-user-select: none; touch-action: none; }
 .pad-header { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; z-index: 1; font-variant-numeric: tabular-nums; }
 .pad-number { font-size: .95rem; font-weight: 600; }
 .pad-bars { font-size: .75rem; color: var(--secondary); white-space: nowrap; }
 .waveform { display: block; width: 100%; flex: 1; min-height: 12px; max-height: 100px; color: var(--wave); margin: 6px 0; z-index: 1; }
 .waveform path { fill: currentColor; }
+.waveform .muted-part { opacity: .16; }
 .pad-status { min-height: 14px; font-size: .6875rem; font-weight: 600; z-index: 1; white-space: nowrap; }
 .pad.queued { color: var(--accent); border-color: #9ebdf3; background: var(--queued); }
 .pad.queued .waveform { color: var(--accent); }
@@ -109,6 +131,9 @@ select { max-width: 100%; min-height: 44px; border: 0; border-radius: 4px; paddi
   .pad-status { font-size: .6875rem; }
   .source-tempo span { font-size: .6875rem; }
   .source-tempo strong { font-size: 1.3rem; }
+  .tray { width: 160px; padding: 2px 8px 10px; }
+  .tray-actions { gap: 0; }
+  .tray-actions button { padding: 0 6px; }
 }
 @media (prefers-color-scheme: dark) {
   :root { --surface: #161618; --muted-surface: #242427; --ink: #f5f5f7; --secondary: #c2c2c2; --wave: #9c9ca3; --line: #414147; --accent: #61abff; --queued: #1f304a; --danger: #ff737b; }

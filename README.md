@@ -13,6 +13,8 @@ A native iPad instrument and a static browser player for percussion loops. The n
 - `Edit pads` toggles persistent exclusions. Disabled pads remain visible so they can be restored. They cannot be launched by touch or MIDI and are removed from cycles. Disabling the playing pad changes to the next valid selection on a bar boundary; if none remains, playback fades out.
 - **Tape** follows tempo by changing playback rate and pitch together.
 - **Slice** schedules precomputed drum transients against the beat clock, plays their attacks at original pitch, and uses short crossfades / decaying tail extension. It preserves the original internal swing, rather than quantizing every hit to a rigid subdivision. Extreme tempo changes can reveal slicing artifacts.
+- Open **FX** for a low-pass, band-pass or high-pass output filter and its cutoff. The tray makes room by resizing the grid, and filter changes are smoothed during playback.
+- Open **Parts** for four approximate layers: Low, Body, Attack and High. Use **All off** and bring them in one by one, or switch individual layers while playing. The four waveform lanes dim as their layers are muted. Layer choices are saved per song. The labels describe the analysis rather than reliably naming individual instruments: the separation can contain bleed or artifacts, particularly when drums overlap. The unmodified original plays when all four layers are on.
 
 ## MIDI and audio
 
@@ -22,7 +24,7 @@ Select the MIDI source and enable external clock in Settings. Incoming MIDI Cloc
 
 Clock smoothing and a phase correction loop reject small timing jitter without jumping the sample cursor. Tempo changes slew over roughly 90 ms, in addition to the short incoming-clock measurement window. If clock vanishes, playback briefly freewheels; after two seconds it fades out and waits for transport restart. The latency offset advances playback for positive values. Physical timing should be calibrated against the actual audio output.
 
-The app requests a 256-frame audio buffer at 48 kHz; iPadOS chooses the available hardware configuration. All samples load before playback. Rendering uses owned in-memory PCM and a bounded single-producer command ring; the render callback performs no file I/O, locks, allocation, or Swift UI work. Audio can continue in the background. Audio interruptions stop playback; a disconnected output requires a deliberate restart.
+The app requests a 256-frame audio buffer at 48 kHz; iPadOS chooses the available hardware configuration. Original loops load before playback. Separated layers are decoded off the audio thread as needed and kept in a small cache. While a playing loop's layers are preparing, its full mix continues unless all layers are off, in which case it fades to silence; the Parts tray reports preparation and offers a retry on failure. Rendering uses owned in-memory PCM and a bounded single-producer command ring; the render callback performs no file I/O, locks, allocation, or Swift UI work. Audio can continue in the background. Audio interruptions stop playback; a disconnected output requires a deliberate restart.
 
 ## Browser player
 
@@ -64,7 +66,7 @@ See [INSTALL.md](INSTALL.md) for the first physical iPad run and MIDI hookup.
 
 Open `Breakwater.xcodeproj` in Xcode. Select the **Breakwater** scheme, choose your personal Apple development team under Signing & Capabilities, and select the iPad or an iPad Simulator. The app requires no package downloads. Apple signing is separate from the GitHub commit identity.
 
-The committed Xcode project can be regenerated with `python3 Scripts/generate_project.py`. The WAV files and `Samples/catalog.json` are already prepared; the Python audio-analysis dependencies are not required to build the app.
+The committed Xcode project can be regenerated with `python3 Scripts/generate_project.py`. The WAV files, compressed parts and `Samples/catalog.json` are already prepared; Python audio-analysis dependencies are not required to build the app. To redo the experimental analysis after changing loops, install NumPy, SciPy, SoundFile and ffmpeg, then run `python3 Scripts/separate_parts.py`. This does not use a pretrained instrument classifier; it groups spectral components separately for each loop.
 
 ## Checks
 
@@ -73,7 +75,7 @@ Scripts/test_core.sh
 Scripts/test_interactions.sh
 ```
 
-The first compiles the portable audio engine with AddressSanitizer and UndefinedBehaviorSanitizer. It tests bar-boundary replacements, full-length cycles, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, and pitch behavior. The second tests gesture latching, MIDI parsing, and every shipped sample's format and metadata.
+The first compiles the portable audio engine with AddressSanitizer and UndefinedBehaviorSanitizer. It tests bar-boundary replacements, full-length cycles, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, layer muting and the output filters. The second tests gesture latching, MIDI parsing, and every shipped sample's format and metadata. Run `npm test` for the browser engine and `python3 Tests/PartsCatalogTests.py` (requires ffprobe) to verify the prepared layer files.
 
 Run native UI tests with `Scripts/test_simulator.sh <iPad Simulator UDID>`. Results and physical-device limitations are recorded in [VALIDATION.md](VALIDATION.md).
 

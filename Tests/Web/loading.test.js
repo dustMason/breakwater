@@ -53,3 +53,29 @@ test('failed samples can retry without re-fetching successes; exclusions are rea
   assert.equal(fetched.length, 3);
   assert.ok(p.loaded.has(61));
 });
+
+test('part downloads are shared, retryable, and bounded while active loops stay pinned', async t => {
+  const { p, sent } = player();
+  p.context.decodeAudioData = async () => ({ length: 8, numberOfChannels: 2, getChannelData: () => new Float32Array(8) });
+  const fetched = [];
+  let fail = true;
+  t.mock.method(globalThis, 'fetch', async url => {
+    fetched.push(url.pathname);
+    if (fail && url.pathname.endsWith('/3.m4a')) return { ok: false, status: 503 };
+    return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  });
+  const sample = id => ({ id, parts: { files: [0,1,2,3].map(n => `parts/${id}/${n}.m4a`) } });
+  for (let id = 0; id < 8; id++) { p.loaded.add(id); p.frameCounts.set(id, 8); }
+  await assert.rejects(p.loadParts(sample(0)), /HTTP 503/);
+  assert.equal(p.partInFlight.size, 0);
+  fail = false;
+  const both = [p.loadParts(sample(0)), p.loadParts(sample(0))];
+  await Promise.all(both);
+  assert.equal(sent.filter(item => item.type === 'parts' && item.id === 0 && item.parts).length, 1);
+  assert.equal(fetched.length, 8);
+  p.pinParts([0]);
+  for (let id = 1; id < 8; id++) await p.loadParts(sample(id));
+  assert.equal(p.partCache.size, 6);
+  assert.ok(p.partCache.has(0));
+  assert.ok(sent.some(item => item.type === 'parts' && item.parts === null));
+});

@@ -19,26 +19,30 @@ def build(output: Path) -> Path:
             shutil.copy2(source, output / source.name)
     catalog = json.loads((ROOT / "Samples/catalog.json").read_text())
     previous_catalog = output / "Samples/catalog.json"
-    current_files = {sample["file"] for song in catalog for sample in song["loops"]}
+    def files(sample):
+        return [sample["file"], *sample.get("parts", {}).get("files", [])]
+    current_files = {path for song in catalog for sample in song["loops"] for path in files(sample)}
     if previous_catalog.exists():
         # A rebuild must also remove samples retired from the song library.
         for song in json.loads(previous_catalog.read_text()):
             for sample in song["loops"]:
-                relative = Path(sample["file"])
-                if relative.is_absolute() or ".." in relative.parts:
-                    raise ValueError(f"Invalid previous sample path: {relative}")
-                if sample["file"] not in current_files:
-                    (output / "Samples" / relative).unlink(missing_ok=True)
+                for path in files(sample):
+                    relative = Path(path)
+                    if relative.is_absolute() or ".." in relative.parts:
+                        raise ValueError(f"Invalid previous sample path: {relative}")
+                    if path not in current_files:
+                        (output / "Samples" / relative).unlink(missing_ok=True)
     (output / "Samples").mkdir(exist_ok=True)
     shutil.copy2(ROOT / "Samples/catalog.json", output / "Samples/catalog.json")
     for song in catalog:
         for sample in song["loops"]:
-            relative = Path(sample["file"])
-            if relative.is_absolute() or ".." in relative.parts:
-                raise ValueError(f"Invalid sample path: {relative}")
-            destination = output / "Samples" / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / "Samples" / relative, destination)
+            for path in files(sample):
+                relative = Path(path)
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError(f"Invalid sample path: {relative}")
+                destination = output / "Samples" / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / "Samples" / relative, destination)
     (output / ".nojekyll").touch()
     print(f"Static site: {output} ({sum(len(song['loops']) for song in catalog)} loops)")
     return output

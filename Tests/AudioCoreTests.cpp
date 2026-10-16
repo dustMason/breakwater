@@ -50,4 +50,26 @@ void midiBarReplacement(){
  }
  assert(firstPlayed&&secondPlayed);puts("PASS single-tap replacements reach the next bar while MIDI clock stays locked");
 }
-int main(){missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}
+
+void partsAndFilters(){
+ constexpr int frames=96000; const double pi=3.141592653589793; const int frequencies[4]={180,600,2400,7000};
+ std::vector<float> pcm(frames*2),parts(frames*8);
+ for(int i=0;i<frames;i++)for(int p=0;p<4;p++){float v=float(.1*std::sin(2*pi*frequencies[p]*i/48000));for(int ch=0;ch<2;ch++){parts[p*frames*2+i*2+ch]=v;pcm[i*2+ch]+=v;}}
+ // Simulate the difference between lossy encoded parts and the original.
+ for(int i=0;i<frames;i++)for(int ch=0;ch<2;ch++)pcm[i*2+ch]+=float(.04*std::sin(2*pi*1000*i/48000));
+ int32_t slice=0,id=0;BWEngine e=bw_create(48000);assert(bw_load_loop(e,0,pcm.data(),frames,4,&slice,1));
+ bw_set_parts(e,0,bw_create_parts(parts.data(),frames));bw_queue(e,&id,1);
+ std::vector<float> l(48000),r(48000);bw_render(e,l.data(),r.data(),48000,10);
+ bw_part_mask(e,0,14);bw_render(e,l.data(),r.data(),48000,11);
+ auto amplitude=[&](int hz){double a=0,b=0;for(int i=2000;i<48000;i++){a+=l[i]*std::sin(2*pi*hz*i/48000);b+=l[i]*std::cos(2*pi*hz*i/48000);}return 2*std::hypot(a,b)/46000;};
+ assert(amplitude(180)<.005);assert(amplitude(600)>.07);
+ bw_part_mask(e,0,1);bw_render(e,l.data(),r.data(),48000,11.5);assert(amplitude(180)>.07);assert(amplitude(1000)<.005);
+ bw_part_mask(e,0,0);bw_render(e,l.data(),r.data(),48000,12);for(int i=1000;i<48000;i++)assert(std::abs(l[i])<1e-6);
+ bw_part_mask(e,0,15);bw_render(e,l.data(),r.data(),48000,13);assert(amplitude(180)>.07);assert(amplitude(1000)>.025);
+ for(int i=0;i<80;i++){bw_filter(e,i%4,40*std::pow(450.0,(i%17)/16.0));bw_render(e,l.data(),r.data(),256,14+i*256.0/48000);for(int j=0;j<256;j++)assert(std::isfinite(l[j])&&std::abs(l[j])<2);}
+ bw_set_parts(e,0,nullptr);bw_render(e,l.data(),r.data(),256,15);bw_destroy(e);
+ auto level=[&](int mode,int hz){BWEngine f=bw_create(48000);std::vector<float> tone(frames*2);for(int i=0;i<frames;i++)tone[i*2]=tone[i*2+1]=float(.5*std::sin(2*pi*hz*i/48000));assert(bw_load_loop(f,0,tone.data(),frames,4,&slice,1));bw_filter(f,mode,1000);bw_queue(f,&id,1);std::vector<float>a(48000),b(48000);bw_render(f,a.data(),b.data(),48000,20);double rms=0;for(int i=24000;i<48000;i++)rms+=a[i]*a[i];bw_destroy(f);return std::sqrt(rms/24000);};
+ assert(level(1,200)>10*level(1,6000));assert(level(3,6000)>10*level(3,200));assert(level(2,1000)>4*level(2,100));
+ puts("PASS separated-part mute/fade/restore and low/band/high output filtering");
+}
+int main(){partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}

@@ -175,3 +175,47 @@ test('all catalog samples exist with unique IDs and valid waveform/phrase metada
     assert.ok(sample.waveform.length > 2 && sample.waveform.every(Number.isFinite));
   }
 });
+
+test('part masks remove only selected layers, fade to silence, and preserve phrase phase', () => {
+  const e = new LoopEngine(rate), frames = rate * 2;
+  const frequencies = [180, 600, 2400, 7000];
+  const parts = frequencies.map(hz => {
+    const a = Float32Array.from({ length: frames }, (_, i) => .1 * Math.sin(2 * Math.PI * hz * i / rate));
+    return [a, a];
+  });
+  // The original and lossy component reconstruction need not match exactly.
+  const mix = Float32Array.from({ length: frames }, (_, i) => parts.reduce((sum, part) => sum + part[0][i], 0) + .04 * Math.sin(2 * Math.PI * 1000 * i / rate));
+  e.load(42, [mix, mix], 4); e.setParts(42, parts); e.queue([42]); advance(e, .5);
+  const before = e.snapshot().progress;
+  e.setPartMask(42, 14); advance(e, .1);
+  assert.ok(e.snapshot().progress > before);
+  const audio = advance(e, 1);
+  function amplitude(values, hz) {
+    let sin = 0, cos = 0;
+    values.forEach((value, i) => { sin += value * Math.sin(2 * Math.PI * hz * i / rate); cos += value * Math.cos(2 * Math.PI * hz * i / rate); });
+    return 2 * Math.hypot(sin, cos) / values.length;
+  }
+  assert.ok(amplitude(audio, 180) < .005);
+  assert.ok(amplitude(audio, 600) > .09);
+  e.setPartMask(42, 1); advance(e, .1);
+  const solo = advance(e, 1);
+  assert.ok(amplitude(solo, 180) > .09);
+  assert.ok(amplitude(solo, 1000) < .005);
+  e.setPartMask(42, 0); advance(e, .1);
+  assert.ok(advance(e, .02).every(value => Math.abs(value) < 1e-6));
+  e.setPartMask(42, 15); advance(e, .1);
+  assert.ok(amplitude(advance(e, 1), 1000) > .035);
+});
+
+test('output filters select frequency bands and survive rapid changes', () => {
+  function level(mode, hz) {
+    const e = new LoopEngine(rate), data = Float32Array.from({length: rate * 2}, (_, i) => .5 * Math.sin(2 * Math.PI * hz * i / rate));
+    e.load(1, [data, data], 4); e.setFilter(mode, 1000); e.queue([1]); advance(e, .5);
+    const values = advance(e, .25); return Math.sqrt(values.reduce((sum, x) => sum + x*x, 0) / values.length);
+  }
+  assert.ok(level(1, 200) > level(1, 6000) * 10);
+  assert.ok(level(3, 6000) > level(3, 200) * 10);
+  assert.ok(level(2, 1000) > level(2, 100) * 4);
+  const e = engine(); e.queue([0]);
+  for (let i = 0; i < 80; i++) { e.setFilter(i % 4, 40 * (450 ** ((i % 17) / 16))); advance(e, .002); }
+});

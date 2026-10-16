@@ -7,12 +7,14 @@ struct PadGrid: UIViewRepresentable {
     let disabled: Set<Int32>
     let editing: Bool
     let ready: Bool
+    let partMask: Int
+    let showParts: Bool
     let queue: ([Int32]) -> Void
     let toggle: (Int32) -> Void
     func makeUIView(context: Context) -> PadGridView { PadGridView() }
     func updateUIView(_ view: PadGridView, context: Context) {
         view.queue = queue; view.toggle = toggle
-        view.update(samples: samples, state: state, disabled: disabled, editing: editing, ready: ready)
+        view.update(samples: samples, state: state, disabled: disabled, editing: editing, ready: ready, partMask: partMask, showParts: showParts)
     }
 }
 
@@ -31,7 +33,7 @@ final class PadGridView: UIView {
         accessibilityIdentifier = "padGrid"
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    func update(samples: [LoopSample], state: PlaybackState, disabled: Set<Int32>, editing: Bool, ready: Bool) {
+    func update(samples: [LoopSample], state: PlaybackState, disabled: Set<Int32>, editing: Bool, ready: Bool, partMask: Int, showParts: Bool) {
         if ids != samples.map(\.id) {
             gesture.cancel(); editTouches.removeAll()
             pads.forEach { $0.removeFromSuperview() }
@@ -58,13 +60,13 @@ final class PadGridView: UIView {
             let order = state.queue.firstIndex(of: pad.sample.id).map { $0 + 1 }
             pad.update(active: state.playing && state.active == pad.sample.id,
                        pending: state.pending, order: order, progress: state.progress,
-                       disabled: disabled.contains(pad.sample.id), editing: editing, ready: ready)
+                       disabled: disabled.contains(pad.sample.id), editing: editing, ready: ready, partMask: partMask, showParts: showParts)
         }
         CATransaction.commit()
     }
     override func layoutSubviews() {
         super.layoutSubviews()
-        let columns = bounds.width > bounds.height * 1.12 ? 6 : 5
+        let columns = bounds.width < 320 ? 3 : bounds.width < 550 ? 4 : bounds.width > bounds.height * 1.12 ? 6 : 5
         let rows = max(1, Int(ceil(Double(pads.count) / Double(columns))))
         let gap: CGFloat = 7
         let width = max(1, (bounds.width - CGFloat(columns-1)*gap) / CGFloat(columns))
@@ -112,10 +114,12 @@ final class WavePad: UIView {
     var exclude: () -> Bool = { false }
     private let number = UILabel(), bars = UILabel(), status = UILabel()
     private let waveform = CAShapeLayer(), progressFill = CALayer(), playhead = CALayer(), queueFlash = CALayer()
+    private let partWaveforms = (0..<4).map { _ in CAShapeLayer() }
     private let exclusion = UIImageView(image: UIImage(systemName: "nosign"))
     private var active = false, pending = false, excluded = false, editing = false, ready = false
     private var order: Int?, progress = 0.0
     private var lastSize = CGSize.zero
+    private var partMask = 15, showParts = false
 
     init(sample: LoopSample) {
         self.sample = sample
@@ -123,7 +127,8 @@ final class WavePad: UIView {
         isUserInteractionEnabled = false; isAccessibilityElement = true
         accessibilityIdentifier = "pad_\(sample.id)"
         layer.cornerRadius = 7; layer.borderWidth = 0.75; layer.masksToBounds = true
-        layer.addSublayer(queueFlash); layer.addSublayer(progressFill); layer.addSublayer(waveform); layer.addSublayer(playhead)
+        layer.addSublayer(queueFlash); layer.addSublayer(progressFill); layer.addSublayer(waveform)
+        partWaveforms.forEach { layer.addSublayer($0) }; layer.addSublayer(playhead)
         [number,bars,status].forEach { addSubview($0); $0.adjustsFontForContentSizeCategory = true }
         number.text = sample.label; bars.textAlignment = .right
         exclusion.contentMode = .scaleAspectFit; addSubview(exclusion)
@@ -142,9 +147,12 @@ final class WavePad: UIView {
         status.font = UIFontMetrics(forTextStyle: .caption2).scaledFont(for: .systemFont(ofSize: 11, weight: .semibold), maximumPointSize: 16)
         bars.text = traitCollection.preferredContentSizeCategory.isAccessibilityCategory ? "\(sample.bars)b" : "\(sample.bars) \(sample.bars == 1 ? "bar" : "bars")"
     }
-    func update(active: Bool, pending: Bool, order: Int?, progress: Double, disabled: Bool, editing: Bool, ready: Bool) {
-        let changed = self.active != active || self.pending != pending || self.order != order || excluded != disabled || self.editing != editing || self.ready != ready
+    func update(active: Bool, pending: Bool, order: Int?, progress: Double, disabled: Bool, editing: Bool, ready: Bool, partMask: Int, showParts: Bool) {
+        let partsChanged = self.partMask != partMask || self.showParts != showParts
+        let changed = self.active != active || self.pending != pending || self.order != order || excluded != disabled || self.editing != editing || self.ready != ready || partsChanged
         self.active=active; self.pending=pending; self.order=order; self.progress=progress; excluded=disabled; self.editing=editing; self.ready=ready
+        self.partMask=partMask; self.showParts=showParts
+        if partsChanged { lastSize = .zero; setNeedsLayout() }
         if changed { applyStyle() }
         updateProgress()
     }
@@ -157,6 +165,13 @@ final class WavePad: UIView {
         number.textColor = ink
         bars.textColor = active ? UIColor.white : Palette.secondaryText
         waveform.fillColor = (active ? UIColor.white : excluded ? .tertiaryLabel : queued ? blue : .secondaryLabel).resolvedColor(with:traitCollection).cgColor
+        let showLanes = sample.parts != nil && (showParts || partMask != 15)
+        waveform.isHidden = showLanes
+        for (index, lane) in partWaveforms.enumerated() {
+            lane.isHidden = !showLanes
+            let color: UIColor = active ? .white : excluded ? .tertiaryLabel : queued ? blue : .secondaryLabel
+            lane.fillColor = color.withAlphaComponent(partMask & (1 << index) != 0 ? 1 : 0.16).resolvedColor(with:traitCollection).cgColor
+        }
         progressFill.backgroundColor = UIColor.white.withAlphaComponent(0.14).cgColor
         playhead.backgroundColor = UIColor.white.cgColor
         progressFill.isHidden = !active; playhead.isHidden = !active
@@ -204,6 +219,21 @@ final class WavePad: UIView {
                 path.close()
             }
             waveform.path=path.cgPath
+            if let parts = sample.parts, parts.waveforms.count == 4 {
+                for (index, values) in parts.waveforms.enumerated() {
+                    let lane = CGRect(x: rect.minX, y: rect.minY + CGFloat(index) * rect.height / 4, width: rect.width, height: rect.height / 4)
+                    let p = UIBezierPath()
+                    if values.count > 1 {
+                        for (i, amplitude) in values.enumerated() {
+                            let point = CGPoint(x: lane.minX + CGFloat(i) * lane.width / CGFloat(values.count - 1), y: lane.midY - CGFloat(amplitude) * lane.height * 0.47)
+                            if i == 0 { p.move(to: point) } else { p.addLine(to: point) }
+                        }
+                        for i in values.indices.reversed() { p.addLine(to: CGPoint(x: lane.minX + CGFloat(i) * lane.width / CGFloat(values.count - 1), y: lane.midY + CGFloat(values[i]) * lane.height * 0.47)) }
+                        p.close()
+                    }
+                    partWaveforms[index].path = p.cgPath
+                }
+            }
         }
         updateProgress()
     }
