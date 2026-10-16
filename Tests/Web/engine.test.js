@@ -294,6 +294,25 @@ test('layered copies keep independent clip filters across live edits and later s
   e.destroy();
 });
 
+test('master and clip filters act independently in series', () => {
+  const e = new LoopEngine(rate);
+  const data = Float32Array.from({length: rate * 2}, (_, i) => .5 * Math.sin(2 * Math.PI * 6000 * i / rate));
+  e.load(7, [data, data], 4);
+  e.arrange([{id:7, token:201, step:0, mask:15, filterType:3, filterHz:500}]);
+  const rms = values => Math.sqrt(values.reduce((sum, value) => sum + value * value, 0) / values.length);
+  advance(e, .2);
+  assert.ok(rms(advance(e, .2)) > .3, 'the clip high-pass allows the tone through');
+  e.setFilter(1, 500); advance(e, .2);
+  assert.ok(rms(advance(e, .2)) < .01, 'the master low-pass filters the mixed output');
+  e.setFilter(0, 1200); advance(e, .2);
+  assert.ok(rms(advance(e, .2)) > .3, 'bypassing the master leaves the clip filter intact');
+  e.setClipFilter(201, 1, 500); advance(e, .2);
+  assert.ok(rms(advance(e, .2)) < .01, 'the clip can be filtered while the master is bypassed');
+  e.setFilter(3, 500); advance(e, .2);
+  assert.ok(rms(advance(e, .2)) < .01, 'changing the master does not reset the clip filter');
+  e.destroy();
+});
+
 test('clip levels are independent, smooth and retained for queued arrangement edits', () => {
   const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.4);
   e.load(7, [data, data], 4);

@@ -1,5 +1,11 @@
 # Validation
 
+## Shared master and clip filter control — 2026-10-16
+
+- Both players use the same center-detented filter dial for clips and the master, with independent state. Drag down for low-pass, up for high-pass, and double-tap or double-click to reset. The master no longer exposes a band-pass mode.
+- All 42 web tests pass, including a digital check that master and clip filters work independently in series. In the muted local browser, both drag directions, double-click reset, independent values, and desktop, tablet and narrow layouts were checked. The original volume was restored.
+- The unsigned Release device build and simulator UI test bundle compile. Native visual and touch behavior has not been tested on a simulator or physical iPad; the installed CoreSimulator version does not match Xcode.
+
 ## Fixed waveform stroke spacing — 2026-10-16
 
 - Both players keep waveform strokes four points or CSS pixels apart and adjust the number of displayed envelope samples with the preview width. The playhead stays within the preview. All 41 web tests pass, and the unsigned Release iOS device build succeeds.

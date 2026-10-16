@@ -233,29 +233,11 @@ private struct PlaybackContent: View {
 
 private struct MasterFilterControl: View {
     @ObservedObject var audio: AudioModel
-    private var slider: Binding<Double> {
-        Binding(get: { log(audio.filterCutoff / 40) / log(18000 / 40) },
-                set: { audio.setFilter(type: audio.filterType, cutoff: 40 * pow(18000 / 40, $0)) })
-    }
-    private var cutoffLabel: String {
-        let hz = audio.filterCutoff
-        return hz >= 1000 ? String(format: "%.1f kHz", hz / 1000) : "\(Int(hz.rounded())) Hz"
-    }
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("MASTER FILTER").font(.caption2.weight(.medium)).foregroundStyle(Palette.secondary)
-                Picker("Master filter type", selection: Binding(get: { audio.filterType }, set: { audio.setFilter(type: $0, cutoff: audio.filterCutoff) })) {
-                    Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
-                }.pickerStyle(.segmented).frame(minWidth: 176, minHeight: 44).accessibilityIdentifier("masterFilterMode")
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                HStack { Text("CUTOFF"); Spacer(minLength: 4); Text(cutoffLabel).monospacedDigit() }
-                    .font(.caption2.weight(.medium)).foregroundStyle(Palette.secondary)
-                Slider(value: slider, in: 0...1).frame(minWidth: 95, maxWidth: 130, minHeight: 44)
-                    .accessibilityLabel("Master filter cutoff").accessibilityValue(cutoffLabel)
-            }.frame(maxWidth: 130)
-        }
+        FilterDial(title: "MASTER FILTER", filterType: audio.filterType, cutoff: audio.filterCutoff,
+                   active: false, label: "Master filter", identifier: "masterFilter") { type, cutoff in
+            audio.setFilter(type: type, cutoff: cutoff)
+        }.frame(width: 86, height: 96)
     }
 }
 
@@ -400,7 +382,10 @@ private struct ClipRow: View {
                     HStack(spacing: 0) { ForEach(0..<2) { column in partButton(row * 2 + column) } }
                 }
             }.frame(width: 88)
-            ClipFilterDial(audio: audio, clip: clip, sample: sample, song: song, active: active)
+            FilterDial(title: "FILTER", filterType: clip.filterType, cutoff: clip.filterCutoff,
+                       active: active, label: "Filter for \(song.name), loop \(sample.label)", identifier: "clipFilter_\(clip.id)") { type, cutoff in
+                audio.setClipFilter(clip.id, type: type, cutoff: cutoff)
+            }
                 .frame(width: 64).frame(maxHeight: .infinity)
             VStack(spacing: 0) {
                 Text("LVL").font(.system(size: 10, weight: .semibold))
@@ -435,7 +420,7 @@ private struct ClipRow: View {
 }
 
 // The center is bypass; rotating left lowers a low-pass cutoff, right raises a high-pass cutoff.
-private enum ClipFilterPosition {
+private enum FilterDialPosition {
     static let deadband = 0.025
     static let range = log(18000.0 / 40.0)
     static func position(type: Int, cutoff: Double) -> Double {
@@ -451,27 +436,29 @@ private enum ClipFilterPosition {
     }
 }
 
-private struct ClipFilterDial: View {
-    @ObservedObject var audio: AudioModel
-    let clip: ArrangementClip
-    let sample: LoopSample
-    let song: Song
+private struct FilterDial: View {
+    let title: String
+    let filterType: Int
+    let cutoff: Double
     let active: Bool
+    let label: String
+    let identifier: String
+    let onChange: (Int, Double) -> Void
     @State private var startPosition: Double?
-    private var position: Double { ClipFilterPosition.position(type: clip.filterType, cutoff: clip.filterCutoff) }
+    private var position: Double { FilterDialPosition.position(type: filterType, cutoff: cutoff) }
     private var valueLabel: String {
-        guard clip.filterType != 0 else { return "OFF" }
-        let hz = clip.filterCutoff
+        guard filterType != 0 else { return "OFF" }
+        let hz = cutoff
         let value = hz >= 1000 ? String(format: "%.1fk", hz / 1000) : "\(Int(hz.rounded()))"
-        return "\(clip.filterType == 1 ? "LP" : "HP") \(value)"
+        return "\(filterType == 1 ? "LP" : "HP") \(value)"
     }
     private func set(_ position: Double) {
-        let (type, cutoff) = ClipFilterPosition.settings(position)
-        audio.setClipFilter(clip.id, type: type, cutoff: cutoff)
+        let (type, cutoff) = FilterDialPosition.settings(position)
+        onChange(type, cutoff)
     }
     var body: some View {
         VStack(spacing: 3) {
-            Text("FILTER").font(.system(size: 10, weight: .semibold))
+            Text(title).font(.system(size: 10, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
             ZStack {
                 Circle().strokeBorder((active ? Color.white : Palette.accent).opacity(0.28), lineWidth: 3)
                 Circle().fill((active ? Color.white : Palette.accent).opacity(0.12)).padding(5)
@@ -489,13 +476,13 @@ private struct ClipFilterDial: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(Rectangle().strokeBorder((active ? Color.white : Color(uiColor: .separator)).opacity(0.25)))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Filter for \(song.name), loop \(sample.label)")
+        .accessibilityLabel(label)
         .accessibilityValue(valueLabel == "OFF" ? "Off" : valueLabel)
         .accessibilityHint("Drag up for high-pass, down for low-pass. Double-tap to reset.")
         .accessibilityAdjustableAction { direction in
             switch direction { case .increment: set(position + 0.1); case .decrement: set(position - 0.1); @unknown default: break }
         }
-        .accessibilityIdentifier("clipFilter_\(clip.id)")
+        .accessibilityIdentifier(identifier)
     }
 }
 

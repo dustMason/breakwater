@@ -101,7 +101,6 @@ function allClips() { return arrangement.flat(); }
 function selectedClip() { return allClips().find(clip => clip.token === selectedToken); }
 function sampleFor(id) { return samples.find(sample => sample.id === id); }
 function formatHz(hz) { return hz >= 1000 ? `${(hz / 1000).toFixed(1)} kHz` : `${Math.round(hz)} Hz`; }
-function sliderPosition(hz) { return Math.round(1000 * Math.log(hz / 40) / Math.log(18000 / 40)); }
 function renderPartStatus() {
   const clip = selectedClip();
   const failure = clip && partFailures.get(clip.id);
@@ -171,17 +170,30 @@ const clipWaveformObserver = new ResizeObserver(entries => {
   }
 });
 
-function filterLabel(clip) {
-  if (clip.filterType === 0) return 'Off';
-  return `${clip.filterType === 1 ? 'LPF' : 'HPF'} ${formatHz(clip.filterHz)}`;
+function createFilterControl(title, label, token) {
+  const control = document.createElement('div'); control.className = 'filter-control';
+  const heading = document.createElement('span'); heading.className = 'control-title'; heading.textContent = title;
+  const dial = document.createElement('div'); dial.className = 'filter-dial';
+  dial.innerHTML = '<span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>';
+  const input = document.createElement('input'); input.type = 'range'; input.min = '-100'; input.max = '100'; input.step = '1'; input.dataset.filter = token;
+  input.setAttribute('aria-label', label); input.setAttribute('aria-describedby', 'filter-help');
+  dial.append(input);
+  const value = document.createElement('span'); value.className = 'filter-value';
+  const sides = document.createElement('span'); sides.className = 'filter-sides'; sides.textContent = 'LP · HP';
+  control.append(heading, dial, value, sides);
+  return control;
 }
-function updateClipFilterUI(row, clip) {
-  const input = row.querySelector('[data-filter]'), value = filterLabel(clip);
-  input.value = Math.round(positionFromFilter(clip.filterType, clip.filterHz) * 100);
+function updateFilterUI(control, type, hz) {
+  const input = control.querySelector('[data-filter]');
+  const value = type === 0 ? 'Off' : `${type === 1 ? 'LPF' : 'HPF'} ${formatHz(hz)}`;
+  input.value = Math.round(positionFromFilter(type, hz) * 100);
   input.setAttribute('aria-valuetext', value);
-  row.querySelector('.filter-value').textContent = clip.filterType ? value.replace('F ', ' ') : 'OFF';
-  row.querySelector('.dial-pointer').style.transform = `rotate(${Number(input.value) * 1.35}deg)`;
+  control.querySelector('.filter-value').textContent = type ? value.replace('F ', ' ') : 'OFF';
+  control.querySelector('.dial-pointer').style.transform = `rotate(${Number(input.value) * 1.35}deg)`;
 }
+const masterFilter = createFilterControl('MASTER FILTER', 'Master filter', 'master');
+$('master-controls').append(masterFilter);
+updateFilterUI(masterFilter, filterMode, filterHz);
 function updateClipPartsUI(row, clip, sample, beats) {
   row.querySelectorAll('[data-part]').forEach(button => button.setAttribute('aria-pressed', String(!!(clip.mask & (1 << Number(button.dataset.part))))));
   const all = row.querySelector('[data-parts-all]');
@@ -226,16 +238,7 @@ function paintArrangement() {
         button.title = `${name}: approximate separated layer`; grid.append(button);
       });
       controls.append(grid);
-      const filter = document.createElement('div'); filter.className = 'clip-filter';
-      const filterTitle = document.createElement('span'); filterTitle.className = 'control-title'; filterTitle.textContent = 'FILTER';
-      const dial = document.createElement('div'); dial.className = 'filter-dial';
-      dial.innerHTML = '<span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>';
-      const filterInput = document.createElement('input'); filterInput.type = 'range'; filterInput.min = '-100'; filterInput.max = '100'; filterInput.step = '1'; filterInput.dataset.filter = clip.token;
-      filterInput.setAttribute('aria-label', `Filter for ${sample.songName}, loop ${sample.number}, side ${index === 0 ? 'A' : 'B'}`); filterInput.setAttribute('aria-describedby', 'filter-help');
-      dial.append(filterInput);
-      const filterValue = document.createElement('span'); filterValue.className = 'filter-value';
-      const filterSides = document.createElement('span'); filterSides.className = 'filter-sides'; filterSides.textContent = 'LP · HP';
-      filter.append(filterTitle, dial, filterValue, filterSides);
+      const filter = createFilterControl('FILTER', `Filter for ${sample.songName}, loop ${sample.number}, side ${index === 0 ? 'A' : 'B'}`, clip.token);
       const level = document.createElement('label'); level.className = 'clip-level';
       const levelLabel = document.createElement('span'); levelLabel.className = 'control-title'; levelLabel.textContent = 'LVL';
       const slider = document.createElement('input'); slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.step = '1';
@@ -244,7 +247,7 @@ function paintArrangement() {
       const sliderArea = document.createElement('span'); sliderArea.className = 'level-slider'; sliderArea.append(slider);
       const value = document.createElement('output'); value.className = 'clip-level-value'; value.textContent = `${slider.value}%`;
       level.append(levelLabel, sliderArea, value); row.append(display, controls, filter, level); group.append(row);
-      updateClipPartsUI(row, clip, sample, sample.beats); updateClipFilterUI(row, clip);
+      updateClipPartsUI(row, clip, sample, sample.beats); updateFilterUI(filter, clip.filterType, clip.filterHz);
     }
     const target = document.createElement('div'); target.className = 'layer-target'; target.textContent = step.length ? '+ Drop another loop' : `Drop a loop on side ${index ? 'B' : 'A'}`; group.append(target);
     content.append(group);
@@ -472,16 +475,19 @@ $('arrangement-items').addEventListener('click', event => {
     paintArrangement(); submitArrangement(false);
   }
 });
-function applyClipFilter(input) {
-  const clip = allClips().find(item => item.token === Number(input.dataset.filter)); if (!clip) return;
+function applyFilter(input) {
   const settings = filterFromPosition(Number(input.value) / 100);
-  clip.filterType = settings.type; clip.filterHz = settings.hz;
-  selectClip(clip.token); audio.setClipFilter(clip.token, clip.filterType, clip.filterHz);
-  updateClipFilterUI(input.closest('.clip-row'), clip);
+  if (input.dataset.filter === 'master') {
+    filterMode = settings.type; filterHz = settings.hz;
+    audio.setFilter(filterMode, filterHz);
+  } else {
+    const clip = allClips().find(item => item.token === Number(input.dataset.filter)); if (!clip) return;
+    clip.filterType = settings.type; clip.filterHz = settings.hz;
+    selectClip(clip.token); audio.setClipFilter(clip.token, clip.filterType, clip.filterHz);
+  }
+  updateFilterUI(input.closest('.filter-control'), settings.type, settings.hz);
 }
 $('arrangement-items').addEventListener('input', event => {
-  const filter = event.target.closest('input[data-filter]');
-  if (filter) { applyClipFilter(filter); return; }
   const slider = event.target.closest('input[data-level]'); if (!slider) return;
   const clip = allClips().find(item => item.token === Number(slider.dataset.level)); if (!clip) return;
   clip.level = Number(slider.value) / 100;
@@ -489,24 +495,29 @@ $('arrangement-items').addEventListener('input', event => {
   slider.closest('.clip-level').querySelector('output').textContent = `${slider.value}%`;
   audio.setClipLevel(clip.token, clip.level);
 });
+const filterSurface = document.querySelector('.instrument');
+filterSurface.addEventListener('input', event => {
+  const input = event.target.closest('input[data-filter]');
+  if (input) applyFilter(input);
+});
 let dialDrag = null;
-$('arrangement-items').addEventListener('pointerdown', event => {
+filterSurface.addEventListener('pointerdown', event => {
   const input = event.target.closest('input[data-filter]');
   if (!input || event.button !== 0) return;
   event.preventDefault(); input.focus({ preventScroll: true }); input.setPointerCapture(event.pointerId);
   dialDrag = { input, id: event.pointerId, y: event.clientY, value: Number(input.value) };
 });
-$('arrangement-items').addEventListener('pointermove', event => {
+filterSurface.addEventListener('pointermove', event => {
   if (!dialDrag || event.pointerId !== dialDrag.id) return;
   dialDrag.input.value = Math.max(-100, Math.min(100, Math.round(dialDrag.value + dialDrag.y - event.clientY)));
-  applyClipFilter(dialDrag.input);
+  applyFilter(dialDrag.input);
 });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-  $('arrangement-items').addEventListener(type, event => { if (dialDrag && event.pointerId === dialDrag.id) dialDrag = null; });
+  filterSurface.addEventListener(type, event => { if (dialDrag && event.pointerId === dialDrag.id) dialDrag = null; });
 }
-$('arrangement-items').addEventListener('dblclick', event => {
+filterSurface.addEventListener('dblclick', event => {
   const input = event.target.closest('input[data-filter]');
-  if (input) { input.value = '0'; applyClipFilter(input); }
+  if (input) { input.value = '0'; applyFilter(input); }
 });
 $('clear-arrangement').addEventListener('click', () => {
   arrangement = [[], []]; selectedToken = null; paintArrangement(); submitArrangement(false);
@@ -514,16 +525,6 @@ $('clear-arrangement').addEventListener('click', () => {
 $('retry-parts').addEventListener('click', () => {
   const clip = selectedClip(); if (clip) partFailures.delete(clip.id);
   renderPartStatus(); prepareUpcoming();
-});
-$('master-filter-modes').addEventListener('click', event => {
-  const button = event.target.closest('button[data-mode]'); if (!button) return;
-  filterMode = Number(button.dataset.mode); audio.setFilter(filterMode, filterHz);
-  for (const item of $('master-filter-modes').querySelectorAll('button')) item.setAttribute('aria-pressed', String(item === button));
-});
-$('master-cutoff').value = sliderPosition(filterHz);
-$('master-cutoff').addEventListener('input', event => {
-  filterHz = 40 * (18000 / 40) ** (Number(event.target.value) / 1000);
-  $('master-cutoff-value').textContent = formatHz(filterHz); audio.setFilter(filterMode, filterHz);
 });
 function setCrossfade(value) {
   crossfade = Math.max(0, Math.min(1, value));

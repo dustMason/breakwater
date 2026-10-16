@@ -29,12 +29,19 @@ final class BreakwaterUITests: XCTestCase {
         folder.tap()
     }
     func testStacksAndIndependentSound() {
-        let master = app.segmentedControls["masterFilterMode"]
-        XCTAssertTrue(master.buttons["HPF"].isHittable)
-        master.buttons["HPF"].tap()
-        let masterCutoff = app.sliders["Master filter cutoff"]
-        masterCutoff.adjust(toNormalizedSliderPosition: 0.7)
-        let chosenCutoff = masterCutoff.value as? String
+        let master = app.descendants(matching: .any)["masterFilter"]
+        XCTAssertTrue(master.isHittable)
+        let masterDial = master.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
+        masterDial.press(forDuration: 0.1, thenDragTo: masterDial.withOffset(CGVector(dx: 0, dy: 45)))
+        expectation(for: NSPredicate(format: "value CONTAINS 'LP'"), evaluatedWith: master)
+        waitForExpectations(timeout: 5)
+        master.doubleTap()
+        expectation(for: NSPredicate(format: "value == 'Off'"), evaluatedWith: master)
+        waitForExpectations(timeout: 5)
+        masterDial.press(forDuration: 0.1, thenDragTo: masterDial.withOffset(CGVector(dx: 0, dy: -45)))
+        expectation(for: NSPredicate(format: "value CONTAINS 'HP'"), evaluatedWith: master)
+        waitForExpectations(timeout: 5)
+        let chosenMaster = master.value as? String
         app.buttons["pad_0"].tap()
         XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 15))
         waitForValue("clip_1", "Playing")
@@ -73,15 +80,14 @@ final class BreakwaterUITests: XCTestCase {
         dial.press(forDuration: 0.1, thenDragTo: dial.withOffset(CGVector(dx: 0, dy: -45)))
         expectation(for: NSPredicate(format: "value CONTAINS 'HP'"), evaluatedWith: firstFilter)
         waitForExpectations(timeout: 5)
-        XCTAssertTrue(master.buttons["HPF"].isSelected)
-        XCTAssertEqual(masterCutoff.value as? String, chosenCutoff)
+        XCTAssertEqual(master.value as? String, chosenMaster, "Changing a clip filter must not change the master")
         capture("stacks-landscape")
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.buttons["transport"].isHittable)
         XCTAssertTrue(app.buttons["nudgeEarlier"].isHittable)
         XCTAssertTrue(firstPart.isHittable)
         XCTAssertTrue(firstFilter.isHittable)
-        XCTAssertTrue(master.buttons["HPF"].isHittable)
+        XCTAssertTrue(master.isHittable)
         capture("stacks-portrait")
     }
     func testCrowdedStackControlsScrollable() {

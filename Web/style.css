@@ -82,7 +82,7 @@ h3 { font-size: 13px; font-weight: 650; }
 .clip-parts-grid button { min-width: 44px; min-height: 44px; padding: 0; color: inherit; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); font-size: 10px; font-weight: 700; opacity: .55; }
 .clip-parts-grid button[aria-pressed="true"] { opacity: 1; background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .clip-row.active .clip-parts-grid button[aria-pressed="true"] { background: rgb(255 255 255 / 18%); }
-.clip-filter { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+.filter-control { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
 .control-title { font-size: 10px; font-weight: 650; }
 .filter-dial { position: relative; width: 52px; height: 52px; display: grid; place-items: center; }
 .dial-face { position: relative; display: block; width: 36px; height: 36px; border: 3px solid color-mix(in srgb, currentColor 28%, transparent); border-radius: 50%; background: color-mix(in srgb, currentColor 12%, transparent); }
@@ -104,9 +104,6 @@ h3 { font-size: 13px; font-weight: 650; }
 .crossfader { display: flex; align-items: center; gap: 8px; padding: 2px 10px; border-top: 1px solid var(--line); }
 .crossfader button { width: 44px; height: 44px; font-size: 17px; font-weight: 700; }
 .crossfader input { flex: 1; min-width: 0; min-height: 44px; accent-color: var(--accent); }
-.filter-modes { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; margin: 6px 0; padding: 2px; border-radius: 5px; background: var(--surface); }
-.filter-modes button { min-width: 0; min-height: 44px; padding: 2px; color: inherit; border-radius: 4px; font-size: 12px; }
-.filter-modes button[aria-pressed="true"] { background: var(--surface); color: var(--accent); font-weight: 700; }
 .drag-preview { position: fixed; z-index: 10; padding: 8px 11px; border-radius: 5px; color: white; background: var(--playing); pointer-events: none; font-size: 12px; }
 .dock { display: flex; flex: none; align-items: center; gap: 15px; min-height: 64px; padding: 5px 15px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 .transport { display: flex; align-items: center; gap: 6px; font-weight: 650; min-height: 44px; }
@@ -122,14 +119,7 @@ h3 { font-size: 13px; font-weight: 650; }
 .tempo-actions { display: flex; gap: 8px; }
 .tempo-actions button { min-height: 44px; white-space: nowrap; font-size: 12px; }
 .master-filter { display: flex; align-items: center; gap: 10px; min-width: 0; padding-left: 14px; border-left: 1px solid var(--line); }
-.master-mode-control { flex: none; }
-.dock-label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; }
-.master-filter .filter-modes { display: flex; gap: 0; margin: 0; background: var(--subtle); }
-.master-filter .filter-modes button { width: 44px; }
-.master-cutoff-control { flex: 1; min-width: 95px; }
-.master-cutoff-control .dock-label { display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; }
-.master-cutoff-control output { text-transform: none; }
-.master-cutoff-control input { display: block; width: 100%; min-height: 44px; margin: 0; accent-color: var(--accent); }
+.master-filter .filter-control { width: 86px; border: 0; }
 .volume-control { margin-left: auto; }
 .volume-control input { width: 95px; accent-color: var(--accent); }
 @media (max-width: 1050px) { .dock { flex-wrap: wrap; } }

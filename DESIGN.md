@@ -185,7 +185,7 @@ The minimum target frames are recorded in the frontmatter. Clock and edit also h
 
 The Library sits to the left of side-by-side A and B stacks. A clear side label, count and ADD HERE cue show where a library tap will place the next loop. Dropping a library row onto a stack explicitly selects its side. Stacks scroll when needed; the A–B crossfader sits directly below them, above the master transport.
 
-Clip rows are contiguous and contain a stylized waveform, independent four-part switches, a center-detented low/high-pass filter and a vertical level fader. Waveform strokes maintain a fixed spacing; wider previews display more samples of the envelope. Blue denotes a running clip, its playhead shows phase within the waveform preview, and an outline identifies selection. The master filter remains in the bottom bar. Maintain 44-point touch targets and accessible labels for stack, clip and crossfader controls.
+Clip rows are contiguous and contain a stylized waveform, independent four-part switches, a center-detented low/high-pass filter and a vertical level fader. Waveform strokes maintain a fixed spacing; wider previews display more samples of the envelope. Blue denotes a running clip, its playhead shows phase within the waveform preview, and an outline identifies selection. The master filter uses the same center-detented knob in the bottom bar. Maintain 44-point touch targets and accessible labels for stack, clip and crossfader controls.
 
 ### Settings and tempo sheets
 
