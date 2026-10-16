@@ -1,5 +1,10 @@
 # Validation
 
+## Asset history cleanup — 2026-10-16
+
+- Rewrote history to remove the working catalog, all audio files, and all blobs larger than 2 MiB. The small synthetic catalog fixture remains for tests. The rewrite preserved the current file tree, and the local working catalog and audio files were unchanged.
+- A full reachable-object scan and `git fsck` passed; the largest remaining historical blob is 1,489,946 bytes. The Git directory decreased from 351 MiB to approximately 5.8 MiB. All 42 web tests passed after the rewrite.
+
 ## Start crossfader on side A — 2026-10-16
 
 - The shared audio engine and both players start at A; the web crossfade test checks the initial mix and smooth transitions to center and B. All 42 web tests, the Rust tests, and the native audio-core suite pass.

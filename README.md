@@ -112,4 +112,4 @@ Run native UI tests with `Scripts/test_simulator.sh <iPad Simulator UDID>`. Resu
 
 ## Sample provenance
 
-See [Samples/README.md](Samples/README.md). The audio remains separate from the source code's ownership and is not presented as freely licensed sample content. Earlier Git history may still contain prior copies of these files.
+See [Samples/README.md](Samples/README.md). The audio remains separate from the source code's ownership and is not presented as freely licensed sample content. Audio and the working catalog were removed from this repository's history; older clones may still contain prior copies.
