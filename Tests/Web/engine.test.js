@@ -267,8 +267,10 @@ test('two copies of a loop have independent part controls', () => {
   e.load(7, [original, original], 4); e.setParts(7, parts);
   e.arrange([{id:7,token:201,step:0,mask:1}, {id:7,token:202,step:0,mask:2}]); advance(e, .2);
   const amp = (audio, hz) => { let a=0,b=0; audio.forEach((x,i) => { a+=x*Math.sin(2*Math.PI*hz*i/rate); b+=x*Math.cos(2*Math.PI*hz*i/rate); }); return 2*Math.hypot(a,b)/audio.length; };
-  let audio = advance(e, 1); assert.ok(amp(audio,180) > .045 && amp(audio,600) > .045);
-  e.setClipMask(201,0); advance(e,.05); audio=advance(e,1); assert.ok(amp(audio,180) < .003 && amp(audio,600) > .045);
+  let audio = advance(e, 1);
+  assert.ok(Math.abs(amp(audio,180) - .1 / Math.sqrt(2)) < .003 && Math.abs(amp(audio,600) - .1 / Math.sqrt(2)) < .003);
+  e.setClipMask(201,0); advance(e,.05); audio=advance(e,1);
+  assert.ok(amp(audio,180) < .003 && Math.abs(amp(audio,600) - .1) < .003, 'fully muted clips consume no headroom');
   e.setClipMask(202,0); e.setClipMask(201,1); advance(e,.05); audio=advance(e,1); assert.ok(amp(audio,180) > .045 && amp(audio,600) < .003);
 });
 
@@ -299,11 +301,11 @@ test('clip levels are independent, smooth and retained for queued arrangement ed
                  {id:7,token:202,step:0,mask:15,level:.25},
                  {id:7,token:203,step:1,mask:15,level:.7}];
   e.arrange(clips); let audio = advance(e, .15);
-  assert.ok(Math.abs(audio.at(-1) - .25) < 1e-4, 'initial levels are mixed per instance');
+  assert.ok(Math.abs(audio.at(-1) - .4 * 1.25 / Math.hypot(1, .25)) < 1e-4, 'initial levels are mixed per instance');
   const before = audio.at(-1);
   e.setClipLevel(201, 0); audio = advance(e, .02);
   assert.ok(Math.abs(audio[0] - before) < .001, 'level updates ramp rather than jump');
-  assert.ok(Math.abs(audio.at(-1) - .05) < 1e-4, 'muting one layer leaves the other unchanged');
+  assert.ok(Math.abs(audio.at(-1) - .1) < 1e-4, 'a silent layer no longer consumes headroom');
   clips[0].level = 0;
   e.arrange(clips); // The change to a future step is queued until the next bar.
   e.setClipLevel(203, .3); // Must also update the pending copy, not only the current one.
@@ -352,12 +354,70 @@ test('Wasm honors a 44.1 kHz audio context and handles changing host block sizes
   e.destroy();
 });
 
-test('eight simultaneous clips keep independent tokens and the ninth is rejected', () => {
-  const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.4);
+test('eight simultaneous clips use equal-power scaling and the ninth is rejected', () => {
+  const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.1);
   e.load(0, [data], 4);
   e.arrange(Array.from({ length: 9 }, (_, i) => ({ id: 0, token: i + 1, step: 0, mask: 15 })));
   const audio = advance(e, .1), snapshot = e.snapshot();
   assert.deepEqual(snapshot.activeTokens, [1, 2, 3, 4, 5, 6, 7, 8]);
-  assert.ok(Math.abs(audio.at(-1) - .4) < 1e-5, 'layers are averaged for headroom');
+  assert.ok(Math.abs(audio.at(-1) - .1 * Math.sqrt(8)) < 1e-5, 'equal-power scaling retains more of the stack');
+  e.destroy();
+});
+
+test('fader and part muting recover headroom smoothly without boosting a lone clip', () => {
+  const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.1);
+  e.load(0, [data], 4);
+  e.arrange([{id:0,token:1,step:0,mask:15}, {id:0,token:2,step:0,mask:15}]);
+  let audio = advance(e, .1);
+  assert.ok(Math.abs(audio.at(-1) - .1 * Math.sqrt(2)) < 1e-5);
+  let previous = audio.at(-1), maxJump = 0;
+  e.setClipLevel(1, 0); audio = advance(e, .03);
+  for (const value of audio) { maxJump = Math.max(maxJump, Math.abs(value - previous)); previous = value; }
+  assert.ok(maxJump < .001, `fader produced a ${maxJump} step`);
+  assert.ok(Math.abs(audio.at(-1) - .1) < 1e-5);
+  e.setClipLevel(1, 1); advance(e, .03);
+  e.setClipMask(1, 0); audio = advance(e, .03);
+  assert.ok(Math.abs(audio.at(-1) - .1) < 1e-5);
+  e.destroy();
+});
+
+test('natural gaps do not cause the other layers to pump', () => {
+  const e = new LoopEngine(rate), steady = new Float32Array(rate * 2).fill(.1),
+        gap = new Float32Array(rate * 2).fill(.1, 0, rate / 4);
+  e.load(0, [steady], 4); e.load(1, [gap], 4);
+  e.arrange([{id:0,token:1,step:0,mask:15}, {id:1,token:2,step:0,mask:15}]);
+  assert.ok(Math.abs(advance(e, .2).at(-1) - .1 * Math.sqrt(2)) < 1e-5);
+  assert.ok(Math.abs(advance(e, .1).at(-1) - .1 / Math.sqrt(2)) < 1e-5);
+  e.destroy();
+});
+
+test('changing from a layered step to a single clip fades between their mix levels', () => {
+  const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.1);
+  e.load(0, [data], 4);
+  e.arrange([{id:0,token:1,step:0,mask:15}, {id:0,token:2,step:0,mask:15},
+             {id:0,token:3,step:1,mask:15}]);
+  let previous = advance(e, 1.98).at(-1), maxJump = 0;
+  const audio = advance(e, .06);
+  for (const value of audio) { maxJump = Math.max(maxJump, Math.abs(value - previous)); previous = value; }
+  assert.ok(maxJump < .001, `transition produced a ${maxJump} step`);
+  assert.ok(Math.abs(audio.at(-1) - .1) < 1e-5);
+  e.destroy();
+});
+
+test('linked output dynamics compress sustained peaks and protect correlated stacks', () => {
+  const single = new LoopEngine(rate), loud = new Float32Array(rate * 2).fill(.85);
+  single.load(0, [loud], 4); single.arrange([{id:0,token:1,step:0,mask:15}]);
+  assert.ok(Math.abs(advance(single, .1).at(-1) - Math.sqrt(.85 * .75)) < 1e-4,
+            'a sustained loud signal receives the intended gentle compression');
+  single.destroy();
+  const e = new LoopEngine(rate), left = new Float32Array(rate * 2), right = new Float32Array(rate * 2);
+  left.fill(.1, 0, rate / 4); left.fill(.95, rate / 4); right.set(left.map(x => x * .5));
+  e.load(0, [left, right], 4);
+  e.arrange(Array.from({length:8}, (_, i) => ({id:0,token:i+1,step:0,mask:15})));
+  advance(e, .24);
+  const l = new Float32Array(rate / 4), r = new Float32Array(rate / 4); e.render(l, r);
+  assert.ok(l.every(x => Number.isFinite(x) && Math.abs(x) <= 1), 'even sudden correlated peaks stay within sample bounds');
+  assert.ok(l.some(x => x > .9), 'test exercises the peak protector');
+  assert.ok(l.every((x,i) => Math.abs(r[i] * 2 - x) < 1e-5), 'both channels receive the same gain');
   e.destroy();
 });

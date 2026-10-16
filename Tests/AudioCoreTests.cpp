@@ -175,11 +175,12 @@ void independentClipLevels(){
  auto e=bw_create(48000);assert(bw_load_loop(e,7,pcm.data(),frames,4,&slice,1));
  BWClipWithLevel clips[]={{7,201,0,15,0,1200,1000},{7,202,0,15,0,1200,250}};
  bw_arrange_with_levels(e,clips,2);bw_render(e,l.data(),r.data(),5000,10);
- assert(std::abs(l.back()-.2f)<1e-5f&&std::abs(r.back()-.2f)<1e-5f);
+ const float expected=.4f*1.25f/std::sqrt(1.f+.25f*.25f)*.8f;
+ assert(std::abs(l.back()-expected)<1e-5f&&std::abs(r.back()-expected)<1e-5f);
  float before=l.back();bw_clip_level(e,201,0);bw_render(e,l.data(),r.data(),5000,10+5000.0/48000);
- assert(std::abs(l.front()-before)<.001f&&std::abs(l.back()-.04f)<1e-5f);
+ assert(std::abs(l.front()-before)<.001f&&std::abs(l.back()-.08f)<1e-5f);
  bw_clip_level(e,202,1);bw_render(e,l.data(),r.data(),5000,10+10000.0/48000);
- assert(std::abs(l.back()-.16f)<1e-5f);
+ assert(std::abs(l.back()-.32f)<1e-5f);
  bw_destroy(e);puts("PASS per-clip levels are independent and change smoothly");
 }
 void layeredWrapFade(){

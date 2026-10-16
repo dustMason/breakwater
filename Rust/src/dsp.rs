@@ -83,6 +83,11 @@ impl Voice {
             self.level = self.target_level;
         }
     }
+    // Track controls rather than signal energy: a naturally quiet passage must
+    // not make the other clips pump. Both controls ramp during live edits.
+    pub fn mix_weight(&self) -> f64 {
+        (self.level * self.audible) as f64
+    }
     pub fn mask(&mut self, m: i32, immediate: bool) {
         self.mask = m & 15;
         if immediate {
@@ -256,6 +261,50 @@ impl Voice {
     }
 }
 
+/// A low-ratio, stereo-linked output compressor with a zero-latency soft
+/// sample-peak protector. The platform output trim is applied after this stage.
+pub struct MasterDynamics {
+    gain: f64,
+    attack: f64,
+    release: f64,
+}
+impl MasterDynamics {
+    pub fn new(sr: f64) -> Self {
+        Self {
+            gain: 1.,
+            attack: 1. - (-1. / (sr * 0.002)).exp(),
+            release: 1. - (-1. / (sr * 0.15)).exp(),
+        }
+    }
+    pub fn process(&mut self, input: Stereo) -> Stereo {
+        const THRESHOLD: f64 = 0.75;
+        const PEAK_KNEE: f64 = 0.9;
+        let peak = (input.l.abs() as f64).max(input.r.abs() as f64);
+        // sqrt implements a 2:1 ratio in dB, with no automatic makeup gain.
+        let wanted = if peak > THRESHOLD {
+            (THRESHOLD / peak).sqrt()
+        } else {
+            1.
+        };
+        let slew = if wanted < self.gain {
+            self.attack
+        } else {
+            self.release
+        };
+        self.gain += (wanted - self.gain) * slew;
+        let compressed_peak = peak * self.gain;
+        let protection = if compressed_peak > PEAK_KNEE {
+            let excess = compressed_peak - PEAK_KNEE;
+            let range = 1. - PEAK_KNEE;
+            let softened_peak = PEAK_KNEE + range * excess / (range + excess);
+            softened_peak / compressed_peak
+        } else {
+            1.
+        };
+        input.scale(self.gain * protection)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Filter {
     sr: f64,
@@ -324,6 +373,43 @@ impl Filter {
         Stereo {
             l: out[0] as f32,
             r: out[1] as f32,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MasterDynamics, Stereo};
+
+    #[test]
+    fn output_dynamics_are_linked_bounded_and_release_at_both_sample_rates() {
+        for sr in [44100., 48000.] {
+            let mut dynamics = MasterDynamics::new(sr);
+            let quiet = Stereo { l: 0.4, r: 0.2 };
+            let out = dynamics.process(quiet);
+            assert!((out.l - quiet.l).abs() < 1e-6);
+            assert!((out.r - quiet.r).abs() < 1e-6);
+
+            let loud = Stereo { l: 0.85, r: 0.425 };
+            let mut out = loud;
+            for _ in 0..(sr * 0.1) as usize {
+                out = dynamics.process(loud);
+            }
+            let expected = (0.85_f64 * 0.75).sqrt() as f32;
+            assert!((out.l - expected).abs() < 1e-4);
+            assert!((out.r * 2. - out.l).abs() < 1e-6);
+
+            let start = dynamics.process(quiet).l;
+            for _ in 0..(sr * 0.5) as usize {
+                out = dynamics.process(quiet);
+            }
+            assert!(out.l > start + 0.01 && out.l < quiet.l);
+
+            // A sudden peak cannot wait for compressor attack; the separate
+            // protector bounds it without changing the stereo balance.
+            let peak = dynamics.process(Stereo { l: -2., r: -1. });
+            assert!(peak.l < -0.9 && peak.l >= -1.);
+            assert!((peak.r * 2. - peak.l).abs() < 1e-6);
         }
     }
 }

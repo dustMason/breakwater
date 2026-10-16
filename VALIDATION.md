@@ -1,5 +1,12 @@
 # Validation
 
+## Layer headroom and output dynamics — 2026-10-15
+
+- Full-level stacks use 1/√N instead of 1/N; the headroom calculation follows clip levels and mutes smoothly, rather than pumping in response to a clip's natural gaps. The shared output has stereo-linked 2:1 compression and zero-lookahead soft sample-peak protection.
+- `Scripts/test_core.sh`, `Scripts/test_differential.sh`, `Scripts/test_interactions.sh`, strict Rust Clippy and all 34 web tests pass. New checks cover equal-power mixing, fader and part mutes, natural gaps, step crossfades, stereo linking, attack/release and correlated peaks. The differential test checks transport for the full trace and settled single-clip PCM against the legacy mixer, whose stacking behavior intentionally differs.
+- A numerical render of A Safe Balm clips 01–04 at 132 BPM was approximately 5.8 dB higher RMS than the former 1/4 average over 0.1–1.7 seconds, with a 0.9605 sample peak. This measures one stack and is not a listening evaluation. An eight-layer WebAssembly render with partial stems and clip filters ran faster than real time on this computer; it does not establish performance on an A12 iPad.
+- The static preview was rebuilt and its served WebAssembly hash matched the release build. The unsigned iPad Release build and two focused, muted iPad (A16) Simulator UI tests passed, covering layers and MIDI-clock browsing. Audible quality, true-peak levels, physical iPad performance and actual USB MIDI operation have not been verified.
+
 ## Timeline clip levels — 2026-10-15
 
 - Each timeline clip has an independent 0–100% linear level on iPad and web. Live changes ramp over 8 ms; edits to pending steps retain the chosen level. Narrow iPad steps expose the control in a popover. The arrangement's existing layer averaging and output headroom are unchanged.

@@ -1,4 +1,4 @@
-use crate::dsp::{Filter, Stereo, Voice};
+use crate::dsp::{Filter, MasterDynamics, Stereo, Voice};
 use crate::sample::{Bank, MAX_LOOPS};
 
 pub const MAX_QUEUE: usize = 64;
@@ -151,6 +151,7 @@ pub struct Core {
     output_gain: f32,
     web_rewind: bool,
     filter: Filter,
+    dynamics: MasterDynamics,
 }
 impl Core {
     pub fn new(sr: f64, output_gain: f32) -> Self {
@@ -205,6 +206,7 @@ impl Core {
             output_gain,
             web_rewind: false,
             filter: Filter::new(sr),
+            dynamics: MasterDynamics::new(sr),
         }
     }
     fn valid(&self, b: &Bank, id: i32) -> bool {
@@ -886,6 +888,7 @@ impl Core {
                 as f32;
             let mut sample = Stereo::default();
             if self.gain > 0. && self.arranged {
+                let mut weights_squared = 0.;
                 for v in 0..self.layer_count {
                     let layer = &mut self.layers[v];
                     layer.advance_parts(b, self.sr);
@@ -897,18 +900,31 @@ impl Core {
                         layer.tail(b, delta, self.sr)
                     };
                     let part = layer.filter_sample(part);
-                    sample.l += (part.l as f64 / self.layer_count as f64) as f32;
-                    sample.r += (part.r as f64 / self.layer_count as f64) as f32;
+                    let weight = layer.mix_weight();
+                    weights_squared += weight * weight;
+                    sample.l += part.l;
+                    sample.r += part.r;
                 }
+                // Equal-power mixing for full-level clips; zero-level and
+                // fully muted clips gradually stop consuming headroom.
+                let normalizer = 1. / f64::sqrt(f64::max(1., weights_squared));
+                sample.l = (sample.l as f64 * normalizer) as f32;
+                sample.r = (sample.r as f64 * normalizer) as f32;
                 if self.layer_transition > 0 {
                     let mut old = Stereo::default();
+                    let mut old_weights_squared = 0.;
                     for v in 0..self.old_layer_count {
                         self.old_layers[v].advance_parts(b, self.sr);
                         let x = self.old_layers[v].tail(b, delta, self.sr);
                         let x = self.old_layers[v].filter_sample(x);
-                        old.l += (x.l as f64 / self.old_layer_count as f64) as f32;
-                        old.r += (x.r as f64 / self.old_layer_count as f64) as f32;
+                        let weight = self.old_layers[v].mix_weight();
+                        old_weights_squared += weight * weight;
+                        old.l += x.l;
+                        old.r += x.r;
                     }
+                    let normalizer = 1. / f64::sqrt(f64::max(1., old_weights_squared));
+                    old.l = (old.l as f64 * normalizer) as f32;
+                    old.r = (old.r as f64 * normalizer) as f32;
                     let f = self.layer_transition as f64 / (self.sr * 0.005);
                     sample.l = ((sample.l as f64 * (1. - f)) as f32) + ((old.l as f64 * f) as f32);
                     sample.r = ((sample.r as f64 * (1. - f)) as f32) + ((old.r as f64 * f) as f32);
@@ -932,8 +948,11 @@ impl Core {
                 }
             }
             sample = self.filter.process(sample);
-            left[i] = sample.l * self.gain * self.output_gain;
-            right[i] = sample.r * self.gain * self.output_gain;
+            sample.l *= self.gain;
+            sample.r *= self.gain;
+            sample = self.dynamics.process(sample);
+            left[i] = sample.l * self.output_gain;
+            right[i] = sample.r * self.output_gain;
             if self.running {
                 self.beat += delta;
             }
