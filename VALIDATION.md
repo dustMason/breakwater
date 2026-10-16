@@ -1,5 +1,11 @@
 # Validation
 
+## Explicit A/B library controls — 2026-10-16
+
+- Both players expose per-loop A and B add buttons and retain drag-to-stack and persistent exclusions. MIDI notes still select the quieter side. The native UI test cases were updated to cover explicit placement, exclusions and the per-side limit.
+- The 42 web tests pass. In a muted local browser, a preview tap added nothing, A and B each selected their named side regardless of crossfader position, dragging added a loop to the target side, and exclusion and the eight-loop limit disabled the appropriate buttons. Clearing the stack re-enabled them; browser preferences were restored after the check.
+- An unsigned Release device build and the simulator UI test bundle compile. Native UI tests could not run because the installed CoreSimulator service is older than the version Xcode requires. Physical iPad touch and MIDI behavior remain unverified.
+
 ## Shared master and clip filter control — 2026-10-16
 
 - Both players use the same center-detented filter dial for clips and the master, with independent state. Drag down for low-pass, up for high-pass, and double-tap or double-click to reset. The master no longer exposes a band-pass mode.

@@ -42,11 +42,11 @@ final class BreakwaterUITests: XCTestCase {
         expectation(for: NSPredicate(format: "value CONTAINS 'HP'"), evaluatedWith: master)
         waitForExpectations(timeout: 5)
         let chosenMaster = master.value as? String
-        app.buttons["pad_0"].tap()
+        app.buttons["padAddA_0"].tap()
         XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 15))
         waitForValue("clip_1", "Playing")
         XCTAssertEqual(app.buttons["pad_0"].value as? String, "Ready")
-        app.buttons["pad_1"].tap()
+        app.buttons["padAddB_1"].tap()
         XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 10))
         app.buttons["pad_2"].press(forDuration: 0.8, thenDragTo: app.buttons["clip_1"])
         XCTAssertTrue(app.buttons["clip_3"].waitForExistence(timeout: 15))
@@ -92,7 +92,9 @@ final class BreakwaterUITests: XCTestCase {
     }
     func testCrowdedStackControlsScrollable() {
         app.buttons["Fade to side B"].tap()
-        for index in 0..<8 { app.buttons["pad_\(index)"].tap() }
+        for index in 0..<8 { app.buttons["padAddA_\(index)"].tap() }
+        XCTAssertFalse(app.buttons["padAddA_0"].isEnabled)
+        XCTAssertTrue(app.buttons["padAddB_0"].isEnabled)
         let lastPart = app.buttons["clipPart_8_0"]
         XCTAssertTrue(lastPart.waitForExistence(timeout: 15))
         let timeline = app.scrollViews["timelineScroll"]
@@ -104,22 +106,27 @@ final class BreakwaterUITests: XCTestCase {
     }
     func testExclusionsPersistAndRestore() {
         app.buttons["editPads"].tap(); app.buttons["pad_2"].tap(); waitForValue("pad_2", "Excluded")
-        app.buttons["editPads"].tap(); XCTAssertFalse(app.buttons["pad_2"].isEnabled)
+        app.buttons["editPads"].tap()
+        XCTAssertFalse(app.buttons["padAddA_2"].isEnabled)
+        XCTAssertFalse(app.buttons["padAddB_2"].isEnabled)
         app.terminate(); app.launchArguments = ["--mute-audio"]; app.launch()
         XCTAssertTrue(app.buttons["pad_2"].waitForExistence(timeout: 30)); waitForValue("pad_2", "Excluded")
         app.buttons["editPads"].tap(); app.buttons["pad_2"].tap(); waitForValue("pad_2", "Ready")
     }
-    func testQuietSidePlacementAndAllPartsDefaultOn() {
-        app.buttons["pad_0"].tap(); app.buttons["pad_1"].tap()
+    func testExplicitSidePlacementAndAllPartsDefaultOn() {
+        app.buttons["pad_0"].tap()
+        XCTAssertFalse(app.buttons["clip_1"].exists, "Tapping the preview must not add a loop")
+        app.buttons["Fade to side A"].tap(); app.buttons["padAddA_0"].tap()
+        app.buttons["Fade to side B"].tap(); app.buttons["padAddB_1"].tap()
         XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["clip_1"].label.contains("side A"))
         XCTAssertTrue(app.buttons["clip_2"].label.contains("side B"))
         app.buttons["clipPart_1_0"].tap(); waitForValue("clipPart_1_0", "Off")
-        app.buttons["Fade to side B"].tap(); app.buttons["pad_2"].tap()
+        app.buttons["Fade to side A"].tap(); app.buttons["padAddA_2"].tap()
         XCTAssertTrue(app.buttons["clip_3"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["clip_3"].label.contains("side A"))
         for part in 0..<4 { waitForValue("clipPart_3_\(part)", "On") }
-        app.buttons["Fade to side A"].tap(); app.buttons["pad_3"].tap()
+        app.buttons["Fade to side B"].tap(); app.buttons["padAddB_3"].tap()
         XCTAssertTrue(app.buttons["clip_4"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["clip_4"].label.contains("side B"))
         XCTAssertTrue(app.sliders["crossfader"].exists)
@@ -142,12 +149,12 @@ final class BreakwaterUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label CONTAINS 'LOCKED'"), evaluatedWith: app.buttons["clockStatus"])
         waitForExpectations(timeout: 15)
         XCTAssertFalse(app.buttons["useSourceTempo"].isEnabled)
-        app.buttons["pad_0"].tap(); XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 15))
+        app.buttons["padAddA_0"].tap(); XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 15))
         waitForValue("clip_1", "Playing")
         app.buttons["song_sg"].tap(); selectFolder("sh")
         XCTAssertEqual(app.buttons["transport"].label, "Stop")
         XCTAssertTrue(app.buttons["pad_294"].waitForExistence(timeout: 5))
-        app.buttons["pad_294"].tap(); XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 10))
+        app.buttons["padAddB_294"].tap(); XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.buttons["transport"].label, "Stop")
         app.buttons["nudgeEarlier"].tap(); app.buttons["nudgeLater"].tap()
         XCTAssertTrue(app.buttons["clipPart_2_0"].waitForExistence(timeout: 10))

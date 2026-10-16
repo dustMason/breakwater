@@ -54,7 +54,7 @@ private struct LibrarySidebar: View {
                 Button(audio.editing ? "Done" : "Edit") { audio.editing.toggle() }
                     .frame(minHeight: 44).accessibilityIdentifier("editPads")
             }.padding(.horizontal, 10)
-            Text(audio.editing ? "Tap to exclude or restore" : "Tap for the quieter side · drag to A or B")
+            Text(audio.editing ? "Tap to exclude or restore" : "Tap A or B · drag to a stack")
                 .font(.caption2).foregroundStyle(Palette.secondary).padding(.horizontal, 10).padding(.bottom, 8)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -95,29 +95,51 @@ private struct LibraryLoopRow: View {
         audio.addSample(sample.id, side: side)
     }
     var body: some View {
-        Button {
-            if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
-            if audio.editing { audio.toggleDisabled(sample.id) }
-            else { audio.addSample(sample.id) }
-        } label: {
-            HStack(spacing: 6) {
-                Text(sample.label).font(.caption.weight(.semibold).monospacedDigit()).frame(width: 23, alignment: .leading)
-                ClipWaveform(sample: sample, mask: 15, active: false, original: true).frame(height: 18)
-                Text("\(sample.beats / 4)b").font(.caption2).foregroundStyle(Palette.secondary)
-            }.padding(.leading, 22).padding(.trailing, 8).frame(minHeight: 44).contentShape(Rectangle())
+        HStack(spacing: 0) {
+            Button {
+                if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
+                if audio.editing { audio.toggleDisabled(sample.id) }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(sample.label).font(.caption.weight(.semibold).monospacedDigit()).frame(width: 23, alignment: .leading)
+                    ClipWaveform(sample: sample, mask: 15, active: false, original: true).frame(height: 18)
+                    if audio.editing { Text("\(sample.beats / 4)b").font(.caption2).foregroundStyle(Palette.secondary) }
+                }.padding(.leading, 12).padding(.trailing, 4)
+                    .frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).opacity(excluded ? 0.45 : 1)
+            .disabled(!audio.ready || (excluded && !audio.editing))
+            .onDrag {
+                guard !audio.editing else { return NSItemProvider() }
+                if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
+                return NSItemProvider(object: String(sample.id) as NSString)
+            }
+            .accessibilityLabel("\(song.name), loop \(sample.label), \(sample.beats / 4) bars")
+            .accessibilityValue(excluded ? "Excluded" : "Ready")
+            .accessibilityHint(audio.editing ? "Toggle exclusion" : "Select the source or drag to a stack. Use the A and B buttons to add this loop.")
+            .accessibilityIdentifier("pad_\(sample.id)")
+            if !audio.editing {
+                addButton(side: 0)
+                addButton(side: 1)
+            }
         }
-        .buttonStyle(.plain).opacity(excluded ? 0.45 : 1)
-        .disabled(!audio.ready || (excluded && !audio.editing))
-        .onDrag {
-            if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
-            return NSItemProvider(object: String(sample.id) as NSString)
+    }
+
+    private func addButton(side: Int) -> some View {
+        let name = side == 0 ? "A" : "B"
+        let full = audio.arrangement[side].clips.count >= 8
+        return Button { add(to: side) } label: {
+            Text(name).font(.caption.weight(.semibold))
+                .frame(width: 26, height: 26)
+                .background(Palette.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+                .frame(width: 44, height: 44).contentShape(Rectangle())
         }
-        .accessibilityLabel("\(song.name), loop \(sample.label), \(sample.beats / 4) bars")
-        .accessibilityValue(excluded ? "Excluded" : "Ready")
-        .accessibilityHint(audio.editing ? "Toggle exclusion" : "Add to the quieter side. Drag to choose a side.")
-        .accessibilityAction(named: Text("Add to side A")) { add(to: 0) }
-        .accessibilityAction(named: Text("Add to side B")) { add(to: 1) }
-        .accessibilityIdentifier("pad_\(sample.id)")
+        .buttonStyle(.plain).foregroundStyle(Palette.accent)
+        .opacity(!audio.ready || excluded || full ? 0.4 : 1)
+        .disabled(!audio.ready || excluded || full)
+        .accessibilityLabel("Add \(song.name), loop \(sample.label), to side \(name)")
+        .accessibilityHint(full ? "Side \(name) is full." : "Add this loop to side \(name).")
+        .accessibilityIdentifier("padAdd\(name)_\(sample.id)")
     }
 }
 
@@ -258,7 +280,7 @@ private struct ArrangementTray: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Stacks").font(.headline)
-                    Text(audio.arrangementStatus ?? audio.partStatus ?? "Tap a loop to add it to the quieter side")
+                    Text(audio.arrangementStatus ?? audio.partStatus ?? "Use A or B to add a loop")
                         .font(.caption2).foregroundStyle(Palette.secondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
@@ -305,7 +327,6 @@ private struct StackColumn: View {
                 Text("\(audio.arrangement[side].clips.count) / 8").font(.caption.monospacedDigit()).foregroundStyle(Palette.secondary)
                 Spacer()
                 if audio.arrangement[side].clips.count == 8 { Text("FULL").font(.caption2.weight(.semibold)).foregroundStyle(Palette.secondary) }
-                else if side == audio.quieterSide { Text("ADD HERE").font(.caption2.weight(.semibold)).foregroundStyle(Palette.accent) }
             }.padding(.horizontal, 10).frame(height: 44)
             Divider()
             ForEach(audio.arrangement[side].clips) { clip in

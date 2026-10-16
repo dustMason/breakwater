@@ -33,7 +33,7 @@ struct SettingsView: View {
                     LabeledContent("Audio output") { Text(audio.outputName).foregroundStyle(Palette.secondary) }
                 }
                 Section("Loops") {
-                    Text("Tap a library loop to add it to the quieter side, or drag it onto A or B. Both sides loop together; the crossfader blends between them. New loops start on the next bar without restarting the others.")
+                    Text("Use a loop's A or B button to add it to that side, or drag the loop onto a stack. Both sides loop together; the crossfader blends between them. New loops start on the next bar without restarting the others.")
                     Text("Each clip has its own four part switches, filter and level. The master filter is in the bottom bar.")
                     Text("Edit pads excludes unwanted loops and saves your choices. Change songs without interrupting playback.")
                     Button("Restore all pads in this song") { audio.enableSong() }.accessibilityIdentifier("restorePads")

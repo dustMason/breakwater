@@ -82,11 +82,22 @@ function buildLibrary() {
     folder.addEventListener('toggle', () => { if (folder.open) showSong(source.id); });
     const list = document.createElement('div'); list.className = 'folder-loops';
     for (const sample of source.loops) {
+      const row = document.createElement('div'); row.className = 'library-loop';
       const pad = document.createElement('button'); pad.type = 'button'; pad.className = 'pad'; pad.dataset.id = sample.id;
       pad.setAttribute('aria-describedby', 'keyboard-help');
       pad.title = `${source.name} · ${sample.sourceStart}–${sample.sourceEnd} · ${sample.bpm.toFixed(1)} BPM`;
       pad.innerHTML = `<span class="pad-number">${String(sample.number).padStart(2, '0')}</span><svg class="waveform" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${waveform(sample.waveform)}"/></svg><span class="pad-bars">${sample.bars} ${sample.bars === 1 ? 'bar' : 'bars'}</span><span class="pad-status"></span>`;
-      pads.set(sample.id, { element: pad, status: pad.querySelector('.pad-status'), sample }); list.append(pad);
+      const buttons = [0, 1].map(side => {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'side-add';
+        button.dataset.id = sample.id; button.dataset.addSide = side;
+        const name = side ? 'B' : 'A';
+        button.setAttribute('aria-label', `Add ${source.name}, loop ${sample.number}, to side ${name}`);
+        button.title = `Add to side ${name}`;
+        const glyph = document.createElement('span'); glyph.textContent = name; button.append(glyph);
+        return button;
+      });
+      row.append(pad, ...buttons);
+      pads.set(sample.id, { element: pad, status: pad.querySelector('.pad-status'), sample, buttons }); list.append(row);
     }
     folder.append(list); fragment.append(folder);
     if (source.id === (saved.song || songs[0].id)) folder.open = true;
@@ -208,7 +219,7 @@ function paintArrangement() {
   arrangement.forEach((step, index) => {
     const group = document.createElement('div'); group.className = 'sequence-step'; group.dataset.side = index;
     const heading = document.createElement('div'); heading.className = 'step-heading';
-    heading.innerHTML = `<strong>${index ? 'B' : 'A'}</strong><span>${step.length} / 8</span><span class="add-here">${step.length >= 8 ? 'FULL' : index === quieterSide() ? 'ADD HERE' : ''}</span>`;
+    heading.innerHTML = `<strong>${index ? 'B' : 'A'}</strong><span>${step.length} / 8</span><span class="stack-status">${step.length >= 8 ? 'FULL' : ''}</span>`;
     group.append(heading);
     for (const clip of step) {
       const sample = sampleFor(clip.id); if (!sample) continue;
@@ -257,7 +268,7 @@ function paintArrangement() {
   content.querySelectorAll('.clip-waveform-frame').forEach(frame => clipWaveformObserver.observe(frame));
   const clips = allClips().length;
   $('sequence-detail').textContent = `${clips} ${clips === 1 ? 'clip' : 'clips'} · both sides loop together`;
-  $('clear-arrangement').disabled = !clips; paintArrangementState(); renderPartStatus();
+  $('clear-arrangement').disabled = !clips; paintLibrary(); paintArrangementState(); renderPartStatus();
 
 }
 function paintArrangementState() {
@@ -269,12 +280,18 @@ function paintArrangementState() {
   document.querySelectorAll('.sequence-step').forEach(group => group.classList.toggle('active', [...group.querySelectorAll('.clip-row')].some(row => tokens.includes(Number(row.dataset.token)))));
 }
 function paintLibrary() {
-  for (const [id, { element, status, sample }] of pads) {
+  for (const [id, { element, status, sample, buttons }] of pads) {
     const excluded = disabled.has(id); element.classList.toggle('excluded', excluded);
     element.setAttribute('aria-disabled', String(excluded && !editing));
     const label = editing ? (excluded ? 'RESTORE' : 'EXCLUDE') : excluded ? 'EXCLUDED' : '';
     status.textContent = label;
     element.setAttribute('aria-label', `${sampleFor(id)?.songName}, loop ${sample.number}, ${sample.bars} ${sample.bars === 1 ? 'bar' : 'bars'}${label ? `, ${label.toLowerCase()}` : ''}`);
+    buttons.forEach((button, side) => {
+      const full = arrangement[side].length >= 8;
+      button.hidden = editing;
+      button.disabled = excluded || full;
+      button.title = full ? `Side ${side ? 'B' : 'A'} is full` : `Add to side ${side ? 'B' : 'A'}`;
+    });
   }
 }
 function paint() {
@@ -413,7 +430,6 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
         const target = dropAt(event.clientX, event.clientY);
         if (target) addSample(finished.id, target.side);
       } else if (editing) toggleDisabled(finished.id);
-      else addSample(finished.id);
 
     }
     clearPointer();
@@ -422,6 +438,13 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 window.addEventListener('blur', clearPointer);
 $('grid').addEventListener('contextmenu', event => event.preventDefault());
 $('grid').addEventListener('click', event => {
+  const sideButton = event.target instanceof Element ? event.target.closest('.side-add') : null;
+  if (sideButton) {
+    const id = Number(sideButton.dataset.id), source = sampleFor(id)?.songID;
+    if (source && source !== song?.id) showSong(source);
+    addSample(id, Number(sideButton.dataset.addSide));
+    return;
+  }
   // Native keyboard and assistive-technology activation produces detail 0.
   if (event.detail !== 0) return;
   const pad = padAt(event.target);
@@ -430,10 +453,6 @@ $('grid').addEventListener('click', event => {
   const source = sampleFor(id)?.songID;
   if (source && source !== song?.id) showSong(source);
   if (editing) toggleDisabled(id);
-  else if (!disabled.has(id)) {
-    addSample(id);
-
-  }
 });
 $('grid').addEventListener('keydown', event => {
   if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
@@ -531,11 +550,6 @@ function setCrossfade(value) {
   $('crossfade').value = Math.round(crossfade * 100);
   $('crossfade').setAttribute('aria-valuetext', crossfade === .5 ? 'Centered between A and B' : `${Math.round((1-crossfade)*100)} percent toward A, ${Math.round(crossfade*100)} percent toward B`);
   audio.setCrossfade(crossfade);
-  document.querySelectorAll('.sequence-step').forEach(group => {
-    const label = group.querySelector('.add-here');
-    const side = Number(group.dataset.side);
-    label.textContent = arrangement[side].length >= 8 ? 'FULL' : side === quieterSide() ? 'ADD HERE' : '';
-  });
 }
 $('crossfade').addEventListener('input', event => setCrossfade(Number(event.target.value) / 100));
 $('fade-a').addEventListener('click', () => setCrossfade(0));
@@ -582,6 +596,7 @@ $('edit').addEventListener('click', () => {
   $('edit').textContent = editing ? 'Done' : 'Edit';
   $('edit').setAttribute('aria-pressed', String(editing));
   $('grid').classList.toggle('editing', editing);
+  $('library-help').textContent = editing ? 'Tap to exclude or restore' : 'Tap A or B · drag to a stack';
   updateHint();
   paintLibrary(); paint();
 });

@@ -8,8 +8,8 @@
   <title>Breakwater</title>
   <link rel="icon" type="image/png" href="./icon.png">
   <link rel="apple-touch-icon" href="./icon.png">
-  <link rel="stylesheet" href="./style.css?v=8">
-  <script type="module" src="./app.js?v=9"></script>
+  <link rel="stylesheet" href="./style.css?v=9">
+  <script type="module" src="./app.js?v=10"></script>
 </head>
 <body>
   <main class="instrument" aria-label="Breakwater loop player">
@@ -23,7 +23,7 @@
     <div class="workspace">
       <aside class="library" aria-label="Loop library">
         <div class="library-heading"><h2>Library</h2><button id="edit" class="edit" aria-pressed="false" disabled>Edit</button></div>
-        <p class="library-help">Tap for the quieter side · drag to A or B</p>
+        <p id="library-help" class="library-help">Tap A or B · drag to a stack</p>
         <div id="grid" class="library-list" aria-label="Loop folders" aria-busy="true"></div>
       </aside>
       <div class="editor">
@@ -40,7 +40,7 @@
         </section>
       </div>
     </div>
-    <p id="keyboard-help" class="sr-only">Activate a loop to add it to the quieter side. Alt and Left adds to A; Alt and Right adds to B. Use Edit to exclude loops.</p>
+    <p id="keyboard-help" class="sr-only">Use the A or B buttons to add a loop. Alt and Left adds to A; Alt and Right adds to B. Use Edit to exclude loops.</p>
     <p id="filter-help" class="sr-only">Drag up for high-pass or down for low-pass. Double-click to reset. Use arrow keys to adjust.</p>
     <div id="drag-preview" class="drag-preview" hidden aria-hidden="true"></div>
     <footer class="dock">
