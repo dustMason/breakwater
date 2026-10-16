@@ -27,3 +27,13 @@ test('stylized waveform reflects each clip part mask and retains a ghost of the 
   assert.deepEqual(waveformBars(original, parts, 1, 2).map(b => b.enabled), [0.3, 0.2]);
   assert.ok(Math.abs(waveformBars(original, parts, 3, 2)[0].enabled - 0.5) < 1e-9);
 });
+
+test('clip waveforms use the same number of bars for different envelope sizes', () => {
+  for (const length of [8, 64, 256]) {
+    const envelope = Array.from({ length }, (_, index) => index / length);
+    const bars = waveformBars(envelope, null, 15);
+    assert.equal(bars.length, 32);
+    assert.equal(bars[0].full, 0);
+    assert.ok(bars.at(-1).full > 0.8);
+  }
+});

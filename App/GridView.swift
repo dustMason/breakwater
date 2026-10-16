@@ -375,7 +375,16 @@ private struct ClipRow: View {
                 }.frame(height: 44)
                 Button { audio.selectedClipID = clip.id } label: {
                     StylizedClipWaveform(sample: sample, mask: clip.mask, active: active, stepBeats: stepBeats)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.horizontal, 6).contentShape(Rectangle())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .overlay {
+                            if active {
+                                GeometryReader { geometry in
+                                    Rectangle().fill(Color.white.opacity(0.7)).frame(width: 2)
+                                        .offset(x: min(max(0, geometry.size.width - 2), geometry.size.width * min(1, max(0, progress))))
+                                }.clipped().allowsHitTesting(false)
+                            }
+                        }
+                        .padding(.horizontal, 6).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).accessibilityLabel("Select \(song.name), loop \(sample.label), side \(stepNumber == 1 ? "A" : "B")")
                 .accessibilityValue(active ? "Playing" : "Ready").accessibilityIdentifier("clip_\(clip.id)")
@@ -406,9 +415,6 @@ private struct ClipRow: View {
         .foregroundStyle(active ? Color.white : Color(uiColor: .label))
         .background(active ? Color(uiColor: Palette.playing) : Palette.accent.opacity(0.13))
         .overlay(Rectangle().strokeBorder(clip.id == audio.selectedClipID ? (active ? Color.white : Palette.accent) : Color(uiColor: .separator).opacity(0.5), lineWidth: clip.id == audio.selectedClipID ? 2 : 1).allowsHitTesting(false))
-        .overlay {
-            if active { GeometryReader { geometry in Rectangle().fill(Color.white.opacity(0.7)).frame(width: 2).offset(x: geometry.size.width * min(1, max(0, progress))) }.allowsHitTesting(false) }
-        }
     }
 
     private func partButton(_ index: Int) -> some View {
@@ -501,7 +507,7 @@ private struct StylizedClipWaveform: View {
     var body: some View {
         Canvas { context, size in
             guard sample.waveform.count > 1 else { return }
-            let count = min(96, max(16, Int(size.width / 4)))
+            let count = 32
             let repeats = max(1, Double(stepBeats) / Double(sample.beats))
             let color = active ? Color.white : Palette.accent
             for bar in 0..<count {

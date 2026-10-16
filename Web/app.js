@@ -203,7 +203,8 @@ function paintArrangement() {
       choose.setAttribute('aria-pressed', String(clip.token === selectedToken));
       choose.setAttribute('aria-label', `Select ${sample.songName}, loop ${sample.number}, side ${index === 0 ? 'A' : 'B'}`);
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.classList.add('clip-waveform'); svg.setAttribute('aria-hidden', 'true');
-      choose.append(svg); display.append(title, choose);
+      const waveformFrame = document.createElement('span'); waveformFrame.className = 'clip-waveform-frame'; waveformFrame.append(svg);
+      choose.append(waveformFrame); display.append(title, choose);
       const controls = document.createElement('div'); controls.className = 'clip-parts'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', `Parts for ${sample.songName}, loop ${sample.number}`);
       const all = document.createElement('button'); all.type = 'button'; all.dataset.partsAll = clip.token; all.disabled = !sample.parts; controls.append(all);
       const grid = document.createElement('div'); grid.className = 'clip-parts-grid';

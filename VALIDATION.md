@@ -1,5 +1,10 @@
 # Validation
 
+## Waveform playhead and spacing — 2026-10-16
+
+- Both players confine the playhead to the waveform preview and use 32 strokes spaced across its width. The 41 web tests pass, including fixed-count envelope checks; an unsigned Release iOS device build succeeds.
+- In the rebuilt local player, a muted playing clip was checked at 1280×720 and 820×1180. The waveform had 32 strokes at each size, and the moving playhead remained within its preview and clear of the clip controls. The original volume was restored. Native visual behavior on a simulator or physical iPad has not been verified for this change; the installed CoreSimulator version does not match Xcode.
+
 ## Two crossfaded stacks — 2026-10-16
 
 - Both players now provide A and B stacks, an equal-power crossfader, quiet-side tap placement, explicit drag-to-side placement and independent per-clip controls. New clips start with all four parts on. Each side holds up to eight clips; both continue running when faded out. Changes launch on a bar boundary without restarting retained clips.

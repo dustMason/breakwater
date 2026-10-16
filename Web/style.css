@@ -66,12 +66,13 @@ h3 { font-size: 13px; font-weight: 650; }
 .clip-row.active { color: white; background: var(--playing); border-color: var(--playing); }
 .clip-row.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
 .clip-row.active.selected { outline-color: white; }
-.clip-row.active::after { content: ""; position: absolute; top: 0; bottom: 0; left: calc(var(--progress, 0) * 100%); width: 2px; background: white; opacity: .7; pointer-events: none; }
 .clip-display { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .clip-title { display: flex; align-items: center; height: 44px; flex: none; }
 .clip-label { display: block; min-width: 0; padding-left: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; font-weight: 650; }
 .clip-remove { z-index: 1; margin-left: auto; color: inherit; width: 44px; height: 44px; flex: 0 0 44px; opacity: .8; font-size: 18px; }
 .clip-select { display: flex; flex: 1; min-height: 0; min-width: 0; padding: 0 6px; color: inherit; }
+.clip-waveform-frame { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; }
+.clip-row.active .clip-waveform-frame::after { content: ""; position: absolute; top: 0; bottom: 0; left: clamp(0px, calc(var(--progress, 0) * 100%), calc(100% - 2px)); width: 2px; background: white; opacity: .7; pointer-events: none; }
 .clip-waveform { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .clip-waveform path { vector-effect: non-scaling-stroke; }
 .wave-ghost { opacity: .18; } .wave-enabled { opacity: .85; }
