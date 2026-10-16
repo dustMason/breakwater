@@ -1,4 +1,4 @@
-import { AudioPlayer } from './audio.js?v=6';
+import { AudioPlayer } from './audio.js?v=7';
 import { assetBase, assetURL } from './assets.js';
 import { filterFromPosition, positionFromFilter, waveformBarCount, waveformBars } from './clip-controls.js?v=8';
 
@@ -16,7 +16,7 @@ const partFailures = new Map();
 let songs = [], samples = [], song = null;
 let editing = false, loading = false, request = 0;
 let state = { playing: false, active: null, activeLoops: [], activeTokens: [], beat: 0, progress: 0, pending: false, queue: [] };
-let arrangement = [[], []], crossfade = 0.5, selectedToken = null, nextToken = 1, pointer = null;
+let arrangement = [[], []], crossfade = 0, selectedToken = null, nextToken = 1, pointer = null;
 let pads = new Map();
 let lastAnnouncement = '';
 const taps = [];

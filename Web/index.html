@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="./icon.png">
   <link rel="apple-touch-icon" href="./icon.png">
   <link rel="stylesheet" href="./style.css?v=10">
-  <script type="module" src="./app.js?v=11"></script>
+  <script type="module" src="./app.js?v=12"></script>
 </head>
 <body>
   <main class="instrument" aria-label="Breakwater loop player">
@@ -28,7 +28,7 @@
           <div id="notice" class="notice" hidden><span id="notice-text" role="status"></span><button id="retry" hidden>Retry</button><progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress></div>
           <div id="part-notice" class="notice" hidden><span id="part-message" role="status"></span><button id="retry-parts" hidden>Retry parts</button></div>
           <div id="arrangement-items" class="arrangement-items" aria-label="Side A and side B"></div>
-          <div class="crossfader" role="group" aria-label="Crossfader"><button id="fade-a" aria-label="Fade to side A">A</button><input id="crossfade" type="range" min="0" max="100" value="50" aria-label="Crossfader" aria-valuetext="Centered between A and B"><button id="fade-b" aria-label="Fade to side B">B</button></div>
+          <div class="crossfader" role="group" aria-label="Crossfader"><button id="fade-a" aria-label="Fade to side A">A</button><input id="crossfade" type="range" min="0" max="100" value="0" aria-label="Crossfader" aria-valuetext="100 percent toward A, 0 percent toward B"><button id="fade-b" aria-label="Fade to side B">B</button></div>
           <p id="hint" class="hint">Both sides loop in sync. Crossfade to bring either stack in.</p>
         </section>
       </div>

@@ -35,7 +35,7 @@ final class AudioModel: ObservableObject {
     @Published var partMasks: [String: Int] = [:]
     @Published var partStatus: String?
     @Published var arrangement: [ArrangementStep] = [ArrangementStep(clips: []), ArrangementStep(clips: [])]
-    @Published var crossfade = 0.5
+    @Published var crossfade = 0.0
     @Published var selectedClipID: Int32?
     @Published var arrangementStatus: String?
     @Published private(set) var waitingForLoop = false

@@ -1,5 +1,10 @@
 # Validation
 
+## Start crossfader on side A — 2026-10-16
+
+- The shared audio engine and both players start at A; the web crossfade test checks the initial mix and smooth transitions to center and B. All 42 web tests, the Rust tests, and the native audio-core suite pass.
+- The unsigned iPad build succeeds. The rebuilt local web preview displays the crossfader at A; physical iPad playback was not retested.
+
 ## S3-owned catalog and library command — 2026-10-16
 
 - The existing public S3 catalog now includes relative source paths as backward-compatible metadata. Both players continue to consume the same manifest and immutable audio keys. The 3 MB editable catalog is no longer tracked in the current Git tree; the working catalog and publication baseline remain ignored locally.

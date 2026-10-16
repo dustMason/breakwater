@@ -16,7 +16,7 @@ export class AudioPlayer {
     this.partPins = new Set();
     this.tempo = 120;
     this.volume = .8;
-    this.crossfade = .5;
+    this.crossfade = 0;
     this.filter = { mode: 0, hz: 1200 };
     this.masks = new Map();
     this.requests = new Map();
@@ -51,7 +51,7 @@ export class AudioPlayer {
   async initialize() {
     if (!this.context.audioWorklet) throw new Error('AudioWorklet is unavailable. Try a current Safari, Chrome, or Firefox.');
     const [response] = await Promise.all([
-      fetch(new URL('./breakwater_audio.wasm?v=6', import.meta.url)),
+      fetch(new URL('./breakwater_audio.wasm?v=7', import.meta.url)),
       this.context.audioWorklet.addModule(new URL('./audio-worklet.js?v=6', import.meta.url)),
     ]);
     if (!response.ok) throw new Error(`Couldn't load the audio engine (HTTP ${response.status}).`);

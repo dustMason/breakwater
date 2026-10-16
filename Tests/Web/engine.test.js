@@ -448,13 +448,13 @@ test('two stacks run together and equal-power crossfade independently', () => {
   e.stacks(clips); advance(e, .1);
   assert.deepEqual(e.snapshot().activeTokens, [1, 2]);
   const mean = values => values.reduce((x, y) => x + y, 0) / values.length;
-  const center = mean(advance(e, .1));
-  e.setCrossfade(0); const rampA = advance(e, .02); const onlyA = mean(advance(e, .1));
+  const onlyA = mean(advance(e, .1));
+  e.setCrossfade(.5); const rampCenter = advance(e, .02); const center = mean(advance(e, .1));
   e.setCrossfade(1); const rampB = advance(e, .02); const onlyB = mean(advance(e, .1));
   assert.ok(center > onlyA && onlyA > onlyB, `${center}, ${onlyA}, ${onlyB}`);
   assert.ok(Math.abs(onlyA / onlyB - 2) < .05);
   assert.ok(Math.abs(center / onlyA - 1.5 / Math.sqrt(2)) < .03);
-  for (const ramp of [rampA, rampB]) {
+  for (const ramp of [rampCenter, rampB]) {
     let maxJump = 0;
     for (let i = 1; i < ramp.length; i++) maxJump = Math.max(maxJump, Math.abs(ramp[i] - ramp[i-1]));
     assert.ok(maxJump < .003, `crossfader discontinuity ${maxJump}`);
