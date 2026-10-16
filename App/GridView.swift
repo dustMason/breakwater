@@ -507,11 +507,12 @@ private struct StylizedClipWaveform: View {
     var body: some View {
         Canvas { context, size in
             guard sample.waveform.count > 1 else { return }
-            let count = 32
+            let spacing: CGFloat = 4
+            let count = max(1, Int(size.width / spacing))
             let repeats = max(1, Double(stepBeats) / Double(sample.beats))
             let color = active ? Color.white : Palette.accent
             for bar in 0..<count {
-                let x = (CGFloat(bar) + 0.5) * size.width / CGFloat(count)
+                let x = size.width < spacing ? size.width / 2 : (CGFloat(bar) + 0.5) * spacing
                 let phase = (Double(bar) / Double(count) * repeats).truncatingRemainder(dividingBy: 1)
                 let i = min(sample.waveform.count - 1, Int(phase * Double(sample.waveform.count)))
                 let original = CGFloat(sample.waveform[i])

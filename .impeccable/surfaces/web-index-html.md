@@ -19,7 +19,7 @@ FINISH: The A/B redesign was checked in a muted desktop browser; the native simu
 
 ## Current A/B stack extension — 2026-10-16
 
-Each side holds up to eight concurrently looping clips; clips added during playback start at the next bar while retained clips keep phase. Crossfade position determines the quieter side for library taps; a centered tie uses the less-populated side and then A. Dragging targets either side explicitly. Four part switches start enabled for each new clip. Each waveform uses 32 evenly spaced strokes and confines the running playhead to the preview.
+Each side holds up to eight concurrently looping clips; clips added during playback start at the next bar while retained clips keep phase. Crossfade position determines the quieter side for library taps; a centered tie uses the less-populated side and then A. Dragging targets either side explicitly. Four part switches start enabled for each new clip. Waveform strokes keep fixed spacing as the available width changes, and the running playhead stays within the preview.
 
 ## Constraints
 Static hosting only; local preview uses an ordinary HTTP server. Web Audio runs on the audio thread, keeps phase during tempo changes, and handles context interruptions explicitly. No automatic audio playback. The established visual design system remains unchanged while the native and web timeline evolve together.

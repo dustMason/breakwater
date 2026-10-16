@@ -1,6 +1,13 @@
 # Validation
 
-## Waveform playhead and spacing — 2026-10-16
+## Fixed waveform stroke spacing — 2026-10-16
+
+- Both players keep waveform strokes four points or CSS pixels apart and adjust the number of displayed envelope samples with the preview width. The playhead stays within the preview. All 41 web tests pass, and the unsigned Release iOS device build succeeds.
+- In a muted browser check, the same playing clip showed 77 strokes in a 309-pixel preview and 27 strokes in a 108-pixel preview, with four-pixel spacing in each. Resizing during playback and muting a part updated the waveform; the original volume was restored. The native visual change has not been checked on a simulator or physical iPad; the installed CoreSimulator version does not match Xcode.
+
+## Waveform playhead and spacing, previous version — 2026-10-16
+
+The fixed-count spacing described here was superseded by the correction above.
 
 - Both players confine the playhead to the waveform preview and use 32 strokes spaced across its width. The 41 web tests pass, including fixed-count envelope checks; an unsigned Release iOS device build succeeds.
 - In the rebuilt local player, a muted playing clip was checked at 1280×720 and 820×1180. The waveform had 32 strokes at each size, and the moving playhead remained within its preview and clear of the clip controls. The original volume was restored. Native visual behavior on a simulator or physical iPad has not been verified for this change; the installed CoreSimulator version does not match Xcode.

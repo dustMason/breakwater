@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { filterFromPosition, positionFromFilter, waveformBars } from '../../Web/clip-controls.js';
+import { filterFromPosition, positionFromFilter, waveformBarCount, waveformBars } from '../../Web/clip-controls.js';
 
 test('center-detented clip filter sweeps the requested side and round-trips', () => {
   assert.equal(filterFromPosition(0).type, 0);
@@ -28,12 +28,18 @@ test('stylized waveform reflects each clip part mask and retains a ghost of the 
   assert.ok(Math.abs(waveformBars(original, parts, 3, 2)[0].enabled - 0.5) < 1e-9);
 });
 
-test('clip waveforms use the same number of bars for different envelope sizes', () => {
-  for (const length of [8, 64, 256]) {
-    const envelope = Array.from({ length }, (_, index) => index / length);
-    const bars = waveformBars(envelope, null, 15);
-    assert.equal(bars.length, 32);
+test('clip waveform bar count follows width while preserving four-pixel spacing', () => {
+  assert.equal(waveformBarCount(0), 0);
+  assert.equal(waveformBarCount(2), 1);
+  assert.equal(waveformBarCount(128), 32);
+  assert.equal(waveformBarCount(131), 32);
+  assert.equal(waveformBarCount(256), 64);
+  const envelope = Array.from({ length: 128 }, (_, index) => index / 128);
+  for (const width of [128, 256]) {
+    const bars = waveformBars(envelope, null, 15, waveformBarCount(width));
+    assert.equal(bars.length, width / 4);
     assert.equal(bars[0].full, 0);
-    assert.ok(bars.at(-1).full > 0.8);
+    assert.ok(bars.at(-1).full > 0.9);
   }
+  assert.deepEqual(waveformBars([0.2, 0.8], null, 15, 4, 2).map(bar => bar.full), [0.2, 0.8, 0.2, 0.8]);
 });

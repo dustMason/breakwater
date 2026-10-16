@@ -20,12 +20,18 @@ export function positionFromFilter(type, cutoff) {
   return 0;
 }
 
+// Keep stroke centers four CSS pixels apart as the preview grows or shrinks.
+export function waveformBarCount(width) {
+  return Number.isFinite(width) && width > 0 ? Math.max(1, Math.floor(width / 4)) : 0;
+}
+
 // Summarize the original and enabled part envelopes into the same simple bars.
 // This is a visual estimate, not a reconstruction of the mixed PCM waveform.
-export function waveformBars(original, parts, mask, count = 32) {
+export function waveformBars(original, parts, mask, count = 32, repeats = 1) {
   if (!original?.length || count < 1) return [];
   return Array.from({ length: count }, (_, bar) => {
-    const index = Math.min(original.length - 1, Math.floor(bar * original.length / count));
+    const phase = (bar / count * repeats) % 1;
+    const index = Math.min(original.length - 1, Math.floor(phase * original.length));
     const full = Math.max(0, Math.min(1, original[index] || 0));
     const enabled = mask === 15 || !parts || parts.length !== 4 ? full : Math.min(1, Math.sqrt(parts.reduce((sum, lane, part) => {
       const value = mask & (1 << part) ? (lane[index] || 0) : 0;

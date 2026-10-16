@@ -1,6 +1,6 @@
 import { AudioPlayer } from './audio.js?v=6';
 import { assetBase, assetURL } from './assets.js';
-import { filterFromPosition, positionFromFilter, waveformBars } from './clip-controls.js';
+import { filterFromPosition, positionFromFilter, waveformBarCount, waveformBars } from './clip-controls.js?v=8';
 
 const $ = id => document.getElementById(id);
 const storageKey = 'breakwater.web.v1';
@@ -149,16 +149,27 @@ function updateHint() {
   $('hint').textContent = editing ? 'Select a loop in the library to exclude or restore it. Changes are saved.'
     : 'Both sides loop in sync. Crossfade to bring either stack in.';
 }
-function renderClipWaveform(svg, sample, clip, beats) {
-  const bars = waveformBars(sample.waveform, sample.parts?.waveforms, clip.mask);
+function renderClipWaveform(svg, sample, clip, beats, width = svg.getBoundingClientRect().width) {
+  const count = waveformBarCount(width);
+  if (!count) return;
+  const repeats = Math.max(1, beats / (sample.beats || 4));
+  const bars = waveformBars(sample.waveform, sample.parts?.waveforms, clip.mask, count, repeats);
   const paths = (key) => bars.map((bar, index) => {
-    const amplitude = bar[key] * 43, x = (index + 0.5) * 100 / bars.length;
+    const amplitude = bar[key] * 43, x = width < 4 ? width / 2 : (index + 0.5) * 4;
     return `M${x.toFixed(2)} ${(50 - amplitude).toFixed(2)} V${(50 + amplitude).toFixed(2)}`;
   }).join(' ');
-  const fraction = (sample.beats || 4) / beats;
-  svg.innerHTML = Array.from({length: Math.ceil(1 / fraction)}, (_, repeat) =>
-    `<g transform="translate(${repeat * fraction * 100} 0) scale(${fraction} 1)"><path class="wave-ghost" d="${paths('full')}"/><path class="wave-enabled" d="${paths('enabled')}"/></g>`).join('');
+  svg.setAttribute('viewBox', `0 0 ${width} 100`);
+  svg.innerHTML = `<path class="wave-ghost" d="${paths('full')}"/><path class="wave-enabled" d="${paths('enabled')}"/>`;
 }
+
+const clipWaveformObserver = new ResizeObserver(entries => {
+  for (const entry of entries) {
+    const row = entry.target.closest('.clip-row');
+    const clip = allClips().find(item => item.token === Number(row?.dataset.token));
+    const sample = clip && sampleFor(clip.id);
+    if (sample) renderClipWaveform(entry.target.querySelector('.clip-waveform'), sample, clip, Number(row.dataset.beats), entry.contentRect.width);
+  }
+});
 
 function filterLabel(clip) {
   if (clip.filterType === 0) return 'Off';
@@ -238,7 +249,9 @@ function paintArrangement() {
     const target = document.createElement('div'); target.className = 'layer-target'; target.textContent = step.length ? '+ Drop another loop' : `Drop a loop on side ${index ? 'B' : 'A'}`; group.append(target);
     content.append(group);
   });
+  clipWaveformObserver.disconnect();
   container.replaceChildren(content);
+  content.querySelectorAll('.clip-waveform-frame').forEach(frame => clipWaveformObserver.observe(frame));
   const clips = allClips().length;
   $('sequence-detail').textContent = `${clips} ${clips === 1 ? 'clip' : 'clips'} · both sides loop together`;
   $('clear-arrangement').disabled = !clips; paintArrangementState(); renderPartStatus();
