@@ -11,8 +11,8 @@ Mode: Operate. Static HTML/CSS/JavaScript port of the approved native performanc
 ## Direction contract
 THESIS: Browse the shared loop catalog by folder and build a playable, layered arrangement on a bar-oriented browser timeline.
 OWN-WORLD: Continue the established neutral surfaces, system typography, thin borders, blue playback state, real waveforms and approved B icon.
-STORY: Open a song folder, add or drag loops into the timeline, select a clip to shape its sound, change tempo and edit exclusions. Browsing preserves playback.
-FIRST VIEWPORT: The source and approximate BPM are in the header; a scrollable Library is left of the Timeline, with the optional Sound device rack beneath the timeline and transport below. Timeline steps contain stacked waveform clips with selection outlines and a blue playing state and playhead. On narrow screens the rack scrolls horizontally and the dock wraps.
+STORY: Open a song folder, add or drag loops into the timeline, shape each clip directly, change tempo and edit exclusions. Browsing preserves playback.
+FIRST VIEWPORT: The source and approximate BPM are in the header; a scrollable Library is left of the Timeline and transport is below. Timeline steps contain stacked waveform clips with embedded part switches, a filter knob and a vertical level fader. Selection outlines, a blue playing state and a playhead distinguish state. Crowded steps scroll horizontally; the dock wraps on narrow screens.
 FORM: Extend the established waveform-instrument world with the native timeline composition and browser-appropriate controls. No new visual world or comp round. Browser playback omits MIDI and slicing.
 FINISH: The supplied independent timeline reviewer scored all five material fixes resolved. The source and capture evidence and its limits are recorded below.
 
@@ -22,13 +22,13 @@ Static hosting only; local preview uses an ordinary HTTP server. Web Audio runs 
 ## Timeline extension — 2026-10-15
 The Library expands song folders into numbered waveform rows and loop lengths. Activating a row adds it at the end; dragging places it directly. Keyboard activation and Alt/Option shortcuts provide layer and before/after placement relative to the selected step. Edit makes row activation exclude or restore a loop. The current source BPM remains visible, with Use source in the dock.
 
-Steps run horizontally and their widths follow the longest clip in each step. Drop at a step edge or plus gap to insert; drop in the step to layer. Shorter clips repeat across the step and their waveform repeats visually. Zoom, Fit and Clear sit above the scrolling timeline. Selecting a clip opens Sound; a separate control removes it. Selection, active playback and playhead progress have distinct visual treatments.
+Steps run horizontally and their widths follow the longest clip in each step, subject to a minimum width for the controls. Drop at a step edge or plus margin to insert; drop beneath the clips to layer. Shorter clips repeat across the step and their waveform repeats visually. Zoom, Fit and Clear sit above the scrolling timeline. A waveform selects a clip and a separate control removes it. Selection, active playback and playhead progress have distinct visual treatments.
 
-Sound presents individual part devices and the selected clip's filter in a horizontally scrollable rack beneath the timeline. The separately labeled master filter sits in the bottom transport bar and remains available when Sound is closed. Both filters provide Off, LPF, BPF and HPF with independent cutoffs. Clip-specific controls are unavailable without a selection; master controls remain available. Parts show ON/OFF labels. The browser retains focus-visible outlines and explicit labels alongside the native adaptation.
+Each clip directly presents a 2×2 grid of part switches, an all-parts switch, a center-bypass LPF/HPF knob and a vertical level fader. Waveforms use simple strokes for the enabled parts over a faint original. The separately labeled master filter sits in the bottom transport bar and continues to provide Off, LPF, BPF and HPF with an independent cutoff. The browser retains focus-visible outlines and explicit accessible labels alongside the native adaptation.
 
 The earlier timeline documentation pass checked `Web/index.html`, `Web/style.css`, `Web/app.js`, `PRODUCT.md`, `DESIGN.md`, `.impeccable/design.json`, the prior surface contract, and `.impeccable/review/timeline-desktop.png` (1280×720), `timeline-tablet-web.png` (820×1180), `timeline-phone.png` and `timeline-phone-inspector.png` (both 390×844). Those captures predate the bottom rack. `VALIDATION.md` owns current functional and hardware evidence.
 
-The shared `PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json` still describe the earlier song dropdown, pad grid and its activation behavior in places. That pre-existing shared-document drift was observed and left unchanged; this brief records the current surface.
+`DESIGN.md` and `.impeccable/design.json` still describe the earlier song dropdown and pad grid in places. That pre-existing shared-document drift was observed and left unchanged; this brief records the current surface.
 
 ## Earlier surface history
 The following sections document the previous grid and arrangement-tray iterations. Their layout and interaction descriptions are superseded where they conflict with the timeline contract above.

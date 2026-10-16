@@ -6,7 +6,6 @@ struct GridView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showSettings = false
     @State private var showTempo = false
-    @State private var tray = 0
     private var song: Song? { audio.songs.indices.contains(audio.selectedSong) ? audio.songs[audio.selectedSong] : nil }
 
     var body: some View {
@@ -15,8 +14,7 @@ struct GridView: View {
                 header
                 PlaybackContent(audio: audio, playback: audio.playback, song: song,
                                 compact: geometry.size.width < 900 || typeSize.isAccessibilitySize,
-                                availableHeight: geometry.size.height,
-                                showSettings: $showSettings, showTempo: $showTempo, tray: $tray)
+                                showSettings: $showSettings, showTempo: $showTempo)
             }
             .background(Color(uiColor: .systemBackground))
         }
@@ -41,9 +39,6 @@ struct GridView: View {
                 .buttonStyle(.bordered).frame(minHeight: 44).disabled(song == nil || audio.external)
                 .accessibilityIdentifier("useSourceTempo")
                 .accessibilityHint(audio.external ? "Turn off Follow MIDI clock to use the source tempo." : "Set the manual tempo to this folder's source tempo.")
-            Button("Sound") { tray = tray == 0 ? 1 : 0 }
-                .buttonStyle(.bordered).tint(tray == 1 ? Palette.accent : nil)
-                .frame(minHeight: 44).accessibilityIdentifier("showSound")
         }.padding(.horizontal, 14).padding(.vertical, 2)
     }
 }
@@ -187,24 +182,16 @@ private struct PlaybackContent: View {
     @ObservedObject var playback: PlaybackMonitor
     let song: Song?
     let compact: Bool
-    let availableHeight: CGFloat
     @Binding var showSettings: Bool
     @Binding var showTempo: Bool
-    @Binding var tray: Int
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 LibrarySidebar(audio: audio).frame(width: compact ? 180 : 220)
                 Divider()
-                VStack(spacing: 0) {
-                    ArrangementTray(audio: audio, playback: playback, tray: $tray)
-                    if tray != 0 {
-                        Divider()
-                        SoundTray(audio: audio, tray: $tray)
-                            .frame(height: min(225, max(140, availableHeight * 0.35)))
-                    }
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                ArrangementTray(audio: audio, playback: playback)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
             if !audio.ready && audio.error == nil { ProgressView("Loading library").padding(8).accessibilityIdentifier("loading") }
             Divider()
@@ -340,7 +327,6 @@ private func receiveSample(_ providers: [NSItemProvider], audio: AudioModel, ind
 private struct ArrangementTray: View {
     @ObservedObject var audio: AudioModel
     @ObservedObject var playback: PlaybackMonitor
-    @Binding var tray: Int
     @State private var zoom: CGFloat = 1
     private func beats(_ step: ArrangementStep) -> Int { step.clips.map { audio.sample($0.sampleID)?.beats ?? 4 }.max() ?? 4 }
     var body: some View {
@@ -348,11 +334,12 @@ private struct ArrangementTray: View {
             HStack(spacing: 4) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Timeline").font(.headline)
-                    Text(audio.arrangementStatus ?? (audio.arrangement.isEmpty ? "Drag a loop here to start" : "Drop beneath a clip to layer"))
+                    Text(audio.arrangementStatus ?? audio.partStatus ?? (audio.arrangement.isEmpty ? "Drag a loop here to start" : "Drop beneath a clip to layer"))
                         .font(.caption2).foregroundStyle(Palette.secondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 if audio.arrangementStatus?.hasPrefix("A loop couldn't load") == true { Button("Retry") { audio.retrySamples() } }
+                if audio.partStatus?.hasPrefix("Parts unavailable") == true { Button("Retry parts") { audio.retryParts() }.frame(minHeight: 44) }
                 Button { zoom = max(1, zoom / 1.5) } label: { Image(systemName: "minus.magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("Zoom out timeline")
                 Button("Fit") { zoom = 1 }.frame(minHeight: 44).accessibilityIdentifier("zoomFit")
                 Button { zoom = min(128, zoom * 1.5) } label: { Image(systemName: "plus.magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("Zoom in timeline")
@@ -360,30 +347,29 @@ private struct ArrangementTray: View {
             }.padding(.horizontal, 10)
             Divider()
             GeometryReader { geometry in
-                let width = max(geometry.size.width, 100) * zoom
+                let availableWidth = max(geometry.size.width, 100) * zoom
                 let totalBeats = max(1, audio.arrangement.reduce(0) { $0 + beats($1) })
-                let gapWidth = min(16, max(2, (width - 72) / CGFloat(max(1, audio.arrangement.count - 1) * 3)))
-                let gaps = CGFloat(max(0, audio.arrangement.count - 1)) * gapWidth + 72
-                let musicalWidth = max(0, width - gaps)
+                let musicalWidth = max(0, availableWidth - 72)
+                let stepWidths = audio.arrangement.map { max(270, musicalWidth * CGFloat(beats($0)) / CGFloat(totalBeats)) }
+                let width = audio.arrangement.isEmpty ? availableWidth : max(availableWidth, stepWidths.reduce(72, +))
                 let layers = audio.arrangement.map { $0.clips.count }.max() ?? 1
-                let height = max(geometry.size.height, CGFloat(layers) * 124 + 85)
+                let height = max(geometry.size.height, CGFloat(layers) * 150 + 85)
                 ScrollView([.horizontal, .vertical]) {
                     HStack(alignment: .top, spacing: 0) {
                         if audio.arrangement.isEmpty {
                             SequenceDropGap(audio: audio, index: 0, empty: true).frame(width: width, height: height)
                         } else {
                             ForEach(Array(audio.arrangement.enumerated()), id: \.element.id) { index, step in
-                                SequenceDropGap(audio: audio, index: index, empty: false).frame(width: index == 0 ? 36 : gapWidth, height: height)
+                                if index == 0 { SequenceDropGap(audio: audio, index: index, empty: false).frame(width: 36, height: height) }
                                 SequenceCard(audio: audio, playback: playback, step: step, index: index,
-                                             width: musicalWidth * CGFloat(beats(step)) / CGFloat(totalBeats),
-                                             bar: 1 + audio.arrangement.prefix(index).reduce(0) { $0 + beats($1) / 4 },
-                                             tray: $tray)
-                                    .frame(width: musicalWidth * CGFloat(beats(step)) / CGFloat(totalBeats), height: height)
+                                             width: stepWidths[index],
+                                             bar: 1 + audio.arrangement.prefix(index).reduce(0) { $0 + beats($1) / 4 })
+                                    .frame(width: stepWidths[index], height: height)
                             }
                             SequenceDropGap(audio: audio, index: audio.arrangement.count, empty: false).frame(width: 36, height: height)
                         }
                     }.frame(width: width, height: height, alignment: .topLeading)
-                }.background(Color(uiColor: .secondarySystemBackground))
+                }.background(Color(uiColor: .secondarySystemBackground)).accessibilityIdentifier("timelineScroll")
             }
         }
     }
@@ -414,10 +400,9 @@ private struct SequenceCard: View {
     let index: Int
     let width: CGFloat
     let bar: Int
-    @Binding var tray: Int
     @State private var targetPosition: Int? = nil
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("BAR \(bar)").font(.caption2.weight(.semibold)).foregroundStyle(Palette.secondary)
                 .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading).padding(.horizontal, 6)
             Divider()
@@ -428,8 +413,7 @@ private struct SequenceCard: View {
                             active: playback.state.playing && index != nil,
                             progress: index.flatMap { playback.state.activeProgress.indices.contains($0) ? playback.state.activeProgress[$0] : nil } ?? 0,
                             stepBeats: step.clips.map { audio.sample($0.sampleID)?.beats ?? 4 }.max() ?? 4,
-                            stepNumber: self.index + 1,
-                            tray: $tray).frame(height: 118).padding(.horizontal, 4)
+                            stepNumber: self.index + 1).frame(height: 150)
                 }
             }
             Text("+ Drop a layer").font(.caption2).foregroundStyle(targetPosition == -1 ? Palette.accent : Palette.secondary)
@@ -475,64 +459,173 @@ private struct ClipRow: View {
     let progress: Double
     let stepBeats: Int
     let stepNumber: Int
-    @Binding var tray: Int
-    @State private var showLevel = false
     private var level: Binding<Double> {
         Binding(get: { audio.arrangement.flatMap(\.clips).first { $0.id == clip.id }?.level ?? clip.level },
                 set: { audio.setClipLevel(clip.id, level: $0) })
     }
-    private var levelSlider: some View {
-        Slider(value: level, in: 0...1, step: 0.01)
-            .tint(active ? .white : Palette.accent)
-            .accessibilityLabel("Level for \(song.name), loop \(sample.label), step \(stepNumber)")
-            .accessibilityIdentifier("clipLevel_\(clip.id)")
-    }
+    private var labels: [String] { song.partLabels?.count == 4 ? song.partLabels! : ["Kick", "Snare", "Toms", "Cymbals"] }
+
     var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 0) {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 0) {
-                    Button { audio.selectedClipID = clip.id; tray = 1 } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(sample.label) · \(song.name)").font(.caption.weight(.semibold)).lineLimit(1)
-                            ClipWaveform(sample: sample, mask: clip.mask, active: active, repeatInBeats: stepBeats).frame(maxHeight: .infinity)
-                        }.padding(6).frame(maxWidth: .infinity, minHeight: 70, alignment: .leading).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain).accessibilityLabel("Edit \(song.name), loop \(sample.label), step \(stepNumber)")
-                    .accessibilityValue(active ? "Playing" : "Ready").accessibilityIdentifier("clip_\(clip.id)")
+                    Text("\(sample.label) · \(song.name)").font(.caption.weight(.semibold)).lineLimit(1).padding(.leading, 6)
+                    Spacer(minLength: 0)
                     Button { audio.removeClip(clip.id) } label: { Image(systemName: "xmark").font(.caption).frame(width: 44, height: 44) }
                         .buttonStyle(.plain).accessibilityLabel("Remove \(song.name), loop \(sample.label)")
                         .accessibilityIdentifier("removeClip_\(clip.id)")
-                }.frame(height: 70)
-                if geometry.size.width >= 140 {
-                    HStack(spacing: 4) {
-                        Text("Level").font(.caption2)
-                        levelSlider
-                        Text("\(Int((clip.level * 100).rounded()))%").font(.caption2.monospacedDigit()).frame(width: 34, alignment: .trailing)
-                    }.padding(.horizontal, 6).frame(height: 44)
-                } else {
-                    Button { showLevel = true } label: {
-                        Text("Level \(Int((clip.level * 100).rounded()))%")
-                            .font(.caption2.monospacedDigit()).lineLimit(1).minimumScaleFactor(0.7)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Adjust level for \(song.name), loop \(sample.label), step \(stepNumber)")
-                    .accessibilityIdentifier("clipLevelButton_\(clip.id)")
-                    .popover(isPresented: $showLevel) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Clip level · \(Int((clip.level * 100).rounded()))%").font(.headline)
-                            levelSlider.tint(Palette.accent)
-                        }.padding().frame(width: 250).presentationCompactAdaptation(.popover)
-                    }
+                }.frame(height: 44)
+                Button { audio.selectedClipID = clip.id } label: {
+                    StylizedClipWaveform(sample: sample, mask: clip.mask, active: active, stepBeats: stepBeats)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.horizontal, 6).contentShape(Rectangle())
                 }
-            }
+                .buttonStyle(.plain).accessibilityLabel("Select \(song.name), loop \(sample.label), step \(stepNumber)")
+                .accessibilityValue(active ? "Playing" : "Ready").accessibilityIdentifier("clip_\(clip.id)")
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(spacing: 0) {
+                Button(clip.mask == 15 ? "ALL OFF" : "ALL ON") {
+                    audio.setPartsMask(clip.mask == 15 ? 0 : 15, clipID: clip.id)
+                }.font(.system(size: 10, weight: .semibold)).frame(width: 88, height: 44)
+                    .buttonStyle(.plain).disabled(sample.parts == nil)
+                    .accessibilityLabel("\(clip.mask == 15 ? "Mute" : "Enable") all parts for \(song.name), loop \(sample.label)")
+                    .accessibilityIdentifier("clipPartsAll_\(clip.id)")
+                ForEach(0..<2) { row in
+                    HStack(spacing: 0) { ForEach(0..<2) { column in partButton(row * 2 + column) } }
+                }
+            }.frame(width: 88)
+            ClipFilterDial(audio: audio, clip: clip, sample: sample, song: song, active: active)
+                .frame(width: 64).frame(maxHeight: .infinity)
+            VStack(spacing: 0) {
+                Text("LVL").font(.system(size: 10, weight: .semibold))
+                Slider(value: level, in: 0...1, step: 0.01)
+                    .tint(active ? .white : Palette.accent)
+                    .frame(width: 90, height: 44).rotationEffect(.degrees(-90)).frame(width: 44, height: 90)
+                    .accessibilityLabel("Level for \(song.name), loop \(sample.label), step \(stepNumber)")
+                    .accessibilityIdentifier("clipLevel_\(clip.id)")
+                Text("\(Int((clip.level * 100).rounded()))%").font(.system(size: 10).monospacedDigit()).lineLimit(1)
+            }.frame(width: 44).frame(maxHeight: .infinity)
         }
         .foregroundStyle(active ? Color.white : Color(uiColor: .label))
-        .background(RoundedRectangle(cornerRadius: 4).fill(active ? Color(uiColor: Palette.playing) : Palette.accent.opacity(0.13)))
-        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(clip.id == audio.selectedClipID ? (active ? Color.white : Palette.accent) : Color(uiColor: .separator).opacity(0.5), lineWidth: clip.id == audio.selectedClipID ? 2 : 1).allowsHitTesting(false))
+        .background(active ? Color(uiColor: Palette.playing) : Palette.accent.opacity(0.13))
+        .overlay(Rectangle().strokeBorder(clip.id == audio.selectedClipID ? (active ? Color.white : Palette.accent) : Color(uiColor: .separator).opacity(0.5), lineWidth: clip.id == audio.selectedClipID ? 2 : 1).allowsHitTesting(false))
         .overlay {
-            if active { GeometryReader { geometry in Rectangle().fill(Color.white).frame(width: 2).offset(x: geometry.size.width * min(1, max(0, progress))) }.allowsHitTesting(false) }
+            if active { GeometryReader { geometry in Rectangle().fill(Color.white.opacity(0.7)).frame(width: 2).offset(x: geometry.size.width * min(1, max(0, progress))) }.allowsHitTesting(false) }
         }
+    }
+
+    private func partButton(_ index: Int) -> some View {
+        let on = clip.mask & (1 << index) != 0
+        return Button { audio.togglePart(index, clipID: clip.id) } label: {
+            Text(index == 3 && labels[index] == "Cymbals" ? "CYM" : labels[index].uppercased())
+                .font(.system(size: 10, weight: .bold)).lineLimit(1).minimumScaleFactor(0.75)
+                .frame(width: 44).frame(maxHeight: .infinity)
+                .background(on ? (active ? Color.white.opacity(0.18) : Palette.accent.opacity(0.15)) : Color.clear)
+                .opacity(on ? 1 : 0.55)
+                .overlay(Rectangle().strokeBorder((active ? Color.white : Color(uiColor: .separator)).opacity(0.25)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).disabled(sample.parts == nil)
+        .accessibilityLabel("\(labels[index]) for \(song.name), loop \(sample.label), step \(stepNumber)")
+        .accessibilityValue(on ? "On" : "Off").accessibilityIdentifier("clipPart_\(clip.id)_\(index)")
+    }
+}
+
+// The center is bypass; rotating left lowers a low-pass cutoff, right raises a high-pass cutoff.
+private enum ClipFilterPosition {
+    static let deadband = 0.025
+    static let range = log(18000.0 / 40.0)
+    static func position(type: Int, cutoff: Double) -> Double {
+        let hz = min(18000, max(40, cutoff))
+        if type == 1 { return -(deadband + (1 - deadband) * log(18000 / hz) / range) }
+        if type == 3 { return deadband + (1 - deadband) * log(hz / 40) / range }
+        return 0
+    }
+    static func settings(_ position: Double) -> (Int, Double) {
+        let p = min(1, max(-1, position)), amount = (abs(p) - deadband) / (1 - deadband)
+        guard amount > 0 else { return (0, 1200) }
+        return p < 0 ? (1, 18000 * exp(-range * amount)) : (3, 40 * exp(range * amount))
+    }
+}
+
+private struct ClipFilterDial: View {
+    @ObservedObject var audio: AudioModel
+    let clip: ArrangementClip
+    let sample: LoopSample
+    let song: Song
+    let active: Bool
+    @State private var startPosition: Double?
+    private var position: Double { ClipFilterPosition.position(type: clip.filterType, cutoff: clip.filterCutoff) }
+    private var valueLabel: String {
+        guard clip.filterType != 0 else { return "OFF" }
+        let hz = clip.filterCutoff
+        let value = hz >= 1000 ? String(format: "%.1fk", hz / 1000) : "\(Int(hz.rounded()))"
+        return "\(clip.filterType == 1 ? "LP" : "HP") \(value)"
+    }
+    private func set(_ position: Double) {
+        let (type, cutoff) = ClipFilterPosition.settings(position)
+        audio.setClipFilter(clip.id, type: type, cutoff: cutoff)
+    }
+    var body: some View {
+        VStack(spacing: 3) {
+            Text("FILTER").font(.system(size: 10, weight: .semibold))
+            ZStack {
+                Circle().strokeBorder((active ? Color.white : Palette.accent).opacity(0.28), lineWidth: 3)
+                Circle().fill((active ? Color.white : Palette.accent).opacity(0.12)).padding(5)
+                Capsule().fill(active ? Color.white : Palette.accent).frame(width: 3, height: 12)
+                    .offset(y: -10).rotationEffect(.degrees(position * 135))
+            }.frame(width: 36, height: 36).frame(width: 52, height: 52).contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0).onChanged { value in
+                    if startPosition == nil { startPosition = position }
+                    set((startPosition ?? 0) - value.translation.height / 100)
+                }.onEnded { _ in startPosition = nil })
+                .simultaneousGesture(TapGesture(count: 2).onEnded { set(0) })
+            Text(valueLabel).font(.system(size: 10, weight: .medium).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.7)
+            Text("LP  ·  HP").font(.system(size: 9, weight: .medium)).opacity(0.75)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(Rectangle().strokeBorder((active ? Color.white : Color(uiColor: .separator)).opacity(0.25)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Filter for \(song.name), loop \(sample.label)")
+        .accessibilityValue(valueLabel == "OFF" ? "Off" : valueLabel)
+        .accessibilityHint("Drag up for high-pass, down for low-pass. Double-tap to reset.")
+        .accessibilityAdjustableAction { direction in
+            switch direction { case .increment: set(position + 0.1); case .decrement: set(position - 0.1); @unknown default: break }
+        }
+        .accessibilityIdentifier("clipFilter_\(clip.id)")
+    }
+}
+
+private struct StylizedClipWaveform: View {
+    let sample: LoopSample
+    let mask: Int
+    let active: Bool
+    let stepBeats: Int
+    var body: some View {
+        Canvas { context, size in
+            guard sample.waveform.count > 1 else { return }
+            let count = min(96, max(16, Int(size.width / 4)))
+            let repeats = max(1, Double(stepBeats) / Double(sample.beats))
+            let color = active ? Color.white : Palette.accent
+            for bar in 0..<count {
+                let x = (CGFloat(bar) + 0.5) * size.width / CGFloat(count)
+                let phase = (Double(bar) / Double(count) * repeats).truncatingRemainder(dividingBy: 1)
+                let i = min(sample.waveform.count - 1, Int(phase * Double(sample.waveform.count)))
+                let original = CGFloat(sample.waveform[i])
+                var shown = original
+                if mask != 15, let parts = sample.parts?.waveforms, parts.count == 4 {
+                    shown = CGFloat(sqrt(parts.enumerated().reduce(0.0) { total, lane in
+                        let value = lane.element.indices.contains(i) && mask & (1 << lane.offset) != 0 ? Double(lane.element[i]) : 0
+                        return total + value * value
+                    }))
+                }
+                func line(_ amplitude: CGFloat) -> Path {
+                    var path = Path(); let extent = min(1, amplitude) * size.height * 0.43
+                    path.move(to: CGPoint(x: x, y: size.height / 2 - extent)); path.addLine(to: CGPoint(x: x, y: size.height / 2 + extent)); return path
+                }
+                context.stroke(line(original), with: .color(color.opacity(0.18)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                if shown > 0 { context.stroke(line(shown), with: .color(color.opacity(0.85)), style: StrokeStyle(lineWidth: 2, lineCap: .round)) }
+            }
+        }.accessibilityHidden(true)
     }
 }
 
@@ -566,98 +659,5 @@ private struct ClipWaveform: View {
                 context.fill(path, with: .color((active ? Color.white : Color.secondary).opacity(on ? 0.9 : 0.16)))
             }
         }.accessibilityHidden(true)
-    }
-}
-
-private struct SoundTray: View {
-    @ObservedObject var audio: AudioModel
-    @Binding var tray: Int
-    @Environment(\.dynamicTypeSize) private var typeSize
-    private var deviceHeight: CGFloat { typeSize.isAccessibilitySize ? 230 : 150 }
-    private var slider: Binding<Double> {
-        Binding(get: { log((audio.selectedClip?.filterCutoff ?? 1200) / 40) / log(18000 / 40) },
-                set: { audio.setClipFilter(type: audio.selectedClip?.filterType ?? 0, cutoff: 40 * pow(18000 / 40, $0)) })
-    }
-    private var cutoffLabel: String {
-        let hz = audio.selectedClip?.filterCutoff ?? 1200
-        return hz >= 1000 ? String(format: "%.1f kHz", hz / 1000) : "\(Int(hz.rounded())) Hz"
-    }
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Text("Sound").font(.headline)
-                if let song = audio.selectedClipSong, let sample = audio.selectedSample {
-                    Text("\(song.name) · \(sample.label)").font(.caption).foregroundStyle(Palette.secondary).lineLimit(1)
-                } else {
-                    Text("Select a clip in the timeline.").font(.caption).foregroundStyle(Palette.secondary).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                Button { tray = 0 } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
-                    .accessibilityLabel("Close sound controls")
-            }.padding(.horizontal, 12)
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                HStack(alignment: .top, spacing: 8) {
-                    device("Parts", width: 140) {
-                        ScrollView(.vertical) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 12) {
-                                    Button { audio.setPartsMask(0) } label: { Text("All off").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
-                                    Button { audio.setPartsMask(15) } label: { Text("All on").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
-                                }.font(.caption).disabled(audio.selectedClip == nil)
-                                Text("Approximate layers may overlap.").font(.caption2).foregroundStyle(Palette.secondary)
-                                if let status = audio.partStatus {
-                                    Text(status).font(.caption2).foregroundStyle(Palette.secondary).accessibilityIdentifier("partStatus")
-                                    if status.hasPrefix("Parts unavailable") { Button("Retry parts") { audio.retryParts() }.frame(minHeight: 44) }
-                                }
-                            }
-                        }
-                    }
-                    if let song = audio.selectedClipSong, let clip = audio.selectedClip {
-                        ForEach(Array((song.partLabels ?? []).enumerated()), id: \.offset) { index, label in
-                            partDevice(index: index, label: label, isOn: clip.mask & (1 << index) != 0)
-                        }
-                    }
-                    device("Clip filter", width: 210) {
-                        Picker("Clip filter type", selection: Binding(get: { audio.selectedClip?.filterType ?? 0 }, set: { audio.setClipFilter(type: $0, cutoff: audio.selectedClip?.filterCutoff ?? 1200) })) {
-                            Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
-                        }.pickerStyle(.segmented).disabled(audio.selectedClip == nil).accessibilityIdentifier("filterMode")
-                        HStack { Text("Cutoff"); Spacer(); Text(cutoffLabel).monospacedDigit() }.font(.caption)
-                        Slider(value: slider, in: 0...1).disabled(audio.selectedClip == nil).accessibilityLabel("Clip filter cutoff").accessibilityValue(cutoffLabel).accessibilityIdentifier("filterCutoff")
-                    }
-                }.padding(.horizontal, 12).padding(.bottom, 10)
-            }.accessibilityIdentifier("soundDevices").accessibilityHint("Scroll to see more sound devices.")
-        }.accessibilityElement(children: .contain).accessibilityIdentifier("soundTray")
-    }
-
-    private func device<Content: View>(_ title: String, width: CGFloat, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.caption.weight(.semibold)).lineLimit(1)
-            Divider()
-            content()
-            Spacer(minLength: 0)
-        }
-        .padding(8).frame(width: typeSize.isAccessibilitySize ? width * 1.5 : width, height: deviceHeight, alignment: .topLeading)
-        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 5))
-        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color(uiColor: .separator).opacity(0.5)))
-    }
-
-    private func partDevice(index: Int, label: String, isOn: Bool) -> some View {
-        Button { audio.togglePart(index) } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(label).font(.caption.weight(.semibold)).lineLimit(1)
-                Divider()
-                Spacer(minLength: 0)
-                Text(isOn ? "ON" : "OFF").font(.caption.weight(.bold)).foregroundStyle(isOn ? Palette.accent : Palette.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).padding(.horizontal, 8)
-                    .background(isOn ? Palette.accent.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 4))
-                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(isOn ? Palette.accent : Color(uiColor: .separator).opacity(0.5)))
-            }
-            .padding(8).frame(width: typeSize.isAccessibilitySize ? 141 : 94, height: deviceHeight, alignment: .topLeading)
-            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 5))
-            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color(uiColor: .separator).opacity(0.5)))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain).accessibilityLabel(label).accessibilityValue(isOn ? "On" : "Off")
-        .accessibilityIdentifier("part_\(index)")
     }
 }

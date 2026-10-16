@@ -330,12 +330,13 @@ final class AudioModel: ObservableObject {
         let mask = Int32(partMask(song)), ids = song.loops.map(\.id)
         control.async { [dsp] in for id in ids { bw_part_mask(dsp, id, mask) } }
     }
-    func togglePart(_ index: Int) {
-        guard (0..<4).contains(index), let clip = selectedClip else { return }
-        setPartsMask(clip.mask ^ (1 << index))
+    func togglePart(_ index: Int, clipID token: Int32) {
+        guard (0..<4).contains(index), let clip = arrangement.flatMap(\.clips).first(where: { $0.id == token }) else { return }
+        setPartsMask(clip.mask ^ (1 << index), clipID: token)
     }
-    func setPartsMask(_ mask: Int) {
-        guard let token = selectedClipID else { return }
+    func setPartsMask(_ mask: Int, clipID token: Int32) {
+        guard arrangement.contains(where: { $0.clips.contains(where: { $0.id == token }) }) else { return }
+        selectedClipID = token
         for i in arrangement.indices { for j in arrangement[i].clips.indices where arrangement[i].clips[j].id == token { arrangement[i].clips[j].mask = mask & 15 } }
         control.async { [dsp] in bw_clip_mask(dsp, token, Int32(mask & 15)) }
         refreshParts()
@@ -345,8 +346,9 @@ final class AudioModel: ObservableObject {
         let t = Int32(filterType), hz = filterCutoff
         control.async { [dsp] in bw_filter(dsp, t, hz) }
     }
-    func setClipFilter(type: Int, cutoff: Double) {
-        guard let token = selectedClipID, cutoff.isFinite else { return }
+    func setClipFilter(_ token: Int32, type: Int, cutoff: Double) {
+        guard cutoff.isFinite, arrangement.contains(where: { $0.clips.contains(where: { $0.id == token }) }) else { return }
+        selectedClipID = token
         let kind = min(3, max(0, type)), hz = min(18000, max(40, cutoff))
         for i in arrangement.indices { for j in arrangement[i].clips.indices where arrangement[i].clips[j].id == token {
             arrangement[i].clips[j].filterType = kind

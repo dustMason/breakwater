@@ -1,5 +1,6 @@
 import { AudioPlayer } from './audio.js';
 import { assetBase, assetURL } from './assets.js';
+import { filterFromPosition, positionFromFilter, waveformBars } from './clip-controls.js';
 
 const $ = id => document.getElementById(id);
 const storageKey = 'breakwater.web.v1';
@@ -10,7 +11,8 @@ let tempo = bounded(saved.tempo, 120, 30, 300);
 let volume = bounded(saved.volume, .8, 0, 1);
 const disabled = new Set(Array.isArray(saved.disabled) ? saved.disabled.filter(Number.isInteger) : []);
 const partMasks = saved.partMasks && typeof saved.partMasks === 'object' ? saved.partMasks : {};
-let tray = false, filterMode = 0, filterHz = 1200, partError = '';
+let filterMode = 0, filterHz = 1200;
+const partFailures = new Map();
 let songs = [], samples = [], song = null;
 let editing = false, loading = false, request = 0;
 let state = { playing: false, active: null, activeLoops: [], activeTokens: [], beat: 0, progress: 0, pending: false, queue: [] };
@@ -100,34 +102,29 @@ function selectedClip() { return allClips().find(clip => clip.token === selected
 function sampleFor(id) { return samples.find(sample => sample.id === id); }
 function formatHz(hz) { return hz >= 1000 ? `${(hz / 1000).toFixed(1)} kHz` : `${Math.round(hz)} Hz`; }
 function sliderPosition(hz) { return Math.round(1000 * Math.log(hz / 40) / Math.log(18000 / 40)); }
-function paintPartButtons() {
-  const clip = selectedClip(), sample = clip && sampleFor(clip.id);
-  const source = sample && songs.find(item => item.id === sample.songID);
-  $('part-target').textContent = sample ? `${sample.songName} · ${String(sample.number).padStart(2, '0')}` : 'Select a clip in the timeline.';
-  $('parts-off').disabled = $('parts-on').disabled = !clip;
-  $('part-buttons').replaceChildren(...(source?.partLabels || []).map((name, index) => {
-    const button = document.createElement('button'); const on = !!(clip.mask & (1 << index));
-    button.type = 'button'; button.dataset.part = index; button.setAttribute('aria-pressed', String(on));
-    const label = document.createElement('span'); label.className = 'device-name'; label.textContent = name;
-    const state = document.createElement('span'); state.className = 'device-state'; state.textContent = on ? 'ON' : 'OFF'; button.append(label, state);
-    return button;
-  }));
-  for (const button of $('filter-modes').querySelectorAll('button')) {
-    button.disabled = !clip; button.setAttribute('aria-pressed', String(Number(button.dataset.mode) === (clip?.filterType ?? 0)));
+function renderPartStatus() {
+  const clip = selectedClip();
+  const failure = clip && partFailures.get(clip.id);
+  let message = '';
+  if (failure && clip.mask !== 15) message = `Parts could not load (${failure}). The full mix remains available.`;
+  else if (clip && clip.mask !== 15 && state.playing && audio.partInFlight.has(clip.id)) {
+    message = clip.mask === 0 ? 'Preparing parts · all layers are off' : 'Preparing parts · full mix plays until ready';
   }
-  $('cutoff').disabled = !clip;
-  $('cutoff').value = sliderPosition(clip?.filterHz ?? 1200);
-  $('cutoff-value').textContent = formatHz(clip?.filterHz ?? 1200);
+  $('part-message').textContent = message;
+  $('part-notice').hidden = !message;
+  $('retry-parts').hidden = !failure || clip.mask === 15;
 }
-function paintWaveforms() {}
 
-function setTray(next) {
-  tray = next;
-  $('tray').hidden = !tray;
-  $('show-sound').setAttribute('aria-expanded', String(tray));
-  paintWaveforms();
-  layout();
+function selectClip(token) {
+  selectedToken = token;
+  document.querySelectorAll('.clip-row').forEach(row => {
+    const selected = Number(row.dataset.token) === token;
+    row.classList.toggle('selected', selected);
+    row.querySelector('[data-select]')?.setAttribute('aria-pressed', String(selected));
+  });
+  renderPartStatus();
 }
+
 function prepareUpcoming() {
   if (!state.playing) return;
   const index = arrangement.findIndex(step => step.some(clip => (state.activeTokens || []).includes(clip.token)));
@@ -136,32 +133,57 @@ function prepareUpcoming() {
   audio.pinParts([...new Set([...(state.activeLoops || []), ...ids])]);
   for (const id of ids) {
     const sample = sampleFor(id);
-    if (!sample || !audio.loaded.has(id) || audio.partCache.has(id) || audio.partInFlight.has(id)) continue;
-    if (partError) continue;
-    if (id === selectedClip()?.id) $('part-message').textContent = 'Preparing parts · full mix plays until ready';
-    audio.loadParts(sample).then(() => {
-      if (id === selectedClip()?.id) $('part-message').textContent = '';
-    }).catch(error => {
-      partError = `Parts could not load (${error.message}). The full mix remains available.`;
-      $('part-message').textContent = partError; $('retry-parts').hidden = false;
+    if (!sample || !audio.loaded.has(id) || audio.partCache.has(id) || audio.partInFlight.has(id) || partFailures.has(id)) continue;
+    audio.loadParts(sample).then(() => { renderPartStatus(); }).catch(error => {
+      partFailures.set(id, error.message); renderPartStatus();
     });
   }
+  renderPartStatus();
 }
 
 function updateHint() {
   $('hint').textContent = editing ? 'Select a loop in the library to exclude or restore it. Changes are saved.'
-    : 'Drop at a step edge to insert; drop beneath a clip to layer. Select a clip to edit its sound.';
+    : 'Drop at a step edge to insert; drop beneath a clip to layer. Each clip has its own mix controls.';
 }
 let zoom = 1;
 function applyZoom() {
-  const container = $('arrangement-items');
-  container.style.setProperty('--zoom', zoom);
-  const gaps = Math.max(1, arrangement.length - 1);
-  container.style.setProperty('--gap-width', `${Math.max(2, Math.min(18, (container.clientWidth * zoom - 76) / (gaps * 3)))}px`);
+  $('arrangement-items').style.setProperty('--zoom', zoom);
 }
 new ResizeObserver(applyZoom).observe($('arrangement-items'));
+
+function renderClipWaveform(svg, sample, clip, beats) {
+  const bars = waveformBars(sample.waveform, sample.parts?.waveforms, clip.mask);
+  const paths = (key) => bars.map((bar, index) => {
+    const amplitude = bar[key] * 43, x = (index + 0.5) * 100 / bars.length;
+    return `M${x.toFixed(2)} ${(50 - amplitude).toFixed(2)} V${(50 + amplitude).toFixed(2)}`;
+  }).join(' ');
+  const fraction = (sample.beats || 4) / beats;
+  svg.innerHTML = Array.from({length: Math.ceil(1 / fraction)}, (_, repeat) =>
+    `<g transform="translate(${repeat * fraction * 100} 0) scale(${fraction} 1)"><path class="wave-ghost" d="${paths('full')}"/><path class="wave-enabled" d="${paths('enabled')}"/></g>`).join('');
+}
+
+function filterLabel(clip) {
+  if (clip.filterType === 0) return 'Off';
+  return `${clip.filterType === 1 ? 'LPF' : 'HPF'} ${formatHz(clip.filterHz)}`;
+}
+function updateClipFilterUI(row, clip) {
+  const input = row.querySelector('[data-filter]'), value = filterLabel(clip);
+  input.value = Math.round(positionFromFilter(clip.filterType, clip.filterHz) * 100);
+  input.setAttribute('aria-valuetext', value);
+  row.querySelector('.filter-value').textContent = clip.filterType ? value.replace('F ', ' ') : 'OFF';
+  row.querySelector('.dial-pointer').style.transform = `rotate(${Number(input.value) * 1.35}deg)`;
+}
+function updateClipPartsUI(row, clip, sample, beats) {
+  row.querySelectorAll('[data-part]').forEach(button => button.setAttribute('aria-pressed', String(!!(clip.mask & (1 << Number(button.dataset.part))))));
+  const all = row.querySelector('[data-parts-all]');
+  all.textContent = clip.mask === 15 ? 'ALL OFF' : 'ALL ON';
+  all.setAttribute('aria-label', `${clip.mask === 15 ? 'Mute' : 'Enable'} all parts for ${sample.songName}, loop ${sample.number}`);
+  renderClipWaveform(row.querySelector('.clip-waveform'), sample, clip, beats);
+}
+
 function paintArrangement() {
   const container = $('arrangement-items'); const content = document.createElement('div'); content.className = 'timeline-content';
+  if (arrangement.length) content.style.minWidth = `${arrangement.length * 270 + 76}px`;
   let firstBar = 1;
   function gap(index) {
     const slot = document.createElement('div'); slot.className = 'arrangement-gap'; slot.dataset.index = index;
@@ -171,7 +193,7 @@ function paintArrangement() {
     const empty = document.createElement('div'); empty.className = 'arrangement-empty'; empty.dataset.index = '0';
     empty.textContent = 'Drag a loop here to start your sequence'; content.append(empty);
   } else arrangement.forEach((step, index) => {
-    content.append(gap(index));
+    if (index === 0) content.append(gap(index));
     const beats = Math.max(...step.map(clip => sampleFor(clip.id)?.beats || 4));
     const group = document.createElement('div'); group.className = 'sequence-step'; group.dataset.step = index; group.style.flexGrow = beats;
     const heading = document.createElement('div'); heading.className = 'step-heading';
@@ -179,27 +201,50 @@ function paintArrangement() {
     firstBar += beats / 4;
     for (const clip of step) {
       const sample = sampleFor(clip.id); if (!sample) continue;
-      const row = document.createElement('div'); row.className = 'clip-row'; row.dataset.token = clip.token;
+      const source = songs.find(item => item.id === sample.songID);
+      const labels = source?.partLabels?.length === 4 ? source.partLabels : ['Kick', 'Snare', 'Toms', 'Cymbals'];
+      const row = document.createElement('div'); row.className = 'clip-row'; row.dataset.token = clip.token; row.dataset.beats = beats;
       row.classList.toggle('selected', clip.token === selectedToken);
-      const choose = document.createElement('button'); choose.type = 'button'; choose.className = 'clip-select'; choose.dataset.select = clip.token;
-      choose.setAttribute('aria-pressed', String(clip.token === selectedToken));
-      choose.setAttribute('aria-label', `Edit ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+      const display = document.createElement('div'); display.className = 'clip-display';
+      const title = document.createElement('div'); title.className = 'clip-title';
       const label = document.createElement('span'); label.className = 'clip-label'; label.textContent = `${String(sample.number).padStart(2, '0')} · ${sample.songName}`;
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.classList.add('clip-waveform'); svg.setAttribute('aria-hidden', 'true');
-      const fraction = (sample.beats || 4) / beats;
-      const lanes = sample.parts ? sample.parts.waveforms.map((values, p) => `<path class="${clip.mask & (1 << p) ? '' : 'muted-part'}" d="${waveform(values, 12.5 + p * 25, 11)}"/>`).join('') : `<path d="${waveform(sample.waveform)}"/>`;
-      svg.innerHTML = Array.from({length: Math.ceil(1 / fraction)}, (_, repeat) => `<g transform="translate(${repeat * fraction * 100} 0) scale(${fraction} 1)">${lanes}</g>`).join('');
-      choose.append(label, svg);
       const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'clip-remove'; remove.dataset.remove = clip.token;
       remove.setAttribute('aria-label', `Remove ${sample.songName}, loop ${sample.number}, from step ${index + 1}`); remove.textContent = '×';
-      const main = document.createElement('div'); main.className = 'clip-main'; main.append(choose, remove);
+      title.append(label, remove);
+      const choose = document.createElement('button'); choose.type = 'button'; choose.className = 'clip-select'; choose.dataset.select = clip.token;
+      choose.setAttribute('aria-pressed', String(clip.token === selectedToken));
+      choose.setAttribute('aria-label', `Select ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.classList.add('clip-waveform'); svg.setAttribute('aria-hidden', 'true');
+      choose.append(svg); display.append(title, choose);
+      const controls = document.createElement('div'); controls.className = 'clip-parts'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', `Parts for ${sample.songName}, loop ${sample.number}`);
+      const all = document.createElement('button'); all.type = 'button'; all.dataset.partsAll = clip.token; all.disabled = !sample.parts; controls.append(all);
+      const grid = document.createElement('div'); grid.className = 'clip-parts-grid';
+      labels.forEach((name, part) => {
+        const button = document.createElement('button'); button.type = 'button'; button.dataset.part = part; button.disabled = !sample.parts;
+        button.textContent = name === 'Cymbals' ? 'CYM' : name.toUpperCase();
+        button.setAttribute('aria-label', `${name} for ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+        button.title = `${name}: approximate separated layer`; grid.append(button);
+      });
+      controls.append(grid);
+      const filter = document.createElement('div'); filter.className = 'clip-filter';
+      const filterTitle = document.createElement('span'); filterTitle.className = 'control-title'; filterTitle.textContent = 'FILTER';
+      const dial = document.createElement('div'); dial.className = 'filter-dial';
+      dial.innerHTML = '<span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>';
+      const filterInput = document.createElement('input'); filterInput.type = 'range'; filterInput.min = '-100'; filterInput.max = '100'; filterInput.step = '1'; filterInput.dataset.filter = clip.token;
+      filterInput.setAttribute('aria-label', `Filter for ${sample.songName}, loop ${sample.number}, step ${index + 1}`); filterInput.setAttribute('aria-describedby', 'filter-help');
+      dial.append(filterInput);
+      const filterValue = document.createElement('span'); filterValue.className = 'filter-value';
+      const filterSides = document.createElement('span'); filterSides.className = 'filter-sides'; filterSides.textContent = 'LP · HP';
+      filter.append(filterTitle, dial, filterValue, filterSides);
       const level = document.createElement('label'); level.className = 'clip-level';
-      const levelLabel = document.createElement('span'); levelLabel.className = 'clip-level-label'; levelLabel.textContent = 'Level';
+      const levelLabel = document.createElement('span'); levelLabel.className = 'control-title'; levelLabel.textContent = 'LVL';
       const slider = document.createElement('input'); slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.step = '1';
       slider.value = Math.round((clip.level ?? 1) * 100); slider.dataset.level = clip.token;
       slider.setAttribute('aria-label', `Level for ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+      const sliderArea = document.createElement('span'); sliderArea.className = 'level-slider'; sliderArea.append(slider);
       const value = document.createElement('output'); value.className = 'clip-level-value'; value.textContent = `${slider.value}%`;
-      level.append(levelLabel, slider, value); row.append(main, level); group.append(row);
+      level.append(levelLabel, sliderArea, value); row.append(display, controls, filter, level); group.append(row);
+      updateClipPartsUI(row, clip, sample, beats); updateClipFilterUI(row, clip);
     }
     const target = document.createElement('div'); target.className = 'layer-target'; target.textContent = '+ Drop a layer'; group.append(target);
     content.append(group);
@@ -208,7 +253,7 @@ function paintArrangement() {
   container.replaceChildren(content);
   const bars = firstBar - 1, clips = allClips().length;
   $('sequence-detail').textContent = arrangement.length ? `${bars} ${bars === 1 ? 'bar' : 'bars'} · ${clips} ${clips === 1 ? 'clip' : 'clips'}` : 'Drop loops here to build a sequence';
-  $('clear-arrangement').disabled = !arrangement.length; applyZoom(); paintArrangementState();
+  $('clear-arrangement').disabled = !arrangement.length; applyZoom(); paintArrangementState(); renderPartStatus();
 }
 function paintArrangementState() {
   const tokens = state.playing ? state.activeTokens || [] : [];
@@ -285,7 +330,7 @@ function addSample(id, index, layer = false, replace = false) {
   else if (layer && arrangement[index]) arrangement[index].push(clip);
   else arrangement.splice(Math.max(0, Math.min(index, arrangement.length)), 0, [clip]);
   selectedToken = clip.token;
-  paintArrangement(); paintPartButtons(); paintWaveforms();
+  paintArrangement();
   submitArrangement();
 }
 
@@ -305,7 +350,7 @@ function toggleDisabled(id) {
   if (disabled.has(id)) {
     arrangement = arrangement.map(step => step.filter(clip => clip.id !== id)).filter(step => step.length);
     if (!selectedClip()) selectedToken = null;
-    paintArrangement(); paintPartButtons(); paintWaveforms(); submitArrangement(false);
+    paintArrangement(); submitArrangement(false);
   }
   persist();
   paintLibrary(); paint();
@@ -313,7 +358,7 @@ function toggleDisabled(id) {
 function padAt(target) { return target instanceof Element ? target.closest('.pad') : null; }
 function clearPointer() {
   pointer = null; $('drag-preview').hidden = true;
-  document.querySelectorAll('.drop-active').forEach(element => element.classList.remove('drop-active'));
+  document.querySelectorAll('.drop-active, .drop-before, .drop-after').forEach(element => element.classList.remove('drop-active', 'drop-before', 'drop-after'));
 }
 function dropAt(x, y) {
   const target = document.elementFromPoint(x, y);
@@ -324,8 +369,8 @@ function dropAt(x, y) {
   if (step) {
     const index = Number(step.dataset.step), rect = step.getBoundingClientRect();
     const edge = Math.min(24, rect.width / 3);
-    if (x - rect.left < edge) return { element: step.previousElementSibling, index, layer: false };
-    if (rect.right - x < edge) return { element: step.nextElementSibling, index: index + 1, layer: false };
+    if (x - rect.left < edge) return { element: step, index, layer: false, edge: 'before' };
+    if (rect.right - x < edge) return { element: step, index: index + 1, layer: false, edge: 'after' };
     return { element: step, index, layer: true };
   }
   const container = target.closest('#arrangement-items');
@@ -357,9 +402,9 @@ $('grid').addEventListener('pointermove', event => {
   const sample = sampleFor(pointer.id), preview = $('drag-preview');
   preview.hidden = false; preview.textContent = `${sample.songName} · ${String(sample.number).padStart(2, '0')}`;
   preview.style.left = `${event.clientX + 12}px`; preview.style.top = `${event.clientY + 12}px`;
-  document.querySelectorAll('.drop-active').forEach(element => element.classList.remove('drop-active'));
+  document.querySelectorAll('.drop-active, .drop-before, .drop-after').forEach(element => element.classList.remove('drop-active', 'drop-before', 'drop-after'));
   pointer.target = dropAt(event.clientX, event.clientY);
-  pointer.target?.element.classList.add('drop-active');
+  pointer.target?.element.classList.add(pointer.target.edge ? `drop-${pointer.target.edge}` : 'drop-active');
   const rect = $('arrangement-items').getBoundingClientRect();
   if (event.clientY >= rect.top && event.clientY <= rect.bottom) {
     if (event.clientX < rect.left + 42) $('arrangement-items').scrollLeft -= 14;
@@ -434,55 +479,73 @@ $('grid').addEventListener('keydown', event => {
   event.preventDefault(); items[Math.min(items.length - 1, Math.max(0, index + (event.key === 'ArrowUp' ? -1 : 1)))].focus();
 });
 
-$('show-sound').addEventListener('click', () => setTray(!tray));
-$('close-tray').addEventListener('click', () => { setTray(false); $('show-sound').focus(); });
+function setPartsMask(clip, mask) {
+  if (!clip) return;
+  clip.mask = mask & 15;
+  selectClip(clip.token);
+  audio.setClipMask(clip.token, clip.mask);
+  const row = document.querySelector(`.clip-row[data-token="${clip.token}"]`), sample = sampleFor(clip.id);
+  if (row && sample) updateClipPartsUI(row, clip, sample, Number(row.dataset.beats));
+  prepareUpcoming();
+}
 $('arrangement-items').addEventListener('click', event => {
   const choose = event.target.closest('[data-select]'), remove = event.target.closest('[data-remove]');
-  if (choose) {
-    selectedToken = Number(choose.dataset.select); partError = ''; $('retry-parts').hidden = true; $('part-message').textContent = '';
-    paintArrangement(); paintPartButtons(); paintWaveforms(); setTray(true); prepareUpcoming();
-    document.querySelector(`[data-select="${selectedToken}"]`)?.focus({ preventScroll: true });
+  const part = event.target.closest('[data-part]'), all = event.target.closest('[data-parts-all]');
+  if (part || all) {
+    const row = event.target.closest('.clip-row'), clip = allClips().find(item => item.token === Number(row?.dataset.token));
+    if (!clip) return;
+    setPartsMask(clip, all ? (clip.mask === 15 ? 0 : 15) : clip.mask ^ (1 << Number(part.dataset.part)));
+  } else if (choose) {
+    selectClip(Number(choose.dataset.select)); prepareUpcoming();
   } else if (remove) {
     const token = Number(remove.dataset.remove);
     arrangement = arrangement.map(step => step.filter(clip => clip.token !== token)).filter(step => step.length);
     if (selectedToken === token) selectedToken = null;
-    paintArrangement(); paintPartButtons(); paintWaveforms(); submitArrangement(false);
+    paintArrangement(); submitArrangement(false);
   }
 });
+function applyClipFilter(input) {
+  const clip = allClips().find(item => item.token === Number(input.dataset.filter)); if (!clip) return;
+  const settings = filterFromPosition(Number(input.value) / 100);
+  clip.filterType = settings.type; clip.filterHz = settings.hz;
+  selectClip(clip.token); audio.setClipFilter(clip.token, clip.filterType, clip.filterHz);
+  updateClipFilterUI(input.closest('.clip-row'), clip);
+}
 $('arrangement-items').addEventListener('input', event => {
+  const filter = event.target.closest('input[data-filter]');
+  if (filter) { applyClipFilter(filter); return; }
   const slider = event.target.closest('input[data-level]'); if (!slider) return;
   const clip = allClips().find(item => item.token === Number(slider.dataset.level)); if (!clip) return;
   clip.level = Number(slider.value) / 100;
+  selectClip(clip.token);
   slider.closest('.clip-level').querySelector('output').textContent = `${slider.value}%`;
   audio.setClipLevel(clip.token, clip.level);
 });
-$('clear-arrangement').addEventListener('click', () => {
-  arrangement = []; selectedToken = null; paintArrangement(); paintPartButtons(); paintWaveforms(); submitArrangement(false);
+let dialDrag = null;
+$('arrangement-items').addEventListener('pointerdown', event => {
+  const input = event.target.closest('input[data-filter]');
+  if (!input || event.button !== 0) return;
+  event.preventDefault(); input.focus({ preventScroll: true }); input.setPointerCapture(event.pointerId);
+  dialDrag = { input, id: event.pointerId, y: event.clientY, value: Number(input.value) };
 });
-function setPartsMask(mask) {
-  const clip = selectedClip(); if (!clip) return;
-  clip.mask = mask & 15;
-  audio.setClipMask(clip.token, clip.mask);
-  partError = ''; $('retry-parts').hidden = true; $('part-message').textContent = '';
-  paintArrangement(); paintPartButtons(); paintWaveforms(); prepareUpcoming();
+$('arrangement-items').addEventListener('pointermove', event => {
+  if (!dialDrag || event.pointerId !== dialDrag.id) return;
+  dialDrag.input.value = Math.max(-100, Math.min(100, Math.round(dialDrag.value + dialDrag.y - event.clientY)));
+  applyClipFilter(dialDrag.input);
+});
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  $('arrangement-items').addEventListener(type, event => { if (dialDrag && event.pointerId === dialDrag.id) dialDrag = null; });
 }
-$('part-buttons').addEventListener('click', event => {
-  const button = event.target.closest('button[data-part]'), clip = selectedClip(); if (!button || !clip) return;
-  const part = Number(button.dataset.part);
-  setPartsMask(clip.mask ^ (1 << part));
-  document.querySelector(`[data-part="${part}"]`)?.focus({ preventScroll: true });
+$('arrangement-items').addEventListener('dblclick', event => {
+  const input = event.target.closest('input[data-filter]');
+  if (input) { input.value = '0'; applyClipFilter(input); }
 });
-$('parts-off').addEventListener('click', () => setPartsMask(0));
-$('parts-on').addEventListener('click', () => setPartsMask(15));
-$('retry-parts').addEventListener('click', () => { partError = ''; $('retry-parts').hidden = true; $('part-message').textContent = ''; prepareUpcoming(); });
-$('filter-modes').addEventListener('click', event => {
-  const button = event.target.closest('button[data-mode]'), clip = selectedClip(); if (!button || !clip) return;
-  clip.filterType = Number(button.dataset.mode); audio.setClipFilter(clip.token, clip.filterType, clip.filterHz); paintPartButtons();
+$('clear-arrangement').addEventListener('click', () => {
+  arrangement = []; selectedToken = null; paintArrangement(); submitArrangement(false);
 });
-$('cutoff').addEventListener('input', event => {
-  const clip = selectedClip(); if (!clip) return;
-  clip.filterHz = 40 * (18000 / 40) ** (Number(event.target.value) / 1000);
-  $('cutoff-value').textContent = formatHz(clip.filterHz); audio.setClipFilter(clip.token, clip.filterType, clip.filterHz);
+$('retry-parts').addEventListener('click', () => {
+  const clip = selectedClip(); if (clip) partFailures.delete(clip.id);
+  renderPartStatus(); prepareUpcoming();
 });
 $('master-filter-modes').addEventListener('click', event => {
   const button = event.target.closest('button[data-mode]'); if (!button) return;
@@ -585,7 +648,7 @@ async function loadCatalog() {
     for (const item of songs) audio.setPartMask(item.loops.map(sample => sample.id), songMask(item));
     $('transport').disabled = $('edit').disabled = false;
     $('grid').setAttribute('aria-busy', 'false');
-    buildLibrary(); paintArrangement(); paintPartButtons();
+    buildLibrary(); paintArrangement();
   } catch (error) {
     $('grid').setAttribute('aria-busy', 'false');
     notice(`The sample library couldn't load. Check your connection and retry. (${error.message})`, true);

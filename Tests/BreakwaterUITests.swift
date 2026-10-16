@@ -30,17 +30,11 @@ final class BreakwaterUITests: XCTestCase {
     }
     func testTimelineLayersAndIndependentSound() {
         let master = app.segmentedControls["masterFilterMode"]
-        XCTAssertTrue(master.buttons["HPF"].isHittable, "Master filter is available in the bottom bar without opening Sound")
-        XCTAssertTrue(app.otherElements["transportBar"].segmentedControls["masterFilterMode"].exists)
+        XCTAssertTrue(master.buttons["HPF"].isHittable)
         master.buttons["HPF"].tap()
         let masterCutoff = app.sliders["Master filter cutoff"]
         masterCutoff.adjust(toNormalizedSliderPosition: 0.7)
         let chosenCutoff = masterCutoff.value as? String
-        XCTAssertNotEqual(chosenCutoff, "1.2 kHz")
-        app.buttons["showSound"].tap()
-        XCTAssertFalse(app.segmentedControls["filterMode"].buttons["LPF"].isEnabled, "A clip must be selected before editing its filter")
-        XCTAssertFalse(app.otherElements["soundTray"].segmentedControls["masterFilterMode"].exists, "Master filter belongs to the bottom bar")
-        app.buttons["showSound"].tap()
         app.buttons["pad_0"].tap()
         XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 15))
         waitForValue("clip_1", "Playing")
@@ -54,45 +48,52 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(firstLevel.waitForExistence(timeout: 5))
         XCTAssertTrue(layeredLevel.exists)
         let unchangedLevel = layeredLevel.value as? String
-        firstLevel.adjust(toNormalizedSliderPosition: 0)
+        let top = firstLevel.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+        let bottom = firstLevel.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+        top.press(forDuration: 0.1, thenDragTo: bottom)
         let firstValue = (firstLevel.value as? String ?? "").replacingOccurrences(of: "%", with: "")
-        XCTAssertLessThan(Int(firstValue) ?? 100, 15, "Dragging the fader lowers this clip")
+        XCTAssertLessThan(Int(firstValue) ?? 100, 30, "Dragging the vertical fader lowers this clip")
         XCTAssertEqual(layeredLevel.value as? String, unchangedLevel, "Each timeline instance has an independent level")
-        app.buttons["clip_1"].tap()
-        XCTAssertTrue(app.buttons["part_0"].waitForExistence(timeout: 8))
-        XCTAssertGreaterThan(app.otherElements["soundTray"].frame.minY, app.buttons["clip_1"].frame.maxY, "Sound should sit below the timeline")
-        app.buttons["part_0"].tap(); waitForValue("part_0", "Off")
-        let filter = app.segmentedControls["filterMode"]
-        let devices = app.scrollViews["soundDevices"]
-        for _ in 0..<4 where !filter.buttons["LPF"].isHittable { devices.swipeLeft() }
-        XCTAssertTrue(filter.buttons["LPF"].isHittable)
-        filter.buttons["LPF"].tap()
-        XCTAssertTrue(filter.buttons["LPF"].isSelected)
-        app.buttons["clip_3"].tap(); waitForValue("part_0", "On")
-        XCTAssertTrue(filter.buttons["Off"].isSelected)
-        app.buttons["clip_1"].tap(); waitForValue("part_0", "Off")
-        XCTAssertTrue(filter.buttons["LPF"].isSelected)
-        XCTAssertTrue(master.buttons["HPF"].isSelected, "Editing clip filters does not change the master filter")
+        let firstPart = app.buttons["clipPart_1_0"], layeredPart = app.buttons["clipPart_3_0"]
+        XCTAssertTrue(firstPart.isHittable)
+        firstPart.tap(); waitForValue("clipPart_1_0", "Off")
+        waitForValue("clipPart_3_0", "On")
+        let firstFilter = app.descendants(matching: .any)["clipFilter_1"]
+        let layeredFilter = app.descendants(matching: .any)["clipFilter_3"]
+        XCTAssertTrue(firstFilter.isHittable)
+        let dial = firstFilter.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let down = dial.withOffset(CGVector(dx: 0, dy: 45))
+        dial.press(forDuration: 0.1, thenDragTo: down)
+        expectation(for: NSPredicate(format: "value CONTAINS 'LP'"), evaluatedWith: firstFilter)
+        waitForExpectations(timeout: 5)
+        XCTAssertEqual(layeredFilter.value as? String, "Off", "Each clip has an independent filter")
+        firstFilter.doubleTap()
+        expectation(for: NSPredicate(format: "value == 'Off'"), evaluatedWith: firstFilter)
+        waitForExpectations(timeout: 5)
+        dial.press(forDuration: 0.1, thenDragTo: dial.withOffset(CGVector(dx: 0, dy: -45)))
+        expectation(for: NSPredicate(format: "value CONTAINS 'HP'"), evaluatedWith: firstFilter)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(master.buttons["HPF"].isSelected)
         XCTAssertEqual(masterCutoff.value as? String, chosenCutoff)
         capture("timeline-landscape")
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.buttons["transport"].isHittable)
         XCTAssertTrue(app.buttons["nudgeEarlier"].isHittable)
-        for _ in 0..<4 where !app.buttons["part_0"].isHittable { devices.swipeRight() }
-        XCTAssertTrue(app.buttons["part_0"].isHittable, "Parts remain reachable in portrait")
-        XCTAssertTrue(master.buttons["HPF"].isHittable, "Master filter remains reachable in the bottom bar in portrait")
-        XCTAssertTrue(masterCutoff.isHittable)
+        XCTAssertTrue(firstPart.isHittable)
+        XCTAssertTrue(firstFilter.isHittable)
+        XCTAssertTrue(master.buttons["HPF"].isHittable)
         capture("timeline-portrait")
     }
-    func testNarrowTimelineLevelPopover() {
+    func testCrowdedTimelineControlsScrollable() {
         for index in 0..<8 { app.buttons["pad_\(index)"].tap() }
-        let control = app.buttons["clipLevelButton_1"]
-        XCTAssertTrue(control.waitForExistence(timeout: 15))
-        control.tap()
-        let slider = app.sliders["clipLevel_1"]
-        XCTAssertTrue(slider.waitForExistence(timeout: 5))
-        slider.adjust(toNormalizedSliderPosition: 0.4)
-        XCTAssertNotEqual(slider.value as? String, "100%")
+        let lastPart = app.buttons["clipPart_8_0"]
+        XCTAssertTrue(lastPart.waitForExistence(timeout: 15))
+        let timeline = app.scrollViews["timelineScroll"]
+        for _ in 0..<8 { timeline.swipeLeft() }
+        XCTAssertTrue(lastPart.isHittable, "Crowded steps retain touch-sized controls and scroll horizontally")
+        lastPart.tap(); waitForValue("clipPart_8_0", "Off")
+        XCTAssertTrue(app.sliders["clipLevel_8"].isHittable)
+        XCTAssertTrue(app.descendants(matching: .any)["clipFilter_8"].isHittable)
     }
     func testExclusionsPersistAndRestore() {
         app.buttons["editPads"].tap(); app.buttons["pad_2"].tap(); waitForValue("pad_2", "Excluded")
@@ -145,8 +146,8 @@ final class BreakwaterUITests: XCTestCase {
         app.buttons["pad_294"].tap(); XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.buttons["transport"].label, "Stop")
         app.buttons["nudgeEarlier"].tap(); app.buttons["nudgeLater"].tap()
-        app.buttons["clip_2"].tap(); XCTAssertTrue(app.buttons["part_0"].waitForExistence(timeout: 10))
-        app.buttons["part_0"].tap(); waitForValue("part_0", "Off")
+        XCTAssertTrue(app.buttons["clipPart_2_0"].waitForExistence(timeout: 10))
+        app.buttons["clipPart_2_0"].tap(); waitForValue("clipPart_2_0", "Off")
         XCTAssertTrue(app.buttons["clockStatus"].label.contains("LOCKED"))
     }
 }

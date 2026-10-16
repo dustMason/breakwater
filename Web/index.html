@@ -8,8 +8,8 @@
   <title>Breakwater</title>
   <link rel="icon" type="image/png" href="./icon.png">
   <link rel="apple-touch-icon" href="./icon.png">
-  <link rel="stylesheet" href="./style.css?v=3">
-  <script type="module" src="./app.js"></script>
+  <link rel="stylesheet" href="./style.css?v=5">
+  <script type="module" src="./app.js?v=4"></script>
 </head>
 <body>
   <main class="instrument" aria-label="Breakwater loop player">
@@ -18,7 +18,6 @@
       <h1>Breakwater</h1>
       <div class="current-source"><span id="song-name">Library</span><span id="artist" class="artist"></span></div>
       <div class="source-tempo"><span>Source</span><strong id="source-bpm">—</strong><span>BPM</span></div>
-      <button id="show-sound" aria-controls="tray" aria-expanded="false">Sound</button>
     </header>
 
     <div class="workspace">
@@ -34,29 +33,14 @@
             <div class="timeline-actions"><button id="zoom-out" aria-label="Zoom out timeline">−</button><button id="zoom-fit" title="Fit the full sequence">Fit</button><button id="zoom-in" aria-label="Zoom in timeline">+</button><button id="clear-arrangement">Clear</button></div>
           </div>
           <div id="notice" class="notice" hidden><span id="notice-text" role="status"></span><button id="retry" hidden>Retry</button><progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress></div>
+          <div id="part-notice" class="notice" hidden><span id="part-message" role="status"></span><button id="retry-parts" hidden>Retry parts</button></div>
           <div id="arrangement-items" class="arrangement-items" aria-label="Timeline steps"></div>
           <p id="hint" class="hint">Drop at a step edge to insert; drop beneath a clip to layer.</p>
         </section>
-        <aside id="tray" class="tray" aria-label="Sound controls" hidden>
-          <div class="tray-heading"><h2>Sound</h2><p id="part-target" class="tray-description">Select a clip in the timeline.</p><button id="close-tray" aria-label="Close sound controls">×</button></div>
-          <div class="device-rack" aria-label="Sound devices" tabindex="0">
-            <section id="parts-controls" class="device parts-summary">
-              <h3>Parts</h3>
-              <div class="part-actions"><button id="parts-off">All off</button><button id="parts-on">All on</button></div>
-              <p id="part-message" class="tray-description" role="status"></p><button id="retry-parts" hidden>Retry parts</button>
-              <p class="parts-explanation">Approximate layers may overlap.</p>
-            </section>
-            <div id="part-buttons" class="part-buttons" aria-label="Clip parts"></div>
-            <section id="fx-controls" class="device filter-device">
-              <h3>Clip filter</h3>
-              <div id="filter-modes" class="filter-modes" aria-label="Selected clip filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
-              <label class="cutoff-control" for="cutoff"><span>Cutoff <output id="cutoff-value">1.2 kHz</output></span><input id="cutoff" type="range" min="0" max="1000" value="558" aria-label="Selected clip filter cutoff"></label>
-            </section>
-          </div>
-        </aside>
       </div>
     </div>
     <p id="keyboard-help" class="sr-only">Activate a loop to add it to the end. Alt and Enter adds a layer to the selected step. Alt and Left or Right inserts before or after the selected step. Use Edit to exclude loops.</p>
+    <p id="filter-help" class="sr-only">Drag up for high-pass or down for low-pass. Double-click to reset. Use arrow keys to adjust.</p>
     <div id="drag-preview" class="drag-preview" hidden aria-hidden="true"></div>
     <footer class="dock">
       <button id="transport" class="transport" disabled aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="transport-icon" d="M7 4 20 12 7 20Z"/></svg><span id="transport-label">Play</span></button>

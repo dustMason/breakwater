@@ -1,5 +1,11 @@
 # Validation
 
+## Embedded timeline controls — 2026-10-15
+
+- On iPad and web, contiguous timeline clips now contain their own four part switches, center-bypass low-pass/high-pass knob, and vertical level fader. Simplified waveform strokes indicate enabled parts over a faint original. A minimum step width retains accessible controls; long sequences scroll horizontally. The master filter stays in the transport bar.
+- All 36 web tests and `Scripts/test_interactions.sh` pass. The rebuilt local site was checked at desktop, tablet and narrow sizes with muted playback; adding layers and adjusting one clip's parts, filter and level left the other clip unchanged. Both directions of the filter drag were checked. The original browser volume was restored after stopping.
+- Four focused, muted iPad (A16) Simulator UI tests passed across two runs, covering crowded timeline scrolling, independent layered controls, LPF/HPF and double-tap bypass, insertion, and MIDI-clock browsing. Landscape and portrait screenshots were inspected. An unsigned Release device build succeeded. A physical iPad, actual USB MIDI and audible output have not been tested for this change.
+
 ## Master filter in the bottom bar — 2026-10-15
 
 - Both players expose the master filter mode and cutoff in the transport bar, including when Sound is closed or no clip is selected. The clip filter remains in the Sound rack and has independent settings.
