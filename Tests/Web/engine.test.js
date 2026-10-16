@@ -73,6 +73,24 @@ test('tempo slews without jumping phase; boundary follows the integrated beat', 
   assert.ok(Math.abs(e.startBeat - 4) < 1e-8);
 });
 
+test('nudge changes phase smoothly in either direction and carries through queued loops', () => {
+  const ref = engine(), e = engine();
+  ref.queue([0]); e.queue([0]); advance(ref, .5); advance(e, .5);
+  const before = e.beat;
+  e.nudge(10); advance(ref, 1 / rate); advance(e, 1 / rate);
+  assert.ok(e.beat - before < .001);
+  advance(ref, 1); advance(e, 1);
+  assert.ok(Math.abs((e.beat - ref.beat) - .02) < .001);
+  assert.equal(e.bpm, 120);
+  ref.queue([1]); e.queue([1]); advance(ref, 2); advance(e, 2);
+  assert.equal(e.active, 1); assert.equal(ref.active, 1);
+  assert.ok(Math.abs((e.beat - ref.beat) - .02) < .001);
+  e.nudge(-10); advance(ref, 1); advance(e, 1);
+  assert.ok(Math.abs(e.beat - ref.beat) < .001);
+  e.nudge(10); e.stop(); e.queue([0]);
+  assert.equal(e.nudgeRemaining, 0);
+});
+
 test('rate scaling changes the pitch and playback duration together', () => {
   const e = engine();
   e.setTempo(240);

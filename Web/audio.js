@@ -90,6 +90,7 @@ export class AudioPlayer {
   stop() { this.command({ type: 'stop' }); }
   enable(id, enabled) { this.command({ type: 'enable', id, enabled }); }
   setTempo(bpm) { this.tempo = bpm; this.command({ type: 'tempo', bpm }); }
+  nudge(milliseconds) { this.command({ type: 'nudge', milliseconds }); }
   setFilter(mode, hz) { this.filter = { mode, hz }; this.command({ type: 'filter', mode, hz }); }
   setPartMask(ids, mask) {
     for (const id of ids) this.masks.set(id, mask);

@@ -291,6 +291,7 @@ final class AudioModel: ObservableObject {
     func selectMIDI(_ id: Int32) { midiSourceID=id; defaults.set(Int(id),forKey:"midiSourceID"); stop(); midi?.selectedID=id; midi?.refresh() }
     func stop() { control.async { [dsp] in bw_transport(dsp,0) } }
     func play() { control.async { [dsp] in bw_transport(dsp,2) } }
+    func nudge(_ milliseconds: Double) { control.async { [dsp] in bw_nudge(dsp, milliseconds) } }
     func align() { control.async { [dsp] in bw_transport(dsp,3) } }
     private func poll() {
         var s=BWSnapshot(); bw_snapshot(dsp,&s)

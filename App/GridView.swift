@@ -14,7 +14,7 @@ struct GridView: View {
             VStack(spacing: 0) {
                 header
                 PlaybackContent(audio: audio, playback: audio.playback, song: song,
-                                compact: geometry.size.width < 720 || typeSize.isAccessibilitySize,
+                                compact: geometry.size.width < 900 || typeSize.isAccessibilitySize,
                                 showSettings: $showSettings, showTempo: $showTempo, tray: $tray)
             }
             .background(Color(uiColor: .systemBackground))
@@ -145,11 +145,11 @@ private struct PlaybackContent: View {
             if compact {
                 VStack(spacing: 4) {
                     HStack { transport; Spacer(); tempo; Spacer(); clock }
-                    HStack { modePicker; Spacer(); edit; settings }
+                    HStack { modePicker; Spacer(minLength: 4); nudge; Spacer(minLength: 4); edit; settings }
                 }.padding(.horizontal, 16).padding(.vertical, 6)
             } else {
                 HStack(spacing: 20) {
-                    transport; dockDivider; tempo; dockDivider; clock
+                    transport; dockDivider; tempo; dockDivider; clock; nudge
                     Spacer(minLength: 0); modePicker.frame(maxWidth: 230)
                     dockDivider; edit; settings
                 }.padding(.horizontal, 16).padding(.vertical, 8)
@@ -186,6 +186,27 @@ private struct PlaybackContent: View {
                     .foregroundStyle(audio.state.clockState >= 3 ? Color.orange : Palette.accent)
             }.frame(minHeight: 44)
         }.accessibilityIdentifier("clockStatus")
+    }
+    private var nudge: some View {
+        HStack(spacing: 0) {
+            Button { audio.nudge(10) } label: {
+                Image(systemName: "chevron.left").frame(width: 44, height: 44).contentShape(Rectangle())
+            }
+            .accessibilityLabel("Nudge loop earlier")
+            .accessibilityHint("Tap or hold to adjust timing without changing the tempo.")
+            .accessibilityIdentifier("nudgeEarlier")
+            Text("NUDGE").font(.caption2.weight(.medium)).foregroundStyle(Palette.secondary)
+                .accessibilityHidden(true)
+            Button { audio.nudge(-10) } label: {
+                Image(systemName: "chevron.right").frame(width: 44, height: 44).contentShape(Rectangle())
+            }
+            .accessibilityLabel("Nudge loop later")
+            .accessibilityHint("Tap or hold to adjust timing without changing the tempo.")
+            .accessibilityIdentifier("nudgeLater")
+        }
+        .buttonRepeatBehavior(.enabled)
+        .foregroundStyle(Palette.accent)
+        .disabled(!playback.state.playing || playback.state.active < 0)
     }
     private var modePicker: some View {
         Picker("Playback mode", selection: Binding(get: { audio.mode }, set: audio.setMode)) {

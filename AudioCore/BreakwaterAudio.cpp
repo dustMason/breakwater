@@ -15,7 +15,7 @@ struct Loop {
 };
 struct Stereo { float l=0,r=0; Stereo operator*(double a) const{return {float(l*a),float(r*a)};} Stereo operator+(Stereo b)const{return{l+b.l,r+b.r};} };
 struct Command { int type=0,value=0,count=0; double number=0,time=0; std::array<int,maxQueue> ids{}; };
-enum { Queue,Enable,Tempo,Mode,External,Transport,MIDI,Offset,PartMask,Filter };
+enum { Queue,Enable,Tempo,Mode,External,Transport,MIDI,Offset,Nudge,PartMask,Filter };
 struct Voice {
  Loop* loop=nullptr; int mode=0,slice=-1,previousSlice=-1; double position=0,oldPosition=0,localBeat=0,rate=1; int fade=0;
  Stereo at(double index)const {
@@ -94,7 +94,7 @@ struct OutputFilter {
  }
 };
 struct Engine {
- double sr,beat=0,bpm=120,targetBPM=120,clockBPM=120,offset=0;
+ double sr,beat=0,bpm=120,targetBPM=120,clockBPM=120,offset=0,nudgeOffset=0,nudgeRemaining=0;
  std::array<Loop,maxLoops> loops; std::array<bool,maxLoops> enabled;
  std::array<Command,ringSize> commands;std::atomic<uint32_t> head{0},tail{0},dropped{0};
  std::array<int,maxQueue> cycle{},pendingIDs{};int cycleCount=0,cyclePos=0,pendingCount=0;
@@ -140,7 +140,7 @@ struct Engine {
    lastTick=time;haveTick=true;if(transportClock)clockPulse+=1;clockState=intervalCount>=3?2:1;
   }else if(status==0xfa){start(true);lastTick=time;haveTick=true;intervalCount=0;intervalIndex=0;clockState=1;}
   else if(status==0xfc){running=false;transportClock=false;}
-  else if(status==0xfb){clockPulse=std::round(beat*24)-1;start(false);lastTick=time;haveTick=true;}
+  else if(status==0xfb){clockPulse=std::round((beat-(offset+nudgeOffset)*clockBPM/60)*24)-1;start(false);lastTick=time;haveTick=true;}
   else if(status==0xf2){beat=value*.25;clockPulse=beat*24-1;nextBar=(std::floor(beat/4)+1)*4;
    if(valid(active)){startBeat=std::floor(beat/loops[active].beats)*loops[active].beats;voice.begin(&loops[active],mode,beat-startBeat);}else startBeat=beat;}
  }
@@ -151,10 +151,15 @@ struct Engine {
    case Enable:if(c.value>=0&&c.value<maxLoops){enabled[c.value]=c.number!=0;cleanQueue();}break;
    case Tempo:if(!external)targetBPM=std::clamp(c.number,30.0,300.0);break;
    case Mode:if(mode!=c.value){mode=c.value?1:0;outgoing=voice;transition=int(sr*.005);if(active>=0)voice.begin(&loops[active],mode,std::max(0.0,beat-startBeat));}break;
-   case External:external=c.value;haveTick=false;lastTick=-1;clockPulse=-1;intervalCount=0;intervalIndex=0;clockState=external?1:0;transportClock=false;if(external)running=false;break;
+   case External:external=c.value;haveTick=false;lastTick=-1;clockPulse=-1;intervalCount=0;intervalIndex=0;clockState=external?1:0;transportClock=false;nudgeOffset=0;nudgeRemaining=0;if(external)running=false;break;
    case Transport:if(c.value==0){running=false;transportClock=false;}else if(c.value==1){start(true);}else if(c.value==2){start(false);}else{beat=0;nextBar=4;clockPulse=-1;haveTick=false;if(active>=0)launch(active,0);}break;
    case MIDI:midi(c.value,c.count,c.time);break;
    case Offset:offset=std::clamp(c.number,-200.0,200.0)/1000;break;
+   case Nudge:if(running&&active>=0&&std::isfinite(c.number)){
+    double step=std::clamp(c.number,-100.0,100.0)/1000;
+    if(external){double target=std::clamp(nudgeOffset+step,-2.0,2.0);step=target-nudgeOffset;nudgeOffset=target;}
+    if(!external||!transportClock||clockState!=2||clockPulse<0)nudgeRemaining+=step*bpm/60;
+   }break;
    case PartMask:if(c.value>=0&&c.value<maxLoops)loops[c.value].partMask=c.count&15;break;
    case Filter:filter.set(c.value,c.number);break;
   }t=(t+1)%ringSize;}
@@ -169,10 +174,13 @@ struct Engine {
     if(elapsed>2){clockState=4;running=false;transportClock=false;}
     else if(elapsed>.25)clockState=3;
     else if(intervalCount>=3)clockState=2;
-    if(running&&transportClock&&clockState==2&&clockPulse>=0){double desired=clockPulse/24+(elapsed+offset)*clockBPM/60;double error=desired-beat;
+    if(running&&transportClock&&clockState==2&&clockPulse>=0){double desired=clockPulse/24+(elapsed+offset+nudgeOffset)*clockBPM/60;double error=desired-beat;
      // Phase is gently pulled into lock; jitter never jumps an audio cursor.
-     correction=std::clamp(error*60/.12,-bpm*.18,bpm*.18);}
+     correction=std::clamp(error*60/.12,-bpm*.18,bpm*.18);nudgeRemaining=0;}
    }
+   if(running&&nudgeRemaining!=0){double adjust=std::clamp(nudgeRemaining*60/.12,-bpm*.18,bpm*.18);
+    double applied=adjust/(60*sr);if(std::abs(applied)>std::abs(nudgeRemaining))applied=nudgeRemaining;
+    correction+=applied*60*sr;nudgeRemaining-=applied;}
    double delta=(bpm+correction)/(60*sr);
    if(running){
     if(beat+1e-9>=nextBar){double boundary=nextBar;nextBar+=4;if(pending)applyPending(boundary);}
@@ -208,6 +216,7 @@ void bw_external(BWEngine p,int32_t external){command(p,External,external);}
 void bw_transport(BWEngine p,int32_t action){command(p,Transport,action);}
 void bw_midi(BWEngine p,uint8_t status,int32_t value,double seconds){Command c;c.type=MIDI;c.value=status;c.count=value;c.time=seconds;E(p)->push(c);}
 void bw_offset(BWEngine p,double ms){command(p,Offset,0,ms);}
+void bw_nudge(BWEngine p,double ms){command(p,Nudge,0,ms);}
 BWParts bw_create_parts(const float* pcm,int32_t frames){if(!pcm||frames<2)return nullptr;auto* b=new Parts;b->frames=frames;b->pcm.assign(pcm,pcm+size_t(frames)*8);return b;}
 void bw_set_parts(BWEngine p,int32_t id,BWParts parts){E(p)->setParts(id,static_cast<Parts*>(parts));}
 void bw_part_mask(BWEngine p,int32_t id,int32_t mask){Command c;c.type=PartMask;c.value=id;c.count=mask;E(p)->push(c);}

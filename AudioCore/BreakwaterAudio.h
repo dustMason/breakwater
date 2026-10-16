@@ -25,6 +25,8 @@ void bw_external(BWEngine engine,int32_t external);
 void bw_transport(BWEngine engine,int32_t action); // 0 stop, 1 start, 2 continue, 3 align next downbeat now
 void bw_midi(BWEngine engine,uint8_t status,int32_t value,double hostSeconds);
 void bw_offset(BWEngine engine,double milliseconds);
+// Positive moves the playing loop earlier; negative moves it later.
+void bw_nudge(BWEngine engine,double milliseconds);
 // Construct/decode on a worker. Install/retire on the serialized control queue.
 // Parts are planar by part, then interleaved stereo, with exactly `frames` frames.
 BWParts bw_create_parts(const float* pcm,int32_t frames);

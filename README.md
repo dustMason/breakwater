@@ -9,6 +9,7 @@ A native iPad instrument and a static browser player for percussion loops. The n
 - The song picker opens a scrollable list of sources. Selecting a page never stops the audio; tap a pad to queue a loop from that song.
 - **Use source** sets the internal tempo to the selected song’s approximate BPM. It is disabled while following MIDI clock, because the external device controls the tempo.
 - Tap a pad to replace the current loop on the next four-beat bar boundary. With internal clock stopped, tapping starts that pad immediately.
+- Use **Nudge** in the bottom bar to move the playing loop earlier or later in 10 ms steps; hold either arrow to repeat. The adjustment settles smoothly and follows queued loops. When following MIDI clock, it changes the alignment against the master without changing its tempo or the saved latency setting. Switching clock modes clears the MIDI nudge adjustment.
 - Hold one pad and touch additional pads to form an ordered cycle. The cycle stays latched when you release your fingers. Each selected sample plays its full one-, two-, or four-bar length, then the next sample plays. The next fresh gesture replaces the cycle at the next bar.
 - `Edit pads` toggles persistent exclusions. Disabled pads remain visible so they can be restored. They cannot be launched by touch or MIDI and are removed from cycles. Disabling the playing pad changes to the next valid selection on a bar boundary; if none remains, playback fades out.
 - **Tape** follows tempo by changing playback rate and pitch together.
@@ -35,7 +36,7 @@ python3 Scripts/serve_web.py
 # Open http://127.0.0.1:8765/
 ```
 
-The browser version uses the same song pages, real waveform previews, next-bar replacements, full-length cycles, and persistent pad exclusions. Drag across pads or Shift-click to build a cycle with a mouse; on a tablet, hold one pad while touching more. Keyboard users can navigate pads with the arrow keys and activate with Enter/Space (Shift adds to the cycle). On small screens the grid scrolls vertically; touch taps launch on release so swiping does not trigger samples. The bottom transport stays visible.
+The browser version uses the same song pages, real waveform previews, next-bar replacements, full-length cycles, timing nudges, and persistent pad exclusions. Drag across pads or Shift-click to build a cycle with a mouse; on a tablet, hold one pad while touching more. Keyboard users can navigate pads with the arrow keys and activate with Enter/Space (Shift adds to the cycle). On small screens the grid scrolls vertically; touch taps launch on release so swiping does not trigger samples. The bottom transport stays visible.
 
 Enter a tempo, use **Tap tempo**, or **Use source**. Pitch follows speed, with smoothly changing tempo and short transition fades. There is no MIDI or Slice mode in this version. Only selected loops download and decode when first triggered; subsequent plays use the in-memory cache. Rapid selections share in-flight downloads, and failed clips can be retried without reloading successful clips. Playback then runs in an AudioWorklet on the audio thread, independently of animation and main-thread timers. Browser interruptions require pressing Play again. Preferences belong to this browser and are separate from the native app.
 

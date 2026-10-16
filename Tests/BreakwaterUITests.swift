@@ -6,7 +6,7 @@ final class BreakwaterUITests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = ["--reset-preferences", "--mute-audio"]
-        if name.contains("test06") || name.contains("test09") { app.launchArguments.append("--test-midi-clock") }
+        if name.contains("test06") || name.contains("test09") || name.contains("test10") { app.launchArguments.append("--test-midi-clock") }
         XCUIDevice.shared.orientation = .landscapeLeft
         app.launch()
         XCTAssertTrue(app.buttons["pad_0"].waitForExistence(timeout: 20))
@@ -148,6 +148,25 @@ final class BreakwaterUITests: XCTestCase {
         app.buttons["pad_0"].tap()
         waitForValue("pad_0", "Playing")
         XCTAssertEqual(app.buttons["transport"].label, "Stop")
+    }
+
+    func test10NudgeDuringMIDIClock() {
+        expectation(for: NSPredicate(format: "label CONTAINS 'LOCKED'"), evaluatedWith: app.buttons["clockStatus"])
+        waitForExpectations(timeout: 10)
+        app.buttons["pad_0"].tap()
+        waitForValue("pad_0", "Playing")
+        let earlier = app.buttons["nudgeEarlier"], later = app.buttons["nudgeLater"]
+        XCTAssertTrue(earlier.isHittable && later.isHittable)
+        earlier.tap()
+        later.press(forDuration: 0.8)
+        app.buttons["pad_2"].tap()
+        waitForValue("pad_2", "Playing")
+        XCTAssertTrue(app.buttons["clockStatus"].label.contains("LOCKED"))
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(earlier.isHittable && later.isHittable)
+        app.buttons["showFX"].tap()
+        XCTAssertTrue(earlier.isHittable && later.isHittable)
+        capture("nudge-portrait")
     }
 
     func test07UseSourceTempo() {

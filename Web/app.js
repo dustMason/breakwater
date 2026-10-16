@@ -183,6 +183,7 @@ function paint() {
   $('transport-label').textContent = playing || loading ? 'Stop' : 'Play';
   $('transport').setAttribute('aria-label', playing || loading ? 'Stop' : 'Play');
   $('transport-icon').setAttribute('d', playing || loading ? 'M5 5H19V19H5Z' : 'M7 4 20 12 7 20Z');
+  $('nudge-earlier').disabled = $('nudge-later').disabled = !playing || state.active === null;
   const current = samples.find(sample => sample.id === state.active);
   $('playing-label').textContent = playing && current ? `${current.songName} · ${String(current.number).padStart(2, '0')}` : loading ? 'Loading samples' : 'Pick a loop';
   $('playing-label').title = $('playing-label').textContent;
@@ -348,6 +349,30 @@ $('transport').addEventListener('click', () => {
   else if (first) select([first.id]);
   else notice('Every pad on this page is excluded. Use Edit pads to restore a loop.');
 });
+function setupNudge(button, milliseconds) {
+  let delay, interval, handledPointer = false;
+  const clear = () => { clearTimeout(delay); clearInterval(interval); delay = interval = undefined; };
+  button.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || button.disabled) return;
+    handledPointer = true;
+    button.setPointerCapture(event.pointerId);
+    audio.nudge(milliseconds);
+    delay = setTimeout(() => {
+      interval = setInterval(() => { if (!button.disabled) audio.nudge(milliseconds); }, 100);
+    }, 350);
+  });
+  button.addEventListener('pointerup', clear);
+  button.addEventListener('pointercancel', () => { clear(); handledPointer = false; });
+  button.addEventListener('lostpointercapture', clear);
+  button.addEventListener('blur', clear);
+  button.addEventListener('click', event => {
+    if (event.detail === 0 || !handledPointer) audio.nudge(milliseconds);
+    handledPointer = false;
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
+}
+setupNudge($('nudge-earlier'), 10);
+setupNudge($('nudge-later'), -10);
 $('retry').addEventListener('click', () => {
   if (!songs.length) loadCatalog();
   else select(desired.length ? desired : [song.loops.find(sample => !disabled.has(sample.id))?.id].filter(Number.isInteger));

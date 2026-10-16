@@ -7,6 +7,7 @@ export class LoopEngine {
     this.partMasks = new Map();
     this.bpm = this.targetBPM = 120;
     this.beat = this.startBeat = 0;
+    this.nudgeRemaining = 0;
     this.nextBar = 4;
     this.active = null;
     this.cycle = [];
@@ -59,6 +60,12 @@ export class LoopEngine {
     if (!this.running) this.bpm = this.targetBPM;
   }
 
+  nudge(milliseconds) {
+    if (this.running && Number.isFinite(milliseconds)) {
+      this.nudgeRemaining += Math.max(-100, Math.min(100, milliseconds)) / 1000 * this.bpm / 60;
+    }
+  }
+
   queue(ids) {
     const accepted = [...new Set(ids)].filter(id => this.valid(id));
     if (!accepted.length) return;
@@ -88,6 +95,7 @@ export class LoopEngine {
   stop() {
     this.running = false;
     this.pending = null;
+    this.nudgeRemaining = 0;
   }
 
   launch(id, beat) {
@@ -138,7 +146,10 @@ export class LoopEngine {
   render(left, right) {
     for (let frame = 0; frame < left.length; frame++) {
       this.bpm += (this.targetBPM - this.bpm) * this.slew;
-      const delta = this.bpm / (60 * this.sampleRate);
+      const maxAdjustment = this.bpm * .18 / (60 * this.sampleRate);
+      const adjustment = this.running ? Math.max(-maxAdjustment, Math.min(maxAdjustment, this.nudgeRemaining / (.12 * this.sampleRate))) : 0;
+      this.nudgeRemaining -= adjustment;
+      const delta = this.bpm / (60 * this.sampleRate) + adjustment;
       if (this.running) {
         if (this.beat + 1e-9 >= this.nextBar) {
           const boundary = this.nextBar;

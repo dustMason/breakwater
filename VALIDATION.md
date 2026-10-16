@@ -1,5 +1,11 @@
 # Validation
 
+## Live timing nudge
+
+- `Scripts/test_core.sh` passes with sanitizers. Paired synthetic MIDI clocks verify 10 ms nudges in both Tape and Slice, phase continuity, next-pad replacement, a 120→150 BPM tempo change, freewheel and reacquisition, and MIDI Stop/Continue. The test also covers internal-clock nudging and checks the saved latency offset remains independent.
+- All 17 browser tests pass, including smooth early/later nudges, queued-loop continuity, and stopping during a nudge. The static site and unsigned Release iPad build succeed. The interaction and catalog checks pass for all 222 loops.
+- A focused muted iPad Simulator UI test passes for tap and hold during a synthetic MIDI clock, a queued pad change, and control reachability in landscape and portrait with the FX tray open. A separate muted local browser preview was checked for playback, nudging, and a next-bar pad change. Real iPad, USB MIDI timing, and audible results have not been tested.
+
 ## Experimental output filters and layers — 2026-10-15
 
 - Both the iPad app and static player have side trays for an output LPF, BPF or HPF and four per-song layer switches. The grid reflows beside the tray and shows the layer waveforms, with muted lanes faded. All-on playback uses the original mix. All-off fades to silence; other layer changes ramp smoothly. The prepared components are exploratory spectral groupings, not verified clean instrument stems, and require listening review.

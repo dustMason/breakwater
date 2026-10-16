@@ -60,6 +60,11 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path id="transport-icon" d="M7 4 20 12 7 20Z"/></svg>
         <span id="transport-label">Play</span>
       </button>
+      <div class="nudge" role="group" aria-label="Nudge loop timing">
+        <button id="nudge-earlier" aria-label="Nudge loop earlier" title="Nudge earlier (hold to repeat)" disabled>‹</button>
+        <span aria-hidden="true">Nudge</span>
+        <button id="nudge-later" aria-label="Nudge loop later" title="Nudge later (hold to repeat)" disabled>›</button>
+      </div>
       <div class="tempo-control">
         <label for="tempo">Tempo</label>
         <div class="tempo-input"><input id="tempo" type="number" min="30" max="300" step="0.1" value="120" inputmode="decimal"><span>BPM</span></div>

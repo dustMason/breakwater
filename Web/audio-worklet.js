@@ -12,6 +12,7 @@ class BreakwaterProcessor extends AudioWorkletProcessor {
         case 'queue': e.queue(data.ids); break;
         case 'enable': e.enable(data.id, data.enabled); break;
         case 'tempo': e.setTempo(data.bpm); break;
+        case 'nudge': e.nudge(data.milliseconds); break;
         case 'parts': e.setParts(data.id, data.parts); break;
         case 'part-mask': for (const id of data.ids) e.setPartMask(id, data.mask); break;
         case 'filter': e.setFilter(data.mode, data.hz); break;

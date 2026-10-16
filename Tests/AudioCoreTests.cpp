@@ -51,6 +51,59 @@ void midiBarReplacement(){
  assert(firstPlayed&&secondPlayed);puts("PASS single-tap replacements reach the next bar while MIDI clock stays locked");
 }
 
+void nudgeAgainstMidi(){
+ for(int mode=0;mode<=1;mode++){
+  Rig reference, nudged;
+  for(Rig* r:{&reference,&nudged}){bw_mode(r->e,mode);bw_offset(r->e,40);bw_external(r->e,1);r->queue({0});bw_midi(r->e,0xfa,0,r->now);}
+  auto ticks=[&](int count,int bpm){
+   for(int i=0;i<count;i++){
+    for(Rig* r:{&reference,&nudged}){bw_midi(r->e,0xf8,0,r->now);r->frames(1);r->seconds(60.0/(24*bpm)-1.0/48000);}
+   }
+  };
+  ticks(120,120);
+  assert(reference.snapshot().clockState==2&&nudged.snapshot().clockState==2);
+  bw_nudge(nudged.e,10);double before=nudged.snapshot().beat;nudged.frames(1);reference.frames(1);
+  assert(nudged.snapshot().beat>before&&nudged.snapshot().beat-before<.001);
+  ticks(72,120);
+  assert(std::abs((nudged.snapshot().beat-reference.snapshot().beat)-.02)<.002);
+  assert(std::abs(nudged.snapshot().bpm-120)<.01);
+  for(Rig* r:{&reference,&nudged})r->queue({1});
+  ticks(110,120);
+  assert(reference.snapshot().activeLoop==1&&nudged.snapshot().activeLoop==1);
+  assert(std::abs((nudged.snapshot().beat-reference.snapshot().beat)-.02)<.002);
+  ticks(120,150);
+  assert(std::abs(nudged.snapshot().bpm-150)<.1);
+  assert(std::abs((nudged.snapshot().beat-reference.snapshot().beat)-.025)<.003);
+  bw_nudge(nudged.e,-10);ticks(72,150);
+  assert(std::abs(nudged.snapshot().beat-reference.snapshot().beat)<.002);
+  // During clock loss, nudging still moves smoothly; reacquiring the master
+  // must not apply the same adjustment a second time.
+  reference.seconds(.4);nudged.seconds(.4);assert(nudged.snapshot().clockState==3);
+  bw_nudge(nudged.e,10);reference.seconds(.8);nudged.seconds(.8);
+  assert(std::abs((nudged.snapshot().beat-reference.snapshot().beat)-.025)<.003);
+  ticks(96,150);
+  assert(nudged.snapshot().clockState==2);
+  assert(std::abs((nudged.snapshot().beat-reference.snapshot().beat)-.025)<.003);
+  for(Rig* r:{&reference,&nudged}){bw_midi(r->e,0xfc,0,r->now);r->frames(1);r->seconds(.2);bw_midi(r->e,0xfb,0,r->now);}
+  ticks(96,150);
+  assert(nudged.snapshot().clockState==2);
+  assert(std::abs((nudged.snapshot().beat-reference.snapshot().beat)-.025)<.003);
+  assert(nudged.snapshot().droppedCommands==0);
+ }
+ puts("PASS nudge follows MIDI phase smoothly through pad changes, tempo changes and freewheel");
+}
+
+void nudgeInternal(){
+ Rig reference,nudged;reference.queue({0});nudged.queue({0});reference.seconds(.5);nudged.seconds(.5);
+ bw_nudge(nudged.e,10);reference.frames(1);nudged.frames(1);
+ assert(nudged.snapshot().beat-reference.snapshot().beat<.001);
+ reference.seconds(1);nudged.seconds(1);
+ assert(std::abs((nudged.snapshot().beat-reference.snapshot().beat)-.02)<.001);
+ bw_nudge(nudged.e,-10);reference.seconds(1);nudged.seconds(1);
+ assert(std::abs(nudged.snapshot().beat-reference.snapshot().beat)<.001);
+ puts("PASS internal-clock nudge advances and delays without jumping");
+}
+
 void partsAndFilters(){
  constexpr int frames=96000; const double pi=3.141592653589793; const int frequencies[4]={180,600,2400,7000};
  std::vector<float> pcm(frames*2),parts(frames*8);
@@ -72,4 +125,4 @@ void partsAndFilters(){
  assert(level(1,200)>10*level(1,6000));assert(level(3,6000)>10*level(3,200));assert(level(2,1000)>4*level(2,100));
  puts("PASS separated-part mute/fade/restore and low/band/high output filtering");
 }
-int main(){partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}
+int main(){nudgeInternal();nudgeAgainstMidi();partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}
