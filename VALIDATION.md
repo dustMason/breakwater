@@ -1,5 +1,11 @@
 # Validation
 
+## Header and source-tempo shortcut removal — 2026-10-16
+
+- The iPad and web workspaces no longer have a global header or a Use source shortcut. Manual and tap tempo remain available, as does MIDI clock on iPad. Browsing the library continues to select the source used for MIDI and the empty-stack playback fallback.
+- All 42 web tests pass. In the rebuilt local preview, the header is absent and the library, stacks and transport fill the available space. A muted loop played while another folder was opened without changing the tempo; playback, folder and volume were restored afterward.
+- The unsigned Release iPad build and simulator UI test bundle compile. Native UI tests could not run because the installed CoreSimulator service is older than the version Xcode requires. Physical iPad layout and MIDI behavior were not checked.
+
 ## Explicit A/B library controls — 2026-10-16
 
 - Both players expose per-loop A and B add buttons and retain drag-to-stack and persistent exclusions. MIDI notes still select the quieter side. The native UI test cases were updated to cover explicit placement, exclusions and the per-side limit.

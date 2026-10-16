@@ -10,12 +10,9 @@ struct GridView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                header
-                PlaybackContent(audio: audio, playback: audio.playback, song: song,
-                                compact: geometry.size.width < 900 || typeSize.isAccessibilitySize,
-                                showSettings: $showSettings, showTempo: $showTempo)
-            }
+            PlaybackContent(audio: audio, playback: audio.playback, song: song,
+                            compact: geometry.size.width < 900 || typeSize.isAccessibilitySize,
+                            showSettings: $showSettings, showTempo: $showTempo)
             .background(Color(uiColor: .systemBackground))
         }
         .sheet(isPresented: $showSettings) { SettingsView(audio: audio) }
@@ -24,22 +21,6 @@ struct GridView: View {
             Button("Retry") { audio.error = nil; audio.retry() }
             Button("Dismiss", role: .cancel) { audio.error = nil }
         } message: { Text(audio.error ?? "") }
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Text("Breakwater").font(.headline)
-            Spacer(minLength: 4)
-            if let song {
-                Text(song.name).font(.subheadline.weight(.semibold)).lineLimit(1)
-                Text("≈\(song.sourceBPM) BPM").font(.caption.monospacedDigit()).foregroundStyle(Palette.secondary)
-                    .accessibilityIdentifier("sourceBPM")
-            }
-            Button("Use source") { if let song { audio.setTempo(Double(song.sourceBPM)) } }
-                .buttonStyle(.bordered).frame(minHeight: 44).disabled(song == nil || audio.external)
-                .accessibilityIdentifier("useSourceTempo")
-                .accessibilityHint(audio.external ? "Turn off Follow MIDI clock to use the source tempo." : "Set the manual tempo to this folder's source tempo.")
-        }.padding(.horizontal, 14).padding(.vertical, 2)
     }
 }
 

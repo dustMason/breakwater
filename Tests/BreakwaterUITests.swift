@@ -131,16 +131,16 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["clip_4"].label.contains("side B"))
         XCTAssertTrue(app.sliders["crossfader"].exists)
     }
-    func testFolderNavigationAndSourceTempo() {
-        app.buttons["useSourceTempo"].tap()
-        expectation(for: NSPredicate(format: "label CONTAINS '105.0'"), evaluatedWith: app.buttons["tempo"])
-        waitForExpectations(timeout: 10)
+    func testFolderNavigationAndManualTempo() {
+        XCTAssertFalse(app.buttons["useSourceTempo"].exists)
+        let originalTempo = app.buttons["tempo"].label
         app.buttons["song_sg"].tap()
         selectFolder("ml")
         XCTAssertTrue(app.buttons["pad_30"].waitForExistence(timeout: 5))
-        app.buttons["useSourceTempo"].tap()
-        expectation(for: NSPredicate(format: "label CONTAINS '150.0'"), evaluatedWith: app.buttons["tempo"])
-        waitForExpectations(timeout: 10)
+        XCTAssertEqual(app.buttons["tempo"].label, originalTempo, "Browsing must not change the playback tempo")
+        app.buttons["tempo"].tap()
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
         app.buttons["song_ml"].tap()
         selectFolder("sh")
         XCTAssertTrue(app.buttons["pad_294"].waitForExistence(timeout: 5))
@@ -148,7 +148,6 @@ final class BreakwaterUITests: XCTestCase {
     func testMIDIClockAndFolderBrowsing() {
         expectation(for: NSPredicate(format: "label CONTAINS 'LOCKED'"), evaluatedWith: app.buttons["clockStatus"])
         waitForExpectations(timeout: 15)
-        XCTAssertFalse(app.buttons["useSourceTempo"].isEnabled)
         app.buttons["padAddA_0"].tap(); XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 15))
         waitForValue("clip_1", "Playing")
         app.buttons["song_sg"].tap(); selectFolder("sh")

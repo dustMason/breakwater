@@ -69,7 +69,7 @@ struct TempoView: View {
                         }.frame(maxWidth: .infinity, minHeight: 60).font(.title2)
                     }
                 } footer: {
-                    Text(audio.external ? "MIDI clock controls the tempo. Turn it off to use the song's source tempo." : "Tempo changes glide into place while the loop stays on the beat. Use source on the main screen to match the song.")
+                    Text(audio.external ? "MIDI clock controls the tempo. Turn it off to set the tempo manually." : "Tempo changes glide into place while the loop stays on the beat.")
                         .foregroundStyle(Palette.secondary)
                 }
             }

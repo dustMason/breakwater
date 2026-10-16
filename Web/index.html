@@ -8,18 +8,11 @@
   <title>Breakwater</title>
   <link rel="icon" type="image/png" href="./icon.png">
   <link rel="apple-touch-icon" href="./icon.png">
-  <link rel="stylesheet" href="./style.css?v=9">
-  <script type="module" src="./app.js?v=10"></script>
+  <link rel="stylesheet" href="./style.css?v=10">
+  <script type="module" src="./app.js?v=11"></script>
 </head>
 <body>
   <main class="instrument" aria-label="Breakwater loop player">
-    <header class="header">
-      <img class="app-icon" src="./icon.png" alt="" width="32" height="32">
-      <h1>Breakwater</h1>
-      <div class="current-source"><span id="song-name">Library</span><span id="artist" class="artist"></span></div>
-      <div class="source-tempo"><span>Source</span><strong id="source-bpm">—</strong><span>BPM</span></div>
-    </header>
-
     <div class="workspace">
       <aside class="library" aria-label="Loop library">
         <div class="library-heading"><h2>Library</h2><button id="edit" class="edit" aria-pressed="false" disabled>Edit</button></div>
@@ -47,7 +40,7 @@
       <button id="transport" class="transport" disabled aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="transport-icon" d="M7 4 20 12 7 20Z"/></svg><span id="transport-label">Play</span></button>
       <div class="nudge" role="group" aria-label="Nudge loop timing"><button id="nudge-earlier" aria-label="Nudge loop earlier" title="Nudge earlier (hold to repeat)" disabled>‹</button><span aria-hidden="true">Nudge</span><button id="nudge-later" aria-label="Nudge loop later" title="Nudge later (hold to repeat)" disabled>›</button></div>
       <div class="tempo-control"><label for="tempo">Tempo</label><div class="tempo-input"><input id="tempo" type="number" min="30" max="300" step="0.1" value="120" inputmode="decimal"><span>BPM</span></div></div>
-      <div class="tempo-actions"><button id="tap-tempo">Tap tempo</button><button id="source-tempo" title="Set playback tempo to the active folder’s source tempo">Use source</button></div>
+      <div class="tempo-actions"><button id="tap-tempo">Tap tempo</button></div>
       <section id="master-controls" class="master-filter" aria-label="Master filter"></section>
       <label class="volume-control" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></label>
     </footer>

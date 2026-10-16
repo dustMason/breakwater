@@ -63,10 +63,6 @@ function waveform(values, middle = 50, scale = 47) {
 function showSong(id) {
   song = songs.find(item => item.id === id) || songs[0];
   if (!song) return;
-  $('song-name').textContent = song.name;
-  $('artist').textContent = song.artist;
-  $('source-bpm').textContent = `≈${song.sourceBPM}`;
-  $('source-bpm').title = song.sourceBPMRange ? `Loop range: ${song.sourceBPMRange.join('–')} BPM. ${song.timingNote || ''}` : 'Approximate source tempo';
   document.querySelectorAll('.folder').forEach(folder => folder.classList.toggle('active', folder.dataset.song === song.id));
   persist();
 }
@@ -608,7 +604,6 @@ function setTempo(value) {
 }
 $('tempo').addEventListener('change', () => setTempo($('tempo').valueAsNumber));
 $('tempo').addEventListener('keydown', event => { if (event.key === 'Enter') { setTempo($('tempo').valueAsNumber); $('tempo').blur(); } });
-$('source-tempo').addEventListener('click', () => { if (song) setTempo(song.sourceBPM); });
 $('tap-tempo').addEventListener('click', () => {
   const now = performance.now();
   if (taps.length && now - taps.at(-1) > 2000) taps.length = 0;

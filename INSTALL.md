@@ -22,7 +22,7 @@
 6. Connect the USB MIDI adapter through the camera adapter. The plug that receives MIDI from the sequencer connects to the sequencer's MIDI OUT. Connect the iPad's wired audio output separately to your mixer.
 7. In Breakwater Settings, enable **Follow MIDI clock** and choose the input. Add a loop and send **Start** from the master. The clock indicator changes to **LOCKED** once timing is established.
 
-The **Tempo** button opens manual tempo and tap tempo when MIDI sync is off. **Use source** sets the internal tempo to the active folder’s approximate BPM; it is disabled while MIDI clock controls tempo. **Tape** changes pitch with speed; **Slice** keeps the attacks at their original pitch. **Edit** in the library saves exclusions until you restore them.
+The **Tempo** button opens manual tempo and tap tempo when MIDI sync is off. **Tape** changes pitch with speed; **Slice** keeps the attacks at their original pitch. **Edit** in the library saves exclusions until you restore them.
 
 Use **Timing offset** to align the loops by ear against the synth: positive values bring the loops earlier. Prefer a wired output for jamming. The physical iPad/adapter timing still needs this first device check.
 

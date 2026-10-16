@@ -136,11 +136,11 @@ Do not impose custom line heights or tracking on native controls: none is set by
 
 ## Layout
 
-The main view is a native vertical composition: compact header, expanding pad grid, optional loading/editing feedback, divider, then bottom transport. It respects the surrounding native safe area. The song Menu wraps a Picker so the library can grow without adding tabs; source BPM stays at the header's trailing edge.
+The current main view places the library and A/B stacks above the bottom transport, without a global title bar. It respects the surrounding native safe area. The grid measurements below describe the original pad-grid design; the current stack layout is described under Two stacks and sound controls.
 
 The grid chooses six columns when its own width is greater than 1.12 times its height, otherwise five. Rows are `ceil(sampleCount / columns)`. With thirty loops this yields the intended landscape 6×5 and portrait 5×6 arrangements. Each pad receives an equal share after subtracting `grid-gap`; the decision uses the available grid bounds, not a device-name or orientation check.
 
-The header uses `header-margin` horizontally, `tight` vertically, a 12-point inter-item gap and a 9-point song-label/chevron gap. The grid has `grid-margin` side margins and 10 points below. The normal dock uses `dock-margin` horizontally, `dock-vertical` vertically and `dock-gap` between controls. Its vertical separators are 34 points tall. The segmented picker is capped at 230 points wide in this layout.
+The original grid has `grid-margin` side margins and 10 points below. The normal dock uses `dock-margin` horizontally, `dock-vertical` vertically and `dock-gap` between controls. Its vertical separators are 34 points tall. The segmented picker is capped at 230 points wide in this layout.
 
 At an available view width below 720 points, or at any accessibility Dynamic Type size, the dock uses two rows. Transport, tempo and clock occupy the first; mode, edit and settings occupy the second. Rows are separated by `tight`, with 6-point vertical dock padding. This accessibility condition applies even on a wide iPad.
 
@@ -156,9 +156,9 @@ Pads are clipped rectangles with the `pad` corner radius and a 0.75-point border
 
 ## Components
 
-### Song menu and source tempo
+### Library folders
 
-The song name and native chevron form one Menu control with a minimum 44-point height. A native Picker lists song and artist. The menu's accessibility label names the selected song. Source BPM combines a short caption and approximate numeric value into one accessibility element. Keep the approved dropdown; the illustrative comp's two tabs are not the implementation contract.
+Each song appears as an expandable library folder. Opening a folder selects it as the source for MIDI pad notes without interrupting the stacks.
 
 ### Waveform pads
 
