@@ -8,7 +8,7 @@
   <title>Breakwater</title>
   <link rel="icon" type="image/png" href="./icon.png">
   <link rel="apple-touch-icon" href="./icon.png">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=3">
   <script type="module" src="./app.js"></script>
 </head>
 <body>
@@ -52,11 +52,6 @@
               <div id="filter-modes" class="filter-modes" aria-label="Selected clip filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
               <label class="cutoff-control" for="cutoff"><span>Cutoff <output id="cutoff-value">1.2 kHz</output></span><input id="cutoff" type="range" min="0" max="1000" value="558" aria-label="Selected clip filter cutoff"></label>
             </section>
-            <section id="master-controls" class="device filter-device master-device">
-              <h3>Master filter</h3>
-              <div id="master-filter-modes" class="filter-modes" aria-label="Master filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
-              <label class="cutoff-control" for="master-cutoff"><span>Cutoff <output id="master-cutoff-value">1.2 kHz</output></span><input id="master-cutoff" type="range" min="0" max="1000" value="558" aria-label="Master filter cutoff"></label>
-            </section>
           </div>
         </aside>
       </div>
@@ -68,6 +63,10 @@
       <div class="nudge" role="group" aria-label="Nudge loop timing"><button id="nudge-earlier" aria-label="Nudge loop earlier" title="Nudge earlier (hold to repeat)" disabled>‹</button><span aria-hidden="true">Nudge</span><button id="nudge-later" aria-label="Nudge loop later" title="Nudge later (hold to repeat)" disabled>›</button></div>
       <div class="tempo-control"><label for="tempo">Tempo</label><div class="tempo-input"><input id="tempo" type="number" min="30" max="300" step="0.1" value="120" inputmode="decimal"><span>BPM</span></div></div>
       <div class="tempo-actions"><button id="tap-tempo">Tap tempo</button><button id="source-tempo" title="Set playback tempo to the active folder’s source tempo">Use source</button></div>
+      <section id="master-controls" class="master-filter" aria-label="Master filter">
+        <div class="master-mode-control"><span class="dock-label">Master filter</span><div id="master-filter-modes" class="filter-modes" role="group" aria-label="Master filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div></div>
+        <label class="master-cutoff-control" for="master-cutoff"><span class="dock-label">Cutoff <output id="master-cutoff-value">1.2 kHz</output></span><input id="master-cutoff" type="range" min="0" max="1000" value="558" aria-label="Master filter cutoff"></label>
+      </section>
       <label class="volume-control" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></label>
     </footer>
     <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>

@@ -1,5 +1,11 @@
 # Validation
 
+## Master filter in the bottom bar — 2026-10-15
+
+- Both players expose the master filter mode and cutoff in the transport bar, including when Sound is closed or no clip is selected. The clip filter remains in the Sound rack and has independent settings.
+- All 34 web tests and `Scripts/test_interactions.sh` pass. The static preview was rebuilt; browser checks covered master controls with Sound open and closed, plus desktop, tablet and narrow-screen layouts. The preview did not play audio.
+- Three muted iPad (A16) Simulator UI tests passed, including master/clip filter independence, MIDI-clock browsing, and the narrow timeline level control. The focused master-filter test was repeated after the final layout adjustment; landscape and portrait layouts were inspected. An unsigned Release device build succeeded. A physical iPad and audible output have not been tested for this change.
+
 ## Layer headroom and output dynamics — 2026-10-15
 
 - Full-level stacks use 1/√N instead of 1/N; the headroom calculation follows clip levels and mutes smoothly, rather than pumping in response to a clip's natural gaps. The shared output has stereo-linked 2:1 compression and zero-lookahead soft sample-peak protection.

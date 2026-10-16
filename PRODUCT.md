@@ -3,7 +3,7 @@
 
 ## Platform
 
-ios, web
+adaptive
 
 ## Stack
 Native iPad app: SwiftUI and UIKit for multi-touch performance controls; AVAudioEngine and Core MIDI; a shared Rust real-time audio engine. iPadOS 17+, targeting an A12 iPad. Xcode project, no runtime package dependencies.

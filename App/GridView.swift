@@ -208,17 +208,30 @@ private struct PlaybackContent: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
             if !audio.ready && audio.error == nil { ProgressView("Loading library").padding(8).accessibilityIdentifier("loading") }
             Divider()
-            if compact {
-                VStack(spacing: 4) {
-                    HStack { transport; Spacer(); tempo; Spacer(); clock }
-                    HStack { modePicker; Spacer(minLength: 4); nudge; Spacer(minLength: 4); settings }
-                }.padding(.horizontal, 12).padding(.vertical, 6)
-            } else {
-                HStack(spacing: 20) {
-                    transport; dockDivider; tempo; dockDivider; clock; nudge
-                    Spacer(minLength: 0); modePicker.frame(maxWidth: 230); dockDivider; settings
-                }.padding(.horizontal, 16).padding(.vertical, 8)
+            Group {
+                if compact {
+                    VStack(spacing: 4) {
+                        HStack { transport; Spacer(); tempo; Spacer(); clock; Spacer(minLength: 4); settings }
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 8) {
+                                modePicker.frame(maxWidth: 190); Spacer(minLength: 4); nudge
+                                Spacer(minLength: 4); MasterFilterControl(audio: audio)
+                            }
+                            VStack(spacing: 4) {
+                                HStack { modePicker; Spacer(minLength: 4); nudge }
+                                MasterFilterControl(audio: audio).frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }.padding(.horizontal, 12).padding(.vertical, 6)
+                } else {
+                    HStack(spacing: 10) {
+                        transport; dockDivider; tempo; dockDivider; clock; nudge
+                        Spacer(minLength: 0); modePicker.frame(maxWidth: 230); dockDivider
+                        MasterFilterControl(audio: audio); settings
+                    }.padding(.horizontal, 16).padding(.vertical, 8)
+                }
             }
+            .accessibilityElement(children: .contain).accessibilityIdentifier("transportBar")
         }
     }
     private var transport: some View {
@@ -285,6 +298,34 @@ private struct PlaybackContent: View {
         }.accessibilityLabel("Settings").accessibilityIdentifier("settings")
     }
     private var dockDivider: some View { Divider().frame(height: 34) }
+}
+
+private struct MasterFilterControl: View {
+    @ObservedObject var audio: AudioModel
+    private var slider: Binding<Double> {
+        Binding(get: { log(audio.filterCutoff / 40) / log(18000 / 40) },
+                set: { audio.setFilter(type: audio.filterType, cutoff: 40 * pow(18000 / 40, $0)) })
+    }
+    private var cutoffLabel: String {
+        let hz = audio.filterCutoff
+        return hz >= 1000 ? String(format: "%.1f kHz", hz / 1000) : "\(Int(hz.rounded())) Hz"
+    }
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("MASTER FILTER").font(.caption2.weight(.medium)).foregroundStyle(Palette.secondary)
+                Picker("Master filter type", selection: Binding(get: { audio.filterType }, set: { audio.setFilter(type: $0, cutoff: audio.filterCutoff) })) {
+                    Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
+                }.pickerStyle(.segmented).frame(minWidth: 176, minHeight: 44).accessibilityIdentifier("masterFilterMode")
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack { Text("CUTOFF"); Spacer(minLength: 4); Text(cutoffLabel).monospacedDigit() }
+                    .font(.caption2.weight(.medium)).foregroundStyle(Palette.secondary)
+                Slider(value: slider, in: 0...1).frame(minWidth: 95, maxWidth: 130, minHeight: 44)
+                    .accessibilityLabel("Master filter cutoff").accessibilityValue(cutoffLabel)
+            }.frame(maxWidth: 130)
+        }
+    }
 }
 
 private func receiveSample(_ providers: [NSItemProvider], audio: AudioModel, index: Int, layer: Bool) -> Bool {
@@ -541,14 +582,6 @@ private struct SoundTray: View {
         let hz = audio.selectedClip?.filterCutoff ?? 1200
         return hz >= 1000 ? String(format: "%.1f kHz", hz / 1000) : "\(Int(hz.rounded())) Hz"
     }
-    private var masterSlider: Binding<Double> {
-        Binding(get: { log(audio.filterCutoff / 40) / log(18000 / 40) },
-                set: { audio.setFilter(type: audio.filterType, cutoff: 40 * pow(18000 / 40, $0)) })
-    }
-    private var masterCutoffLabel: String {
-        let hz = audio.filterCutoff
-        return hz >= 1000 ? String(format: "%.1f kHz", hz / 1000) : "\(Int(hz.rounded())) Hz"
-    }
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
@@ -591,13 +624,6 @@ private struct SoundTray: View {
                         HStack { Text("Cutoff"); Spacer(); Text(cutoffLabel).monospacedDigit() }.font(.caption)
                         Slider(value: slider, in: 0...1).disabled(audio.selectedClip == nil).accessibilityLabel("Clip filter cutoff").accessibilityValue(cutoffLabel).accessibilityIdentifier("filterCutoff")
                     }
-                    device("Master filter", width: 210) {
-                        Picker("Master filter type", selection: Binding(get: { audio.filterType }, set: { audio.setFilter(type: $0, cutoff: audio.filterCutoff) })) {
-                            Text("Off").tag(0); Text("LPF").tag(1); Text("BPF").tag(2); Text("HPF").tag(3)
-                        }.pickerStyle(.segmented).accessibilityIdentifier("masterFilterMode")
-                        HStack { Text("Cutoff"); Spacer(); Text(masterCutoffLabel).monospacedDigit() }.font(.caption)
-                        Slider(value: masterSlider, in: 0...1).accessibilityLabel("Master filter cutoff").accessibilityValue(masterCutoffLabel)
-                    }.padding(.leading, 8)
                 }.padding(.horizontal, 12).padding(.bottom, 10)
             }.accessibilityIdentifier("soundDevices").accessibilityHint("Scroll to see more sound devices.")
         }.accessibilityElement(children: .contain).accessibilityIdentifier("soundTray")
