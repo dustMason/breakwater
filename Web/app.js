@@ -60,76 +60,67 @@ function waveform(values, middle = 50, scale = 47) {
 
 function showSong(id) {
   song = songs.find(item => item.id === id) || songs[0];
-  $('song').value = song.id;
+  if (!song) return;
+  $('song-name').textContent = song.name;
   $('artist').textContent = song.artist;
   $('source-bpm').textContent = `≈${song.sourceBPM}`;
   $('source-bpm').title = song.sourceBPMRange ? `Loop range: ${song.sourceBPMRange.join('–')} BPM. ${song.timingNote || ''}` : 'Approximate source tempo';
-  $('grid').setAttribute('aria-label', `${song.name} loop pads`);
-  pads = new Map();
-  const fragment = document.createDocumentFragment();
-  for (const sample of song.loops) {
-    const pad = document.createElement('button');
-    pad.type = 'button';
-    pad.className = 'pad';
-    pad.dataset.id = sample.id;
-    pad.setAttribute('aria-describedby', 'keyboard-help');
-    pad.title = `${song.name} · ${sample.sourceStart}–${sample.sourceEnd} · ${sample.bpm.toFixed(1)} BPM`;
-    // Numeric waveform data and metadata come from the catalog.
-    pad.innerHTML = `<span class="sweep"></span><span class="pad-header"><span class="pad-number">${String(sample.number).padStart(2, '0')}</span><span class="pad-bars">${sample.bars} ${sample.bars === 1 ? 'bar' : 'bars'}</span></span><svg class="waveform" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${waveform(sample.waveform)}"/></svg><span class="pad-status"></span>`;
-    pads.set(sample.id, { element: pad, status: pad.querySelector('.pad-status'), sample });
-    fragment.append(pad);
-  }
-  $('grid').replaceChildren(fragment);
-  paintPartButtons();
-  paintArrangement();
-  paintWaveforms();
-  layout();
-  paint();
+  document.querySelectorAll('.folder').forEach(folder => folder.classList.toggle('active', folder.dataset.song === song.id));
   persist();
 }
-
-function layout() {
-  const grid = $('grid');
-  const width = grid.clientWidth;
-  const columns = width < 260 ? 2 : width < 460 ? 3 : width < 650 ? 4 : width > grid.clientHeight * 1.12 ? 6 : 5;
-  grid.style.setProperty('--columns', columns);
-  grid.style.setProperty('--rows', Math.ceil((song?.loops.length || 30) / columns));
-  grid.classList.toggle('scrollable', grid.scrollHeight > grid.clientHeight + 1);
-  updateHint();
+function buildLibrary() {
+  pads = new Map();
+  const fragment = document.createDocumentFragment();
+  for (const source of songs) {
+    const folder = document.createElement('details'); folder.className = 'folder'; folder.dataset.song = source.id;
+    const summary = document.createElement('summary');
+    const title = document.createElement('span'); title.className = 'folder-title'; title.textContent = source.name;
+    const bpm = document.createElement('span'); bpm.className = 'folder-bpm'; bpm.textContent = `≈${source.sourceBPM} BPM`;
+    summary.append(title, bpm); folder.append(summary);
+    folder.addEventListener('toggle', () => { if (folder.open) showSong(source.id); });
+    const list = document.createElement('div'); list.className = 'folder-loops';
+    for (const sample of source.loops) {
+      const pad = document.createElement('button'); pad.type = 'button'; pad.className = 'pad'; pad.dataset.id = sample.id;
+      pad.setAttribute('aria-describedby', 'keyboard-help');
+      pad.title = `${source.name} · ${sample.sourceStart}–${sample.sourceEnd} · ${sample.bpm.toFixed(1)} BPM`;
+      pad.innerHTML = `<span class="pad-number">${String(sample.number).padStart(2, '0')}</span><svg class="waveform" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${waveform(sample.waveform)}"/></svg><span class="pad-bars">${sample.bars} ${sample.bars === 1 ? 'bar' : 'bars'}</span><span class="pad-status"></span>`;
+      pads.set(sample.id, { element: pad, status: pad.querySelector('.pad-status'), sample }); list.append(pad);
+    }
+    folder.append(list); fragment.append(folder);
+    if (source.id === (saved.song || songs[0].id)) folder.open = true;
+  }
+  $('grid').replaceChildren(fragment);
+  showSong(saved.song); paintLibrary(); paint();
 }
-new ResizeObserver(layout).observe($('grid'));
+function layout() {}
 
 function songMask(item = song) { return (Number.isInteger(partMasks[item?.id]) ? partMasks[item.id] : 15) & 15; }
 function allClips() { return arrangement.flat(); }
 function selectedClip() { return allClips().find(clip => clip.token === selectedToken); }
 function sampleFor(id) { return samples.find(sample => sample.id === id); }
-function clipForWaveform(id) {
-  const selected = selectedClip();
-  if (selected?.id === id) return selected;
-  return allClips().find(clip => clip.id === id && (state.activeTokens || []).includes(clip.token));
-}
+function formatHz(hz) { return hz >= 1000 ? `${(hz / 1000).toFixed(1)} kHz` : `${Math.round(hz)} Hz`; }
+function sliderPosition(hz) { return Math.round(1000 * Math.log(hz / 40) / Math.log(18000 / 40)); }
 function paintPartButtons() {
   const clip = selectedClip(), sample = clip && sampleFor(clip.id);
   const source = sample && songs.find(item => item.id === sample.songID);
-  $('part-target').textContent = sample ? `${sample.songName} · ${String(sample.number).padStart(2, '0')} · approximate layers may overlap.` : 'Tap a sample in the sequence to edit its parts.';
+  $('part-target').textContent = sample ? `${sample.songName} · ${String(sample.number).padStart(2, '0')}` : 'Select a clip in the timeline.';
   $('parts-off').disabled = $('parts-on').disabled = !clip;
   $('part-buttons').replaceChildren(...(source?.partLabels || []).map((name, index) => {
-    const button = document.createElement('button');
-    const on = !!(clip.mask & (1 << index));
+    const button = document.createElement('button'); const on = !!(clip.mask & (1 << index));
     button.type = 'button'; button.dataset.part = index; button.setAttribute('aria-pressed', String(on));
-    button.innerHTML = `<span>${name}</span><span>${on ? 'ON' : 'OFF'}</span>`;
+    const label = document.createElement('span'); label.textContent = name;
+    const state = document.createElement('span'); state.textContent = on ? 'ON' : 'OFF'; button.append(label, state);
     return button;
   }));
-}
-function paintWaveforms() {
-  for (const { element, sample } of pads.values()) {
-    const svg = element.querySelector('.waveform');
-    const clip = clipForWaveform(sample.id), mask = clip?.mask ?? 15;
-    if (sample.parts && clip) {
-      svg.innerHTML = sample.parts.waveforms.map((values, index) => `<path class="${mask & (1 << index) ? '' : 'muted-part'}" d="${waveform(values, 12.5 + index * 25, 11)}"/>`).join('');
-    } else svg.innerHTML = `<path d="${waveform(sample.waveform)}"/>`;
+  for (const button of $('filter-modes').querySelectorAll('button')) {
+    button.disabled = !clip; button.setAttribute('aria-pressed', String(Number(button.dataset.mode) === (clip?.filterType ?? 0)));
   }
+  $('cutoff').disabled = !clip;
+  $('cutoff').value = sliderPosition(clip?.filterHz ?? 1200);
+  $('cutoff-value').textContent = formatHz(clip?.filterHz ?? 1200);
 }
+function paintWaveforms() {}
+
 function setTray(next) {
   tray = next;
   $('tray').hidden = !tray;
@@ -158,80 +149,78 @@ function prepareUpcoming() {
 }
 
 function updateHint() {
-  $('hint').textContent = editing ? 'Tap pads to exclude or restore them. Changes are saved on this browser.'
-    : 'Tap a pad to replace the sequence. Drag it below to layer or add a step. On touch, hold briefly to drag; swipe to scroll.';
+  $('hint').textContent = editing ? 'Select a loop in the library to exclude or restore it. Changes are saved.'
+    : 'Drop at a step edge to insert; drop beneath a clip to layer. Select a clip to edit its sound.';
 }
-
-function paintArrangement() {
+let zoom = 1;
+function applyZoom() {
   const container = $('arrangement-items');
-  const content = document.createDocumentFragment();
+  container.style.setProperty('--zoom', zoom);
+  const gaps = Math.max(1, arrangement.length - 1);
+  container.style.setProperty('--gap-width', `${Math.max(2, Math.min(18, (container.clientWidth * zoom - 76) / (gaps * 3)))}px`);
+}
+new ResizeObserver(applyZoom).observe($('arrangement-items'));
+function paintArrangement() {
+  const container = $('arrangement-items'); const content = document.createElement('div'); content.className = 'timeline-content';
+  let firstBar = 1;
   function gap(index) {
     const slot = document.createElement('div'); slot.className = 'arrangement-gap'; slot.dataset.index = index;
     slot.setAttribute('aria-hidden', 'true'); slot.textContent = '+'; return slot;
   }
   if (!arrangement.length) {
     const empty = document.createElement('div'); empty.className = 'arrangement-empty'; empty.dataset.index = '0';
-    empty.textContent = 'Drag a sample here to start'; content.append(empty);
+    empty.textContent = 'Drag a loop here to start your sequence'; content.append(empty);
   } else arrangement.forEach((step, index) => {
     content.append(gap(index));
-    const group = document.createElement('div'); group.className = 'sequence-step'; group.dataset.step = index;
-    const heading = document.createElement('div'); heading.className = 'step-heading'; heading.textContent = `STEP ${String(index + 1).padStart(2, '0')}  ·  ${step.length} ${step.length === 1 ? 'SAMPLE' : 'LAYERS'}`;
-    group.append(heading);
+    const beats = Math.max(...step.map(clip => sampleFor(clip.id)?.beats || 4));
+    const group = document.createElement('div'); group.className = 'sequence-step'; group.dataset.step = index; group.style.flexGrow = beats;
+    const heading = document.createElement('div'); heading.className = 'step-heading';
+    heading.textContent = `BAR ${firstBar} · ${beats / 4} ${beats === 4 ? 'BAR' : 'BARS'}`; group.append(heading);
+    firstBar += beats / 4;
     for (const clip of step) {
       const sample = sampleFor(clip.id); if (!sample) continue;
       const row = document.createElement('div'); row.className = 'clip-row'; row.dataset.token = clip.token;
+      row.classList.toggle('selected', clip.token === selectedToken);
       const choose = document.createElement('button'); choose.type = 'button'; choose.className = 'clip-select'; choose.dataset.select = clip.token;
       choose.setAttribute('aria-pressed', String(clip.token === selectedToken));
-      choose.setAttribute('aria-label', `Edit parts for ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
-      const label = document.createElement('span'); label.className = 'clip-label'; label.textContent = `${sample.songName} · ${String(sample.number).padStart(2, '0')}`;
+      choose.setAttribute('aria-label', `Edit ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+      const label = document.createElement('span'); label.className = 'clip-label'; label.textContent = `${String(sample.number).padStart(2, '0')} · ${sample.songName}`;
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.classList.add('clip-waveform'); svg.setAttribute('aria-hidden', 'true');
-      svg.innerHTML = sample.parts ? sample.parts.waveforms.map((values, p) => `<path class="${clip.mask & (1 << p) ? '' : 'muted-part'}" d="${waveform(values, 12.5 + p * 25, 11)}"/>`).join('') : `<path d="${waveform(sample.waveform)}"/>`;
+      const fraction = (sample.beats || 4) / beats;
+      const lanes = sample.parts ? sample.parts.waveforms.map((values, p) => `<path class="${clip.mask & (1 << p) ? '' : 'muted-part'}" d="${waveform(values, 12.5 + p * 25, 11)}"/>`).join('') : `<path d="${waveform(sample.waveform)}"/>`;
+      svg.innerHTML = Array.from({length: Math.ceil(1 / fraction)}, (_, repeat) => `<g transform="translate(${repeat * fraction * 100} 0) scale(${fraction} 1)">${lanes}</g>`).join('');
       choose.append(label, svg);
       const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'clip-remove'; remove.dataset.remove = clip.token;
       remove.setAttribute('aria-label', `Remove ${sample.songName}, loop ${sample.number}, from step ${index + 1}`); remove.textContent = '×';
       row.append(choose, remove); group.append(row);
     }
+    const target = document.createElement('div'); target.className = 'layer-target'; target.textContent = '+ Drop a layer'; group.append(target);
     content.append(group);
   });
   if (arrangement.length) content.append(gap(arrangement.length));
   container.replaceChildren(content);
-  $('clear-arrangement').disabled = !arrangement.length;
-  paintArrangementState();
+  const bars = firstBar - 1, clips = allClips().length;
+  $('sequence-detail').textContent = arrangement.length ? `${bars} ${bars === 1 ? 'bar' : 'bars'} · ${clips} ${clips === 1 ? 'clip' : 'clips'}` : 'Drop loops here to build a sequence';
+  $('clear-arrangement').disabled = !arrangement.length; applyZoom(); paintArrangementState();
 }
 function paintArrangementState() {
-  const active = new Set(state.playing ? state.activeTokens || [] : []);
-  document.querySelectorAll('.clip-row').forEach(row => row.classList.toggle('active', active.has(Number(row.dataset.token))));
-  document.querySelectorAll('.sequence-step').forEach(group => group.classList.toggle('active', [...group.querySelectorAll('.clip-row')].some(row => active.has(Number(row.dataset.token)))));
+  const tokens = state.playing ? state.activeTokens || [] : [];
+  document.querySelectorAll('.clip-row').forEach(row => {
+    const index = tokens.indexOf(Number(row.dataset.token)); row.classList.toggle('active', index >= 0);
+    if (index >= 0) row.style.setProperty('--progress', state.activeProgress?.[index] ?? 0);
+  });
+  document.querySelectorAll('.sequence-step').forEach(group => group.classList.toggle('active', [...group.querySelectorAll('.clip-row')].some(row => tokens.includes(Number(row.dataset.token)))));
 }
-
-function paint() {
-  const queue = allClips().map(clip => clip.id);
-  const playingIDs = new Set(state.playing ? (state.activeLoops || [state.active]) : []);
+function paintLibrary() {
   for (const [id, { element, status, sample }] of pads) {
-    const excluded = disabled.has(id);
-    const playing = playingIDs.has(id);
-    const order = arrangement.findIndex(step => step.some(clip => clip.id === id));
-    const pending = (state.pending || loading) && order >= 0;
-    element.classList.toggle('playing', playing);
-    element.classList.toggle('queued', order >= 0 && !playing);
-    element.classList.toggle('pending', pending);
-    element.classList.toggle('excluded', excluded);
+    const excluded = disabled.has(id); element.classList.toggle('excluded', excluded);
     element.setAttribute('aria-disabled', String(excluded && !editing));
-    element.setAttribute('aria-pressed', String(playing));
-    if (playing) {
-      const selected = selectedClip();
-      const index = selected?.id === id ? (state.activeTokens || []).indexOf(selected.token) : (state.activeLoops || []).indexOf(id);
-      element.style.setProperty('--progress', state.activeProgress?.[index] ?? state.progress);
-    }
-    let label = '';
-    if (editing) label = excluded ? 'RESTORE' : 'EXCLUDE';
-    else if (excluded) label = 'EXCLUDED';
-    else if (loading && order >= 0) label = `${order + 1} · LOADING`;
-    else if (playing) label = pending ? `${order + 1} · NEXT BAR` : `PLAYING${order >= 0 && queue.length > 1 ? ` · ${order + 1}` : ''}`;
-    else if (order >= 0 && state.playing) label = `${order + 1} · ${pending ? 'NEXT BAR' : 'CYCLE'}`;
+    const label = editing ? (excluded ? 'RESTORE' : 'EXCLUDE') : excluded ? 'EXCLUDED' : '';
     status.textContent = label;
-    element.setAttribute('aria-label', `Loop ${sample.number}, ${sample.bars} ${sample.bars === 1 ? 'bar' : 'bars'}${label ? `, ${label.toLowerCase()}` : ''}`);
+    element.setAttribute('aria-label', `${sampleFor(id)?.songName}, loop ${sample.number}, ${sample.bars} ${sample.bars === 1 ? 'bar' : 'bars'}${label ? `, ${label.toLowerCase()}` : ''}`);
   }
+}
+function paint() {
   const playing = state.playing;
   $('transport').classList.toggle('running', playing || loading);
   $('transport-label').textContent = playing || loading ? 'Stop' : 'Play';
@@ -239,10 +228,6 @@ function paint() {
   $('transport-icon').setAttribute('d', playing || loading ? 'M5 5H19V19H5Z' : 'M7 4 20 12 7 20Z');
   $('nudge-earlier').disabled = $('nudge-later').disabled = !playing || state.active === null;
   const current = samples.find(sample => sample.id === state.active);
-  $('playing-label').textContent = playing && current ? `${current.songName} · ${String(current.number).padStart(2, '0')}` : loading ? 'Loading samples' : 'Pick a loop';
-  if (playing && (state.activeLoops || []).length > 1) $('playing-label').textContent += ` + ${(state.activeLoops || []).length - 1}`;
-  $('playing-label').title = $('playing-label').textContent;
-  [...document.querySelectorAll('.beat-dots i')].forEach((dot, index) => dot.classList.toggle('on', playing && Math.floor(state.beat) % 4 === index));
   if (playing && current) announce(`Playing ${current.songName}, loop ${current.number}`);
   paintArrangementState();
 }
@@ -282,7 +267,7 @@ async function submitArrangement(start = true) {
 
 function newClip(id) {
   const sample = sampleFor(id);
-  return { id, token: nextToken++, mask: songMask({ id: sample?.songID }) };
+  return { id, token: nextToken++, mask: songMask({ id: sample?.songID }), filterType: 0, filterHz: 1200 };
 }
 function addSample(id, index, layer = false, replace = false) {
   if (disabled.has(id) || !sampleFor(id)) return;
@@ -316,7 +301,7 @@ function toggleDisabled(id) {
     paintArrangement(); paintPartButtons(); paintWaveforms(); submitArrangement(false);
   }
   persist();
-  paint();
+  paintLibrary(); paint();
 }
 function padAt(target) { return target instanceof Element ? target.closest('.pad') : null; }
 function clearPointer() {
@@ -329,7 +314,13 @@ function dropAt(x, y) {
   const slot = target.closest('.arrangement-gap, .arrangement-empty');
   if (slot) return { element: slot, index: Number(slot.dataset.index), layer: false };
   const step = target.closest('.sequence-step');
-  if (step) return { element: step, index: Number(step.dataset.step), layer: true };
+  if (step) {
+    const index = Number(step.dataset.step), rect = step.getBoundingClientRect();
+    const edge = Math.min(24, rect.width / 3);
+    if (x - rect.left < edge) return { element: step.previousElementSibling, index, layer: false };
+    if (rect.right - x < edge) return { element: step.nextElementSibling, index: index + 1, layer: false };
+    return { element: step, index, layer: true };
+  }
   const container = target.closest('#arrangement-items');
   return container ? { element: container, index: arrangement.length, layer: false } : null;
 }
@@ -337,6 +328,8 @@ $('grid').addEventListener('pointerdown', event => {
   const pad = padAt(event.target);
   if (!pad || (event.pointerType === 'mouse' && event.button !== 0)) return;
   const id = Number(pad.dataset.id);
+  const source = sampleFor(id)?.songID;
+  if (source && source !== song?.id) showSong(source);
   event.preventDefault();
   pad.focus({ preventScroll: true });
   if (pointer || (!editing && disabled.has(id))) return;
@@ -377,7 +370,7 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
       } else if (editing) toggleDisabled(finished.id);
       else if (finished.shift) addSample(finished.id, arrangement.length);
       else if (finished.alt && arrangement.length) addSample(finished.id, Math.max(0, arrangement.findIndex(step => step.some(clip => clip.token === selectedToken))), true);
-      else addSample(finished.id, 0, false, true);
+      else addSample(finished.id, arrangement.length);
     }
     clearPointer();
   });
@@ -390,14 +383,26 @@ $('grid').addEventListener('click', event => {
   const pad = padAt(event.target);
   if (!pad) return;
   const id = Number(pad.dataset.id);
+  const source = sampleFor(id)?.songID;
+  if (source && source !== song?.id) showSong(source);
   if (editing) toggleDisabled(id);
   else if (!disabled.has(id)) {
     if (event.shiftKey) addSample(id, arrangement.length);
     else if (event.altKey && arrangement.length) addSample(id, Math.max(0, arrangement.findIndex(step => step.some(clip => clip.token === selectedToken))), true);
-    else addSample(id, 0, false, true);
+    else addSample(id, arrangement.length);
   }
 });
 $('grid').addEventListener('keydown', event => {
+  if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    const pad = padAt(event.target); if (!pad) return;
+    event.preventDefault(); if (event.repeat || editing) return;
+    const id = Number(pad.dataset.id), source = sampleFor(id)?.songID;
+    if (source && source !== song?.id) showSong(source);
+    const selected = arrangement.findIndex(step => step.some(clip => clip.token === selectedToken));
+    const index = selected < 0 ? (event.key === 'ArrowLeft' ? 0 : arrangement.length) : selected + (event.key === 'ArrowRight' ? 1 : 0);
+    addSample(id, index);
+    return;
+  }
   // Modified Enter/Space is not consistently translated into a native click,
   // especially Option-Enter on macOS, so handle those shortcuts directly.
   if ((event.key === 'Enter' || event.key === ' ') && (event.shiftKey || event.altKey)) {
@@ -406,24 +411,22 @@ $('grid').addEventListener('keydown', event => {
     const pad = padAt(event.target);
     if (!pad) return;
     const id = Number(pad.dataset.id);
+    const source = sampleFor(id)?.songID;
+    if (source && source !== song?.id) showSong(source);
     if (editing) toggleDisabled(id);
     else if (!disabled.has(id)) {
       if (event.shiftKey) addSample(id, arrangement.length);
       else if (arrangement.length) addSample(id, Math.max(0, arrangement.findIndex(step => step.some(clip => clip.token === selectedToken))), true);
-      else addSample(id, 0, false, true);
+      else addSample(id, arrangement.length);
     }
     return;
   }
-  const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -Number($('grid').style.getPropertyValue('--columns')), ArrowDown: Number($('grid').style.getPropertyValue('--columns')) };
-  if (!(event.key in offsets)) return;
-  const items = [...pads.values()].map(item => item.element);
-  const index = items.indexOf(event.target);
-  if (index < 0) return;
-  event.preventDefault();
-  items[Math.min(items.length - 1, Math.max(0, index + offsets[event.key]))].focus();
+  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+  const items = [...pads.values()].map(item => item.element).filter(item => item.offsetParent);
+  const index = items.indexOf(event.target); if (index < 0) return;
+  event.preventDefault(); items[Math.min(items.length - 1, Math.max(0, index + (event.key === 'ArrowUp' ? -1 : 1)))].focus();
 });
 
-$('song').addEventListener('change', () => showSong($('song').value));
 $('show-sound').addEventListener('click', () => setTray(!tray));
 $('close-tray').addEventListener('click', () => setTray(false));
 $('arrangement-items').addEventListener('click', event => {
@@ -459,22 +462,35 @@ $('parts-off').addEventListener('click', () => setPartsMask(0));
 $('parts-on').addEventListener('click', () => setPartsMask(15));
 $('retry-parts').addEventListener('click', () => { partError = ''; $('retry-parts').hidden = true; $('part-message').textContent = ''; prepareUpcoming(); });
 $('filter-modes').addEventListener('click', event => {
+  const button = event.target.closest('button[data-mode]'), clip = selectedClip(); if (!button || !clip) return;
+  clip.filterType = Number(button.dataset.mode); audio.setClipFilter(clip.token, clip.filterType, clip.filterHz); paintPartButtons();
+});
+$('cutoff').addEventListener('input', event => {
+  const clip = selectedClip(); if (!clip) return;
+  clip.filterHz = 40 * (18000 / 40) ** (Number(event.target.value) / 1000);
+  $('cutoff-value').textContent = formatHz(clip.filterHz); audio.setClipFilter(clip.token, clip.filterType, clip.filterHz);
+});
+$('master-filter-modes').addEventListener('click', event => {
   const button = event.target.closest('button[data-mode]'); if (!button) return;
   filterMode = Number(button.dataset.mode); audio.setFilter(filterMode, filterHz);
-  for (const item of $('filter-modes').querySelectorAll('button')) item.setAttribute('aria-pressed', String(item === button));
+  for (const item of $('master-filter-modes').querySelectorAll('button')) item.setAttribute('aria-pressed', String(item === button));
 });
-$('cutoff').value = Math.round(1000 * Math.log(filterHz / 40) / Math.log(18000 / 40));
-$('cutoff').addEventListener('input', event => {
+$('master-cutoff').value = sliderPosition(filterHz);
+$('master-cutoff').addEventListener('input', event => {
   filterHz = 40 * (18000 / 40) ** (Number(event.target.value) / 1000);
-  $('cutoff-value').textContent = filterHz >= 1000 ? `${(filterHz / 1000).toFixed(1)} kHz` : `${Math.round(filterHz)} Hz`;
-  audio.setFilter(filterMode, filterHz);
+  $('master-cutoff-value').textContent = formatHz(filterHz); audio.setFilter(filterMode, filterHz);
 });
+$('zoom-fit').addEventListener('click', () => { zoom = 1; applyZoom(); $('arrangement-items').scrollLeft = 0; });
+$('zoom-in').addEventListener('click', () => { zoom = Math.min(128, zoom * 1.5); applyZoom(); });
+$('zoom-out').addEventListener('click', () => { zoom = Math.max(1, zoom / 1.5); applyZoom(); });
+
+
 $('transport').addEventListener('click', () => {
   if (state.playing || loading) { stop(); return; }
   const first = song.loops.find(sample => !disabled.has(sample.id));
   if (arrangement.length) submitArrangement();
   else if (first) addSample(first.id, 0);
-  else notice('Every pad on this page is excluded. Use Edit pads to restore a loop.');
+  else notice('Every loop in this folder is excluded. Use Edit to restore a loop.');
 });
 function setupNudge(button, milliseconds) {
   let delay, interval, handledPointer = false;
@@ -507,11 +523,11 @@ $('retry').addEventListener('click', () => {
 $('edit').addEventListener('click', () => {
   editing = !editing;
   clearPointer();
-  $('edit').textContent = editing ? 'Done' : 'Edit pads';
+  $('edit').textContent = editing ? 'Done' : 'Edit';
   $('edit').setAttribute('aria-pressed', String(editing));
   $('grid').classList.toggle('editing', editing);
   updateHint();
-  paint();
+  paintLibrary(); paint();
 });
 function setTempo(value) {
   tempo = Math.round(bounded(value, tempo, 30, 300) * 10) / 10;
@@ -553,10 +569,9 @@ async function loadCatalog() {
     songs = catalog;
     samples = songs.flatMap(item => item.loops.map(sample => ({ ...sample, songName: item.name, songID: item.id })));
     for (const item of songs) audio.setPartMask(item.loops.map(sample => sample.id), songMask(item));
-    $('song').replaceChildren(...songs.map(item => new Option(`${item.name}`, item.id)));
-    $('song').disabled = $('transport').disabled = $('edit').disabled = false;
+    $('transport').disabled = $('edit').disabled = false;
     $('grid').setAttribute('aria-busy', 'false');
-    showSong(saved.song);
+    buildLibrary(); paintArrangement(); paintPartButtons();
   } catch (error) {
     $('grid').setAttribute('aria-busy', 'false');
     notice(`The sample library couldn't load. Check your connection and retry. (${error.message})`, true);

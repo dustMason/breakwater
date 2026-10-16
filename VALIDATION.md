@@ -1,5 +1,12 @@
 # Validation
 
+## Timeline editor and per-clip filters — 2026-10-15
+
+- The iPad and web players now use a folder library, a fit-to-sequence timeline with sequence/layer drop targets, and a selected-clip inspector. Clip instances have independent parts and filters; the master filter remains separate. The catalog and external sample objects are unchanged.
+- `Scripts/test_core.sh`, `Scripts/test_interactions.sh`, strict Rust Clippy, and all 28 `npm test` cases pass. The new WebAssembly audio test verifies independent filters on layered copies, live updates and later steps. The C++ differential suite passes at 44.1 and 48 kHz, with a maximum sample difference of approximately `2.7e-8` for the unfiltered reference traces. The unsigned Release iOS device build succeeds.
+- All five muted iPad (A16) Simulator UI tests pass: persistent exclusions, scrollable folders and source tempo, layered dragging with independent sound settings, step-edge insertion and the placement menu, and folder browsing, nudge and part editing while a synthetic MIDI clock is locked. The final timeline layout was captured in landscape and portrait. Browser checks with audio muted covered beginning/end and layered drops, edge and keyboard insertion, independent clip settings, and desktop, tablet and phone layouts. A 64-step mixed-length arrangement on a 390-pixel viewport retained a 69-pixel clip-selection target at maximum zoom.
+- No physical A12 iPad, USB MIDI interface, live clock timing, device performance, or audible listening test was performed. Simulator and synthetic-clock results do not establish those behaviors.
+
 ## Shared Rust audio engine — 2026-10-15
 
 - iPad and browser playback now use the same Rust engine. Native links a static library through the existing C interface; the browser runs its WebAssembly build in an AudioWorklet. The prior C++ implementation is kept solely as a differential test reference. The sample catalog and audio files are unchanged.

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#004cc9">
-  <meta name="description" content="Breakwater: a playable grid of drum loops. Layer and sequence samples, shape their parts, and change the tempo.">
+  <meta name="description" content="Breakwater: arrange, layer, and shape percussion loops.">
   <title>Breakwater</title>
   <link rel="icon" type="image/png" href="./icon.png">
   <link rel="apple-touch-icon" href="./icon.png">
@@ -14,76 +14,55 @@
 <body>
   <main class="instrument" aria-label="Breakwater loop player">
     <header class="header">
-      <img class="app-icon" src="./icon.png" alt="Breakwater" width="36" height="36">
-      <div class="song-control">
-        <label class="sr-only" for="song">Source song</label>
-        <select id="song" disabled><option>Loading library…</option></select>
-        <span id="artist" class="artist"></span>
-      </div>
-      <div class="source-tempo"><span>Source BPM</span><strong id="source-bpm">—</strong></div>
-      <div class="tray-actions" aria-label="Sound controls">
-        <button id="show-sound" aria-controls="tray" aria-expanded="false">Parts &amp; FX</button>
-      </div>
+      <img class="app-icon" src="./icon.png" alt="" width="32" height="32">
+      <h1>Breakwater</h1>
+      <div class="current-source"><span id="song-name">Library</span><span id="artist" class="artist"></span></div>
+      <div class="source-tempo"><span>Source</span><strong id="source-bpm">—</strong><span>BPM</span></div>
+      <button id="show-sound" aria-controls="tray" aria-expanded="false">Sound</button>
     </header>
 
     <div class="workspace">
-      <section id="grid" class="grid" aria-label="Loop pads" aria-busy="true"></section>
+      <aside class="library" aria-label="Loop library">
+        <div class="library-heading"><h2>Library</h2><button id="edit" class="edit" aria-pressed="false" disabled>Edit</button></div>
+        <p class="library-help">Drag a loop onto the timeline</p>
+        <div id="grid" class="library-list" aria-label="Loop folders" aria-busy="true"></div>
+      </aside>
+      <section id="arrangement" class="arrangement" aria-label="Playback timeline">
+        <div class="arrangement-heading">
+          <div><h2>Timeline</h2><span id="sequence-detail">Drop loops here to build a sequence</span></div>
+          <div class="timeline-actions"><button id="zoom-out" aria-label="Zoom out timeline">−</button><button id="zoom-fit" title="Fit the full sequence">Fit</button><button id="zoom-in" aria-label="Zoom in timeline">+</button><button id="clear-arrangement">Clear</button></div>
+        </div>
+        <div id="notice" class="notice" hidden><span id="notice-text" role="status"></span><button id="retry" hidden>Retry</button><progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress></div>
+        <div id="arrangement-items" class="arrangement-items" aria-label="Timeline steps"></div>
+        <p id="hint" class="hint">Drop at a step edge to insert; drop beneath a clip to layer.</p>
+      </section>
       <aside id="tray" class="tray" aria-label="Sound controls" hidden>
-        <div class="tray-heading"><h2>Sound</h2><button id="close-tray" aria-label="Close sound controls"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2"/></svg></button></div>
+        <div class="tray-heading"><h2>Sound</h2><button id="close-tray" aria-label="Close sound controls">×</button></div>
         <section id="parts-controls">
-          <h3>Parts</h3>
-          <p id="part-target" class="tray-description">Tap a sample in the sequence to edit its parts.</p>
-          <div class="part-actions"><button id="parts-off">All off</button><button id="parts-on">All on</button></div>
-          <div id="part-buttons" class="part-buttons"></div>
-          <p id="part-message" class="tray-description" role="status"></p>
-          <button id="retry-parts" hidden>Retry parts</button>
+          <h3>Selected clip</h3><p id="part-target" class="tray-description">Select a clip in the timeline.</p>
+          <div class="section-label"><strong>Parts</strong><div class="part-actions"><button id="parts-off">All off</button><button id="parts-on">All on</button></div></div>
+          <div id="part-buttons" class="part-buttons"></div><p id="part-message" class="tray-description" role="status"></p><button id="retry-parts" hidden>Retry parts</button>
         </section>
         <section id="fx-controls">
-          <h3>Filter</h3>
-          <p class="tray-description">Shape the full output.</p>
-          <div id="filter-modes" class="filter-modes" aria-label="Filter type">
-            <button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button>
-          </div>
-          <label class="cutoff-control" for="cutoff"><span>Cutoff <output id="cutoff-value">1.2 kHz</output></span><input id="cutoff" type="range" min="0" max="1000" value="558" aria-label="Filter cutoff"></label>
+          <h3>Clip filter</h3>
+          <div id="filter-modes" class="filter-modes" aria-label="Selected clip filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
+          <label class="cutoff-control" for="cutoff"><span>Cutoff <output id="cutoff-value">1.2 kHz</output></span><input id="cutoff" type="range" min="0" max="1000" value="558" aria-label="Selected clip filter cutoff"></label>
+        </section>
+        <section id="master-controls">
+          <h3>Master filter</h3>
+          <div id="master-filter-modes" class="filter-modes" aria-label="Master filter type"><button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button></div>
+          <label class="cutoff-control" for="master-cutoff"><span>Cutoff <output id="master-cutoff-value">1.2 kHz</output></span><input id="master-cutoff" type="range" min="0" max="1000" value="558" aria-label="Master filter cutoff"></label>
         </section>
       </aside>
     </div>
-
-    <div id="notice" class="notice" hidden>
-      <span id="notice-text" role="status"></span>
-      <button id="retry" hidden>Retry</button>
-      <progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress>
-    </div>
-    <p id="hint" class="hint">Drag a pad below: drop on a step to layer, or between steps to sequence.</p>
-    <p id="keyboard-help" class="sr-only">Use the arrow keys to move between pads. Press Enter or Space to replace the sequence, Shift with Enter or Space to add a step, or Alt with Enter or Space to add a layer to the selected step.</p>
-
-    <section id="arrangement" class="arrangement" aria-label="Playback sequence">
-      <div class="arrangement-heading"><strong>Sequence</strong><span>Drop on a step to layer · drop between steps to sequence</span><button id="clear-arrangement">Clear</button></div>
-      <div id="arrangement-items" class="arrangement-items" aria-label="Sequence steps"></div>
-    </section>
+    <p id="keyboard-help" class="sr-only">Activate a loop to add it to the end. Alt and Enter adds a layer to the selected step. Alt and Left or Right inserts before or after the selected step. Use Edit to exclude loops.</p>
     <div id="drag-preview" class="drag-preview" hidden aria-hidden="true"></div>
-
     <footer class="dock">
-      <button id="transport" class="transport" disabled aria-label="Play">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="transport-icon" d="M7 4 20 12 7 20Z"/></svg>
-        <span id="transport-label">Play</span>
-      </button>
-      <div class="nudge" role="group" aria-label="Nudge loop timing">
-        <button id="nudge-earlier" aria-label="Nudge loop earlier" title="Nudge earlier (hold to repeat)" disabled>‹</button>
-        <span aria-hidden="true">Nudge</span>
-        <button id="nudge-later" aria-label="Nudge loop later" title="Nudge later (hold to repeat)" disabled>›</button>
-      </div>
-      <div class="tempo-control">
-        <label for="tempo">Tempo</label>
-        <div class="tempo-input"><input id="tempo" type="number" min="30" max="300" step="0.1" value="120" inputmode="decimal"><span>BPM</span></div>
-      </div>
-      <div class="tempo-actions">
-        <button id="tap-tempo">Tap tempo</button>
-        <button id="source-tempo" title="Set playback tempo to this song’s original tempo">Use source</button>
-      </div>
-      <div class="now-playing"><span id="playing-label">Pick a loop</span><div class="beat-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+      <button id="transport" class="transport" disabled aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="transport-icon" d="M7 4 20 12 7 20Z"/></svg><span id="transport-label">Play</span></button>
+      <div class="nudge" role="group" aria-label="Nudge loop timing"><button id="nudge-earlier" aria-label="Nudge loop earlier" title="Nudge earlier (hold to repeat)" disabled>‹</button><span aria-hidden="true">Nudge</span><button id="nudge-later" aria-label="Nudge loop later" title="Nudge later (hold to repeat)" disabled>›</button></div>
+      <div class="tempo-control"><label for="tempo">Tempo</label><div class="tempo-input"><input id="tempo" type="number" min="30" max="300" step="0.1" value="120" inputmode="decimal"><span>BPM</span></div></div>
+      <div class="tempo-actions"><button id="tap-tempo">Tap tempo</button><button id="source-tempo" title="Set playback tempo to the active folder’s source tempo">Use source</button></div>
       <label class="volume-control" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></label>
-      <button id="edit" class="edit" aria-pressed="false" disabled>Edit pads</button>
     </footer>
     <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
   </main>

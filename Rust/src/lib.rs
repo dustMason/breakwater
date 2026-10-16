@@ -327,6 +327,15 @@ pub unsafe extern "C" fn bw_queue(p: *mut Handle, ids: *const i32, count: i32) {
     }
     h.commands.push(c)
 }
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct BasicClip {
+    loop_id: i32,
+    token: i32,
+    step: i32,
+    mask: i32,
+}
+
 unsafe fn arrange(p: *mut Handle, clips: *const Clip, count: i32, start: bool) {
     let Some(h) = handle(p) else { return };
     let mut n = count.clamp(0, MAX_QUEUE as i32) as usize;
@@ -344,16 +353,62 @@ unsafe fn arrange(p: *mut Handle, clips: *const Clip, count: i32, start: bool) {
     }
     h.commands.push(c)
 }
-/// # Safety
-/// The handle must be live; calls must come from the one serialized producer. The clips pointer must contain count readable clips.
-#[no_mangle]
-pub unsafe extern "C" fn bw_arrange(p: *mut Handle, clips: *const Clip, count: i32) {
-    arrange(p, clips, count, true)
+unsafe fn arrange_basic(p: *mut Handle, clips: *const BasicClip, count: i32, start: bool) {
+    let Some(h) = handle(p) else { return };
+    let n = if clips.is_null() {
+        0
+    } else {
+        count.clamp(0, MAX_QUEUE as i32) as usize
+    };
+    let mut c = Command {
+        kind: ARRANGE,
+        value: start as i32,
+        count: n as i32,
+        ..Command::default()
+    };
+    if n > 0 {
+        for (out, clip) in c.clips[..n]
+            .iter_mut()
+            .zip(std::slice::from_raw_parts(clips, n))
+        {
+            *out = Clip {
+                loop_id: clip.loop_id,
+                token: clip.token,
+                step: clip.step,
+                mask: clip.mask,
+                filter_type: 0,
+                filter_hz: 1200,
+            };
+        }
+    }
+    h.commands.push(c)
 }
 /// # Safety
 /// The handle must be live; calls must come from the one serialized producer. The clips pointer must contain count readable clips.
 #[no_mangle]
-pub unsafe extern "C" fn bw_edit_arrangement(p: *mut Handle, clips: *const Clip, count: i32) {
+pub unsafe extern "C" fn bw_arrange(p: *mut Handle, clips: *const BasicClip, count: i32) {
+    arrange_basic(p, clips, count, true)
+}
+/// # Safety
+/// The handle must be live; calls must come from the one serialized producer. The clips pointer must contain count readable clips.
+#[no_mangle]
+pub unsafe extern "C" fn bw_edit_arrangement(p: *mut Handle, clips: *const BasicClip, count: i32) {
+    arrange_basic(p, clips, count, false)
+}
+/// # Safety
+/// The handle must be live; the clips pointer must contain count readable extended clips.
+#[no_mangle]
+pub unsafe extern "C" fn bw_arrange_with_filters(p: *mut Handle, clips: *const Clip, count: i32) {
+    arrange(p, clips, count, true)
+}
+/// # Safety
+/// The handle must be live; the clips pointer must contain count readable extended clips.
+#[no_mangle]
+pub unsafe extern "C" fn bw_edit_arrangement_with_filters(
+    p: *mut Handle,
+    clips: *const Clip,
+    count: i32,
+) {
     arrange(p, clips, count, false)
 }
 /// # Safety
@@ -365,6 +420,20 @@ pub unsafe extern "C" fn bw_clip_mask(p: *mut Handle, token: i32, mask: i32) {
             kind: CLIP_MASK,
             value: token,
             count: mask,
+            ..Command::default()
+        });
+    }
+}
+/// # Safety
+/// The handle must be live, and calls must come from its one serialized control producer.
+#[no_mangle]
+pub unsafe extern "C" fn bw_clip_filter(p: *mut Handle, token: i32, kind: i32, hz: f64) {
+    if let Some(h) = handle(p) {
+        h.commands.push(Command {
+            kind: CLIP_FILTER,
+            value: token,
+            count: kind,
+            number: hz,
             ..Command::default()
         });
     }
@@ -711,13 +780,16 @@ mod tests {
                 token: 1,
                 step: 0,
                 mask: 15,
+                filter_type: 0,
+                filter_hz: 1200,
             }];
-            bw_arrange(h, clips.as_ptr(), 1);
+            bw_arrange_with_filters(h, clips.as_ptr(), 1);
             let mut left = [0.; 128];
             let mut right = [0.; 128];
             ALLOCATIONS.with(|count| count.set(0));
             COUNT_ALLOCATIONS.with(|enabled| enabled.set(true));
             for block in 0..200 {
+                bw_clip_filter(h, 1, block % 4, 200. + block as f64 * 10.);
                 bw_render(
                     h,
                     left.as_mut_ptr(),

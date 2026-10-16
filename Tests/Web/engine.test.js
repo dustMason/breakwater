@@ -272,6 +272,26 @@ test('two copies of a loop have independent part controls', () => {
   e.setClipMask(202,0); e.setClipMask(201,1); advance(e,.05); audio=advance(e,1); assert.ok(amp(audio,180) > .045 && amp(audio,600) < .003);
 });
 
+test('layered copies keep independent clip filters across live edits and later steps', () => {
+  const e = new LoopEngine(rate);
+  const data = Float32Array.from({length: rate * 2}, (_, i) => .5 * Math.sin(2 * Math.PI * 6000 * i / rate));
+  e.load(7, [data, data], 4);
+  const clips = [{id:7,token:201,step:0,mask:15,filterType:1,filterHz:500},
+                 {id:7,token:202,step:0,mask:15,filterType:0,filterHz:1200},
+                 {id:7,token:203,step:1,mask:15,filterType:1,filterHz:500}];
+  e.arrange(clips); advance(e, .15);
+  const rms = values => Math.sqrt(values.reduce((sum, value) => sum + value * value, 0) / values.length);
+  assert.ok(rms(advance(e, .25)) > .15, 'unfiltered layer remains audible');
+  e.setClipMask(202, 0); advance(e, .15);
+  assert.ok(rms(advance(e, .25)) < .01, 'low-pass affects only its clip');
+  e.setClipFilter(201, 0, 500); advance(e, .15);
+  assert.ok(rms(advance(e, .25)) > .15, 'changing the first filter does not restart the phrase');
+  e.setClipFilter(203, 3, 500); advance(e, .95);
+  assert.deepEqual(e.snapshot().activeTokens, [203]);
+  assert.ok(rms(advance(e, .25)) > .3, 'pending step retained its independently edited high-pass');
+  e.destroy();
+});
+
 test('a short layer crossfades when it wraps underneath a longer one', () => {
   const e = new LoopEngine(rate);
   const short = Float32Array.from({length:rate*2}, (_, i) => i < rate ? .6 : -.6);

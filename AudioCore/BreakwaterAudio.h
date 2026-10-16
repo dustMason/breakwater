@@ -8,6 +8,8 @@ typedef void* BWEngine;
 typedef void* BWParts;
 // A clip belongs to one ordered step; clips in the same step play together.
 typedef struct { int32_t loop, token, step, mask; } BWClip;
+// Extended clip descriptor. Filter cutoff is expressed in whole Hz.
+typedef struct { int32_t loop, token, step, mask, filterType, filterHz; } BWClipWithFilter;
 typedef struct {
  double beat, bpm, loopProgress;
  int32_t playing, activeLoop, mode, externalClock, clockState, pending, queueCount;
@@ -27,7 +29,10 @@ void bw_queue(BWEngine engine,const int32_t* ids,int32_t count);
 void bw_arrange(BWEngine engine,const BWClip* clips,int32_t count);
 // Change the arrangement without starting a stopped transport.
 void bw_edit_arrangement(BWEngine engine,const BWClip* clips,int32_t count);
+void bw_arrange_with_filters(BWEngine engine,const BWClipWithFilter* clips,int32_t count);
+void bw_edit_arrangement_with_filters(BWEngine engine,const BWClipWithFilter* clips,int32_t count);
 void bw_clip_mask(BWEngine engine,int32_t token,int32_t mask);
+void bw_clip_filter(BWEngine engine,int32_t token,int32_t type,double cutoffHz);
 void bw_enable(BWEngine engine,int32_t id,int32_t enabled);
 void bw_tempo(BWEngine engine,double bpm);
 void bw_mode(BWEngine engine,int32_t mode);

@@ -10,6 +10,8 @@ pub struct Clip {
     pub token: i32,
     pub step: i32,
     pub mask: i32,
+    pub filter_type: i32,
+    pub filter_hz: i32,
 }
 #[derive(Clone, Copy)]
 pub struct Command {
@@ -49,6 +51,7 @@ pub const CLIP_MASK: u8 = 11;
 pub const FILTER: u8 = 12;
 pub const WEB_STOP: u8 = 13;
 pub const WEB_TEMPO: u8 = 14;
+pub const CLIP_FILTER: u8 = 15;
 
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -263,6 +266,7 @@ impl Core {
             let mut v = Voice::default();
             v.token = c.token;
             v.mask(c.mask, true);
+            v.prepare_filter(self.sr, c.filter_type, c.filter_hz as f64);
             v.begin(
                 b,
                 c.loop_id,
@@ -319,6 +323,7 @@ impl Core {
                     for v in 0..self.layer_count {
                         if self.layers[v].token == c.token && self.layers[v].id == c.loop_id {
                             self.layers[v].mask(c.mask, false);
+                            self.layers[v].set_filter(c.filter_type, c.filter_hz as f64);
                             matches = true;
                             break;
                         }
@@ -558,6 +563,8 @@ impl Core {
                         && per_step[clip.step as usize] < MAX_LAYERS
                     {
                         clip.mask &= 15;
+                        clip.filter_type = clip.filter_type.clamp(0, 3);
+                        clip.filter_hz = clip.filter_hz.clamp(40, 18000);
                         self.pending_arrangement[self.pending_arrangement_count] = clip;
                         self.pending_arrangement_count += 1;
                         per_step[clip.step as usize] += 1;
@@ -718,6 +725,34 @@ impl Core {
                     }
                 }
             }
+            CLIP_FILTER => {
+                if c.number.is_finite() {
+                    let kind = c.count.clamp(0, 3);
+                    let hz = c.number.clamp(40., 18000.);
+                    for clip in &mut self.arrangement[..self.arrangement_count] {
+                        if clip.token == c.value {
+                            clip.filter_type = kind;
+                            clip.filter_hz = hz.round() as i32;
+                        }
+                    }
+                    for clip in &mut self.pending_arrangement[..self.pending_arrangement_count] {
+                        if clip.token == c.value {
+                            clip.filter_type = kind;
+                            clip.filter_hz = hz.round() as i32;
+                        }
+                    }
+                    for layer in &mut self.layers[..self.layer_count] {
+                        if layer.token == c.value {
+                            layer.set_filter(kind, hz);
+                        }
+                    }
+                    for layer in &mut self.old_layers[..self.old_layer_count] {
+                        if layer.token == c.value {
+                            layer.set_filter(kind, hz);
+                        }
+                    }
+                }
+            }
             FILTER => {
                 if c.number.is_finite() {
                     self.filter.set(c.value, c.number)
@@ -830,6 +865,7 @@ impl Core {
                     } else {
                         layer.tail(b, delta, self.sr)
                     };
+                    let part = layer.filter_sample(part);
                     sample.l += (part.l as f64 / self.layer_count as f64) as f32;
                     sample.r += (part.r as f64 / self.layer_count as f64) as f32;
                 }
@@ -838,6 +874,7 @@ impl Core {
                     for v in 0..self.old_layer_count {
                         self.old_layers[v].advance_parts(b, self.sr);
                         let x = self.old_layers[v].tail(b, delta, self.sr);
+                        let x = self.old_layers[v].filter_sample(x);
                         old.l += (x.l as f64 / self.old_layer_count as f64) as f32;
                         old.r += (x.r as f64 / self.old_layer_count as f64) as f32;
                     }

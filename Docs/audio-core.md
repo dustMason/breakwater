@@ -60,3 +60,12 @@ uses `bw_prepare_loop` / `bw_prepare_parts` to fill private planar buffers,
 then transfers ownership on installation. The core's Rust FFI entry points
 document their pointer and threading requirements. The web bridge asks Rust
 for snapshot field offsets rather than assuming a native struct layout.
+
+The original four-field `BWClip` arrangement API remains available. Hosts that
+need per-clip filtering use `BWClipWithFilter` with
+`bw_arrange_with_filters` / `bw_edit_arrangement_with_filters`, and can update
+an instance by token with `bw_clip_filter`. Each live layer owns its filter
+state, so two uses of the same loop can have different settings. Filter changes
+are smoothed in the audio engine; the separate master filter still processes the
+combined output. The extended clip array and filter commands are copied into
+the existing bounded command queue, without allocating in the render callback.

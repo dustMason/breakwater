@@ -37,6 +37,7 @@ pub struct Voice {
     last: Stereo,
     wrap_tail: Stereo,
     wrap_fade: i32,
+    filter: Filter,
 }
 impl Default for Voice {
     fn default() -> Self {
@@ -57,10 +58,21 @@ impl Default for Voice {
             last: Stereo::default(),
             wrap_tail: Stereo::default(),
             wrap_fade: 0,
+            filter: Filter::new(48000.),
         }
     }
 }
 impl Voice {
+    pub fn prepare_filter(&mut self, sr: f64, kind: i32, hz: f64) {
+        self.filter = Filter::new(sr);
+        self.filter.set(kind, hz);
+    }
+    pub fn set_filter(&mut self, kind: i32, hz: f64) {
+        self.filter.set(kind, hz);
+    }
+    pub fn filter_sample(&mut self, sample: Stereo) -> Stereo {
+        self.filter.process(sample)
+    }
     pub fn mask(&mut self, m: i32, immediate: bool) {
         self.mask = m & 15;
         if immediate {
@@ -233,6 +245,7 @@ impl Voice {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Filter {
     sr: f64,
     slew: f64,

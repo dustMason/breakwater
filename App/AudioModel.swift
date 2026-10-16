@@ -264,11 +264,11 @@ final class AudioModel: ObservableObject {
         waitingForLoop = false
         arrangementStatus = nil
         let clips = arrangement.enumerated().flatMap { step, group in
-            group.clips.map { BWClip(loop: $0.sampleID, token: $0.id, step: Int32(step), mask: Int32($0.mask)) }
+            group.clips.map { BWClipWithFilter(loop: $0.sampleID, token: $0.id, step: Int32(step), mask: Int32($0.mask), filterType: Int32($0.filterType), filterHz: Int32($0.filterCutoff.rounded())) }
         }
         control.async { [dsp] in clips.withUnsafeBufferPointer {
-            if startIfStopped { bw_arrange(dsp, $0.baseAddress, Int32($0.count)) }
-            else { bw_edit_arrangement(dsp, $0.baseAddress, Int32($0.count)) }
+            if startIfStopped { bw_arrange_with_filters(dsp, $0.baseAddress, Int32($0.count)) }
+            else { bw_edit_arrangement_with_filters(dsp, $0.baseAddress, Int32($0.count)) }
         } }
     }
     func retrySamples() { failedLoops.removeAll(); submitArrangement(startIfStopped: arrangementStartsPlayback) }
@@ -344,6 +344,15 @@ final class AudioModel: ObservableObject {
         filterType = min(3, max(0, type)); filterCutoff = min(18000, max(40, cutoff))
         let t = Int32(filterType), hz = filterCutoff
         control.async { [dsp] in bw_filter(dsp, t, hz) }
+    }
+    func setClipFilter(type: Int, cutoff: Double) {
+        guard let token = selectedClipID, cutoff.isFinite else { return }
+        let kind = min(3, max(0, type)), hz = min(18000, max(40, cutoff))
+        for i in arrangement.indices { for j in arrangement[i].clips.indices where arrangement[i].clips[j].id == token {
+            arrangement[i].clips[j].filterType = kind
+            arrangement[i].clips[j].filterCutoff = hz
+        } }
+        control.async { [dsp] in bw_clip_filter(dsp, token, Int32(kind), hz) }
     }
     func retryParts() { partFailures.removeAll(); partStatus = nil; refreshParts() }
     var gridMasks: [Int32: Int] {
