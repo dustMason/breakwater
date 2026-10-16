@@ -28,7 +28,7 @@ struct GridView: View {
             }
         }
         .alert("Audio needs attention", isPresented: Binding(get: { audio.error != nil }, set: { if !$0 { audio.error = nil } })) {
-            Button("Retry audio") { audio.error = nil; audio.retryAudio() }
+            Button("Retry") { audio.error = nil; audio.retry() }
             Button("Dismiss", role: .cancel) { audio.error = nil }
         } message: { Text(audio.error ?? "") }
     }
@@ -136,7 +136,7 @@ private struct PlaybackContent: View {
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
             if !audio.ready && audio.error == nil {
-                ProgressView("Loading samples", value: audio.loadProgress)
+                ProgressView("Loading library")
                     .padding(.horizontal, 20).padding(.bottom, 12).accessibilityIdentifier("loading")
             }
             if audio.editing {
@@ -161,14 +161,15 @@ private struct PlaybackContent: View {
         }
     }
     private var transport: some View {
-        Button {
-            if audio.state.playing { audio.stop() }
+        let canStop = audio.state.playing || audio.waitingForLoop
+        return Button {
+            if canStop { audio.stop() }
             else if audio.arrangement.isEmpty, let first = song?.loops.first(where: { !audio.disabled.contains($0.id) }) { audio.queue([first.id]) }
             else { audio.play() }
         } label: {
-            Label(audio.state.playing ? "Stop" : "Play", systemImage: audio.state.playing ? "stop.fill" : "play.fill")
+            Label(canStop ? "Stop" : "Play", systemImage: canStop ? "stop.fill" : "play.fill")
                 .font(.headline).frame(minWidth: 75, minHeight: 44)
-                .foregroundStyle(audio.state.playing ? Color.red : Palette.accent)
+                .foregroundStyle(canStop ? Color.red : Palette.accent)
         }.disabled(!audio.ready).accessibilityIdentifier("transport")
     }
     private var tempo: some View {
@@ -250,6 +251,9 @@ private struct ArrangementTray: View {
                 Text("Sequence").font(.subheadline.weight(.semibold))
                 Text(audio.arrangementStatus ?? "Drop on a step to layer · between steps to sequence")
                     .font(.caption).foregroundStyle(Palette.secondary).lineLimit(1)
+                if audio.arrangementStatus?.hasPrefix("A loop couldn't load") == true {
+                    Button("Retry samples") { audio.retrySamples() }.font(.caption)
+                }
                 Spacer(minLength: 2)
                 Button("Clear") { audio.clearArrangement() }.disabled(audio.arrangement.isEmpty)
                     .font(.subheadline).frame(minHeight: 36).accessibilityIdentifier("clearArrangement")

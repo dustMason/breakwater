@@ -9,4 +9,10 @@ xcuserdata/
 .impeccable/config.local.json
 __pycache__/
 *.pyc
+.venv/
 Rust/target/
+.asset.env
+App/Config.local.xcconfig
+Samples/Stems/drumsep-v1/
+Samples/**/*.wav
+Samples/**/*.m4a

@@ -37,10 +37,13 @@ final class AudioModel: ObservableObject {
     @Published var arrangement: [ArrangementStep] = []
     @Published var selectedClipID: Int32?
     @Published var arrangementStatus: String?
+    @Published private(set) var waitingForLoop = false
     @Published var filterType = 0
     @Published var filterCutoff = 1200.0
     private let control = DispatchQueue(label: "Breakwater.control", qos: .userInteractive)
     private let partIO = DispatchQueue(label: "Breakwater.parts", qos: .userInitiated)
+    private let sampleIO = DispatchQueue(label: "Breakwater.samples", qos: .userInitiated, attributes: .concurrent)
+    private let sampleLimit = DispatchSemaphore(value: 4)
     private let engine = AVAudioEngine()
     private let dsp: BWEngine
     private var node: AVAudioSourceNode?
@@ -63,6 +66,12 @@ final class AudioModel: ObservableObject {
     private var partLoading: Set<Int32> = []
     private var partFailures: Set<Int32> = []
     private let defaults = UserDefaults.standard
+    private var assets: AssetStore?
+    private var loadedLoops: Set<Int32> = []
+    private var loadingLoops: Set<Int32> = []
+    private var failedLoops: Set<Int32> = []
+    private var arrangementStartsPlayback = true
+    private var libraryLoading = false
 
     init() {
         dsp = bw_create(48000)!
@@ -80,43 +89,35 @@ final class AudioModel: ObservableObject {
         syncOffset = defaults.double(forKey: "syncOffset")
         midiSourceID = Int32(defaults.integer(forKey: "midiSourceID"))
         partMasks = defaults.dictionary(forKey: "partMasks") as? [String: Int] ?? [:]
-        do {
-            let url = Bundle.main.resourceURL!.appendingPathComponent("Samples/catalog.json")
-            songs = try JSONDecoder().decode([Song].self, from: Data(contentsOf: url))
-            let ids = songs.flatMap(\.loops).map(\.id)
-            guard !songs.isEmpty, songs.allSatisfy({ !$0.loops.isEmpty }),
-                  Set(ids).count == ids.count, ids.allSatisfy({ $0 >= 0 && $0 < 1024 }) else { throw LoadError.invalidCatalog }
-            midiPads = songs[0].midiPads
-            for song in songs { for sample in song.loops { sampleByID[sample.id] = sample; songByLoop[sample.id] = song.id } }
-        } catch { self.error = "The sample library could not load: \(error.localizedDescription)"; return }
-        let all = songs.flatMap(\.loops), handle = dsp
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let retainedSelf = self else { return }
-            defer { withExtendedLifetime(retainedSelf) {} }
+        loadLibrary()
+    }
+
+    private func loadLibrary() {
+        guard !libraryLoading else { return }
+        libraryLoading = true
+        var base = Bundle.main.object(forInfoDictionaryKey: "BreakwaterAssetBaseURL") as? String ?? ""
+        #if DEBUG
+        if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--asset-base-url"),
+           ProcessInfo.processInfo.arguments.indices.contains(index + 1) {
+            base = ProcessInfo.processInfo.arguments[index + 1]
+        }
+        #endif
+        let baseURLString = base
+        sampleIO.async { [self] in
             do {
-                for (index, sample) in all.enumerated() {
-                    let url = Bundle.main.resourceURL!.appendingPathComponent("Samples/" + sample.file)
-                    let file = try AVAudioFile(forReading: url)
-                    guard file.processingFormat.sampleRate == 48000, file.processingFormat.channelCount == 2,
-                          file.length == sample.frames,
-                          let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else { throw LoadError.invalidSample }
-                    try file.read(into: buffer)
-                    guard let channels = buffer.floatChannelData else { throw LoadError.invalidSample }
-                    var pcm = [Float](repeating: 0, count: sample.frames * 2)
-                    for frame in 0..<sample.frames { pcm[frame*2] = channels[0][frame]; pcm[frame*2+1] = channels[1][frame] }
-                    let result = pcm.withUnsafeBufferPointer { audio in sample.sliceFrames.withUnsafeBufferPointer { cuts in
-                        bw_load_loop(handle, sample.id, audio.baseAddress, Int32(sample.frames), Int32(sample.beats), cuts.baseAddress, Int32(cuts.count))
-                    } }
-                    guard result == 1 else { throw LoadError.invalidSample }
-                    DispatchQueue.main.async { self?.loadProgress = Double(index + 1) / Double(all.count) }
+                let store = try AssetStore(baseString: baseURLString)
+                let library = try store.catalog()
+                DispatchQueue.main.async { [self] in
+                    assets = store; songs = library; midiPads = library[0].midiPads
+                    for song in library { for sample in song.loops { sampleByID[sample.id] = sample; songByLoop[sample.id] = song.id } }
+                    libraryLoading = false; finishLoading()
                 }
-                DispatchQueue.main.async { self?.finishLoading() }
-            } catch { DispatchQueue.main.async { self?.error = "Sample loading failed: \(error.localizedDescription). Relaunch to retry." } }
+            } catch { DispatchQueue.main.async { [self] in libraryLoading = false; self.error = "The sample library could not load: \(error.localizedDescription)" } }
         }
     }
     enum LoadError: LocalizedError {
-        case invalidCatalog, invalidSample
-        var errorDescription: String? { "The bundled sample data is incomplete or has an unsupported format." }
+        case invalidSample
+        var errorDescription: String? { "The sample data is incomplete or has an unsupported format." }
     }
     private func finishLoading() {
         setMode(mode); setTempo(manualBPM); setExternal(external); setOffset(syncOffset)
@@ -204,11 +205,13 @@ final class AudioModel: ObservableObject {
     func retryAudio() {
         do { try startAudio(); ready = true } catch { self.error = "Audio is unavailable: \(error.localizedDescription). Check your output and retry." }
     }
+    func retry() { if songs.isEmpty { loadLibrary() } else { retryAudio() } }
     private func updateOutput() { outputName = AVAudioSession.sharedInstance().currentRoute.outputs.map(\.portName).joined(separator: ", ") }
     func queue(_ ids: [Int32]) {
         guard ready else { return }
         let accepted = ids.filter { !disabled.contains($0) }
         guard !accepted.isEmpty else { return }
+        failedLoops.subtract(accepted)
         arrangement = accepted.map { ArrangementStep(clips: [makeClip($0)]) }
         selectedClipID = arrangement.first?.clips.first?.id
         submitArrangement()
@@ -224,6 +227,7 @@ final class AudioModel: ObservableObject {
     }
     func addSample(_ id: Int32, at index: Int, layer: Bool) {
         guard ready, !disabled.contains(id), sampleByID[id] != nil else { return }
+        failedLoops.remove(id)
         guard arrangement.reduce(0, { $0 + $1.clips.count }) < 64 else { arrangementStatus = "The sequence can hold up to 64 samples."; return }
         if layer, arrangement.indices.contains(index), arrangement[index].clips.count >= 8 {
             arrangementStatus = "A step can contain up to 8 layers."; return
@@ -244,6 +248,21 @@ final class AudioModel: ObservableObject {
         submitArrangement(startIfStopped: false)
     }
     private func submitArrangement(startIfStopped: Bool = true) {
+        arrangementStartsPlayback = startIfStopped
+        let ids = Set(arrangement.flatMap(\.clips).map(\.sampleID))
+        let missing = ids.subtracting(loadedLoops)
+        if !missing.isEmpty {
+            waitingForLoop = startIfStopped
+            arrangementStatus = missing.contains(where: { failedLoops.contains($0) })
+                ? "A loop couldn't load. Retry samples."
+                : "Loading loops · current playback continues"
+            for id in missing where !loadingLoops.contains(id) && !failedLoops.contains(id) {
+                if let sample = sampleByID[id] { loadLoop(sample) }
+            }
+            return
+        }
+        waitingForLoop = false
+        arrangementStatus = nil
         let clips = arrangement.enumerated().flatMap { step, group in
             group.clips.map { BWClip(loop: $0.sampleID, token: $0.id, step: Int32(step), mask: Int32($0.mask)) }
         }
@@ -251,6 +270,43 @@ final class AudioModel: ObservableObject {
             if startIfStopped { bw_arrange(dsp, $0.baseAddress, Int32($0.count)) }
             else { bw_edit_arrangement(dsp, $0.baseAddress, Int32($0.count)) }
         } }
+    }
+    func retrySamples() { failedLoops.removeAll(); submitArrangement(startIfStopped: arrangementStartsPlayback) }
+
+    private func loadLoop(_ sample: LoopSample) {
+        guard let assets else { return }
+        loadingLoops.insert(sample.id)
+        sampleIO.async { [self] in
+            sampleLimit.wait(); defer { sampleLimit.signal() }
+            do {
+                let url = try assets.file(sample.file)
+                let file = try AVAudioFile(forReading: url)
+                guard file.processingFormat.sampleRate == 48000, file.processingFormat.channelCount == 2,
+                      file.length == sample.frames,
+                      let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else { throw LoadError.invalidSample }
+                try file.read(into: buffer)
+                guard buffer.frameLength == sample.frames, let channels = buffer.floatChannelData else { throw LoadError.invalidSample }
+                var pcm = [Float](repeating: 0, count: sample.frames * 2)
+                for frame in 0..<sample.frames { pcm[frame*2] = channels[0][frame]; pcm[frame*2+1] = channels[1][frame] }
+                let result = pcm.withUnsafeBufferPointer { audio in sample.sliceFrames.withUnsafeBufferPointer { cuts in
+                    bw_load_loop(dsp, sample.id, audio.baseAddress, Int32(sample.frames), Int32(sample.beats), cuts.baseAddress, Int32(cuts.count))
+                } }
+                guard result == 1 else { throw LoadError.invalidSample }
+                DispatchQueue.main.async { [self] in
+                    loadingLoops.remove(sample.id); loadedLoops.insert(sample.id)
+                    if arrangement.flatMap(\.clips).contains(where: { $0.sampleID == sample.id }) {
+                        submitArrangement(startIfStopped: arrangementStartsPlayback); refreshParts()
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async { [self] in
+                    loadingLoops.remove(sample.id); failedLoops.insert(sample.id)
+                    if arrangement.flatMap(\.clips).contains(where: { $0.sampleID == sample.id }) {
+                        submitArrangement(startIfStopped: arrangementStartsPlayback)
+                    }
+                }
+            }
+        }
     }
     func toggleDisabled(_ id: Int32) {
         if disabled.contains(id) { disabled.remove(id) } else { disabled.insert(id) }
@@ -322,14 +378,15 @@ final class AudioModel: ObservableObject {
         if partStatus != status { partStatus = status }
     }
     private func prepareParts(_ sample: LoopSample) {
-        guard !partCache.contains(sample.id), !partLoading.contains(sample.id), !partFailures.contains(sample.id),
+        guard loadedLoops.contains(sample.id), let assets,
+              !partCache.contains(sample.id), !partLoading.contains(sample.id), !partFailures.contains(sample.id),
               let parts = sample.parts, parts.files.count == 4 else { return }
         partLoading.insert(sample.id)
         partIO.async { [self] in
             do {
                 var pcm = [Float](repeating: 0, count: sample.frames * 8)
                 for (part, path) in parts.files.enumerated() {
-                    let url = Bundle.main.resourceURL!.appendingPathComponent("Samples/" + path)
+                    let url = try assets.file(path)
                     let file = try AVAudioFile(forReading: url)
                     guard file.processingFormat.sampleRate == 48000, file.processingFormat.channelCount == 2,
                           file.length >= sample.frames,
@@ -358,7 +415,13 @@ final class AudioModel: ObservableObject {
         }
     }
     func selectMIDI(_ id: Int32) { midiSourceID=id; defaults.set(Int(id),forKey:"midiSourceID"); stop(); midi?.selectedID=id; midi?.refresh() }
-    func stop() { control.async { [dsp] in bw_transport(dsp,0) } }
+    func stop() {
+        // A selection may still be downloading when the user stops or audio is interrupted.
+        // Install it when ready without restarting transport.
+        arrangementStartsPlayback = false
+        waitingForLoop = false
+        control.async { [dsp] in bw_transport(dsp,0) }
+    }
     func play() { if !arrangement.isEmpty { submitArrangement() }; control.async { [dsp] in bw_transport(dsp,2) } }
     func nudge(_ milliseconds: Double) { control.async { [dsp] in bw_nudge(dsp, milliseconds) } }
     func align() { control.async { [dsp] in bw_transport(dsp,3) } }

@@ -1,4 +1,3 @@
-use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
 pub const MAX_LOOPS: usize = 1024;
@@ -29,18 +28,13 @@ impl Drop for Sample {
     }
 }
 
-pub struct Slot(pub UnsafeCell<Option<Sample>>);
-// SAFETY: a slot is written once before audio starts, or from the Wasm audio
-// thread between callbacks. Published samples are immutable except for parts,
-// whose pointer is atomic and whose retired allocations outlive render blocks.
-unsafe impl Sync for Slot {}
-
-pub struct Bank(pub Box<[Slot]>);
+// A loop is installed at most once and stays alive until the bank is dropped.
+pub struct Bank(pub Box<[AtomicPtr<Sample>]>);
 impl Bank {
     pub fn new() -> Self {
         Self(
             (0..MAX_LOOPS)
-                .map(|_| Slot(UnsafeCell::new(None)))
+                .map(|_| AtomicPtr::new(std::ptr::null_mut()))
                 .collect(),
         )
     }
@@ -48,19 +42,43 @@ impl Bank {
         if !(0..MAX_LOOPS as i32).contains(&id) {
             return None;
         }
-        // SAFETY: see Slot's publication contract above.
-        unsafe { (&*self.0[id as usize].0.get()).as_ref() }
+        // SAFETY: published samples remain alive for the lifetime of the bank.
+        unsafe { self.0[id as usize].load(Ordering::Acquire).as_ref() }
     }
-    pub unsafe fn install(&self, id: i32, sample: Sample) -> bool {
+    pub fn install(&self, id: i32, sample: Sample) -> bool {
         if !(0..MAX_LOOPS as i32).contains(&id) {
             return false;
         }
-        let slot = &mut *self.0[id as usize].0.get();
-        if slot.is_some() {
+        let raw = Box::into_raw(Box::new(sample));
+        if self.0[id as usize]
+            .compare_exchange(
+                std::ptr::null_mut(),
+                raw,
+                Ordering::Release,
+                Ordering::Relaxed,
+            )
+            .is_err()
+        {
+            // The rejected object was never published and remains ours.
+            unsafe {
+                drop(Box::from_raw(raw));
+            }
             return false;
         }
-        *slot = Some(sample);
         true
+    }
+}
+impl Drop for Bank {
+    fn drop(&mut self) {
+        for slot in self.0.iter_mut() {
+            let sample = *slot.get_mut();
+            if !sample.is_null() {
+                // SAFETY: the owner stops all access before dropping the bank.
+                unsafe {
+                    drop(Box::from_raw(sample));
+                }
+            }
+        }
     }
 }
 impl Sample {

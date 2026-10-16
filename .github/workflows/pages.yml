@@ -33,9 +33,13 @@ jobs:
           cargo clippy --all-targets --manifest-path Rust/Cargo.toml -- -D warnings
           Scripts/test_core.sh
           Scripts/test_differential.sh
+          python3 Tests/AssetPublisherTests.py
+          python3 Tests/AssetRecoveryTests.py
       - name: Test browser audio engine
         run: npm test
       - name: Build static site
+        env:
+          BREAKWATER_ASSET_BASE_URL: ${{ vars.BREAKWATER_ASSET_BASE_URL }}
         run: python3 Scripts/build_web.py
       - uses: actions/upload-pages-artifact@v4
         with:

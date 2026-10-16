@@ -8,7 +8,7 @@ ios, web
 ## Stack
 Native iPad app: SwiftUI and UIKit for multi-touch performance controls; AVAudioEngine and Core MIDI; a shared Rust real-time audio engine. iPadOS 17+, targeting an A12 iPad. Xcode project, no runtime package dependencies.
 
-Browser adaptation: static HTML, CSS and JavaScript with Web Audio and an AudioWorklet hosting the same engine as WebAssembly. The same committed sample library supplies both platforms. No server or runtime package dependencies; browser audio requires HTTPS or localhost and a user gesture to start.
+Browser adaptation: static HTML, CSS and JavaScript with Web Audio and an AudioWorklet hosting the same engine as WebAssembly. Both platforms fetch the same separately hosted sample catalog and audio. No application server or runtime package dependencies; browser audio requires HTTPS or localhost and a user gesture to start.
 
 ## Users
 Jordan, playing a live synth jam with an external MIDI clock source and a CME U2MIDI Pro connected through Apple's camera adapter on iPad, or choosing songs and playing loops with an internal tempo in a browser.
@@ -24,7 +24,7 @@ Play the selected percussion loops continuously, at the jam's tempo, with fast m
 - Native iPad: tape-style rate/pitch change or transient-sliced playback at original pitch; external MIDI clock and transport, smooth tempo changes, and internal tempo for standalone use.
 - Browser: tape-style rate/pitch change only, with editable BPM, tap tempo, source-tempo reset and volume. No MIDI or original-pitch slicing. Mouse or touch drag builds the arrangement; Shift and Alt activation provide keyboard alternatives. Song browsing preserves playback.
 - Show approximate source-song BPM while maximizing grid area. Approved visual mockup C: transport along the bottom, with song tabs replaced by a dropdown.
-- Keep the sample WAVs in the repository for the current prototype; provenance and publishing scope are documented separately.
+- Keep sample audio outside the code repository; provenance and publishing scope are documented separately.
 - Prepare static browser output for GitHub Pages on the user's personal repository.
 - Exact iPad model/iPadOS version and physical MIDI/audio routing remain unverified.
 

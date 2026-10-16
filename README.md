@@ -1,6 +1,6 @@
 # Breakwater
 
-A native iPad instrument and a static browser player for percussion loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. The bundled library has 222 loops across 13 song pages: the original 60 Niagara cuts plus 162 loops from the percussion audition shortlist. See [the sample catalog](Samples/README.md) for sources and counts.
+A native iPad instrument and a static browser player for percussion loops. The native app supports MIDI-synchronized synth jams on iPadOS 17+, designed for an A12 iPad. The sample library has 222 loops across 13 song pages: the original 60 Niagara cuts plus 162 loops from the percussion audition shortlist. See [the sample catalog](Samples/README.md) for sources and counts.
 
 ![Breakwater on iPad](Docs/Design/tablet-landscape.png)
 
@@ -15,7 +15,7 @@ A native iPad instrument and a static browser player for percussion loops. The n
 - **Tape** follows tempo by changing playback rate and pitch together.
 - **Slice** schedules precomputed drum transients against the beat clock, plays their attacks at original pitch, and uses short crossfades / decaying tail extension. It preserves the original internal swing, rather than quantizing every hit to a rigid subdivision. Extreme tempo changes can reveal slicing artifacts.
 - Open **Parts & FX** to see both the selected clip's parts and the output filter together. The tray makes room by resizing the grid; filter choices are Off, low-pass, band-pass and high-pass, with a smoothed cutoff.
-- Parts offers four approximate layers: Low, Body, Attack and High. Use **All off** and bring them in one by one, or switch individual layers while playing. Waveform lanes dim when their layers are muted. The labels describe the analysis rather than reliably naming individual instruments: the separation can contain bleed or artifacts, particularly when drums overlap. The unmodified original plays when all four layers are on.
+- Parts offers four DrumSep estimates: **Kick, Snare, Toms and Cymbals** (including hi-hats). Use **All off** and bring them in one by one, or switch individual parts while playing. Waveform lanes dim when their parts are muted. Separation can contain bleed or artifacts; hand percussion may be assigned to the nearest kit category. The unmodified original plays when all four parts are on.
 
 ## MIDI and audio
 
@@ -25,7 +25,7 @@ Select the MIDI source and enable external clock in Settings. Incoming MIDI Cloc
 
 Clock smoothing and a phase correction loop reject small timing jitter without jumping the sample cursor. Tempo changes slew over roughly 90 ms, in addition to the short incoming-clock measurement window. If clock vanishes, playback briefly freewheels; after two seconds it fades out and waits for transport restart. The latency offset advances playback for positive values. Physical timing should be calibrated against the actual audio output.
 
-The app requests a 256-frame audio buffer at 48 kHz; iPadOS chooses the available hardware configuration. Original loops load before playback. Separated layers are decoded off the audio thread as needed and kept in a small cache. While a playing loop's layers are preparing, its full mix continues unless all layers are off, in which case it fades to silence; the Parts tray reports preparation and offers a retry on failure. Rendering uses owned in-memory PCM and a bounded single-producer command ring; the render callback performs no file I/O, locks, allocation, or Swift UI work. Audio can continue in the background. Audio interruptions stop playback; a disconnected output requires a deliberate restart.
+The app requests a 256-frame audio buffer at 48 kHz; iPadOS chooses the available hardware configuration. Loops and separated parts download and decode off the audio thread when selected. Current playback continues while a replacement loads, and its first launch occurs on a bar boundary after loading. The iPad caches downloaded audio on disk for offline use; files not yet cached require a connection. While a playing loop's parts are preparing, its full mix continues unless all parts are off, in which case it fades to silence. Rendering uses owned in-memory PCM and a bounded single-producer command ring; the render callback performs no file I/O, locks, allocation, or Swift UI work. Audio can continue in the background. Audio interruptions stop playback; a disconnected output requires a deliberate restart.
 
 ## Browser player
 
@@ -33,6 +33,7 @@ Install Rust with the `wasm32-unknown-unknown` target, then run locally with Pyt
 
 ```sh
 rustup target add wasm32-unknown-unknown
+source .asset.env # or export BREAKWATER_ASSET_BASE_URL yourself
 python3 Scripts/serve_web.py
 # Open http://127.0.0.1:8765/
 ```
@@ -46,21 +47,40 @@ Use a current browser with AudioWorklet support. HTTPS or localhost is required;
 ### GitHub Pages
 
 1. Create/push this repository under your personal GitHub account, with `main` as the branch.
-2. In **Settings → Pages → Build and deployment → Source**, choose **GitHub Actions**.
-3. Push to `main`, or run **Deploy web player to GitHub Pages** in the Actions tab after enabling Pages.
+2. In **Settings → Secrets and variables → Actions → Variables**, set `BREAKWATER_ASSET_BASE_URL` to the HTTPS asset-library base URL.
+3. In **Settings → Pages → Build and deployment → Source**, choose **GitHub Actions**.
+4. Push to `main`, or run **Deploy web player to GitHub Pages** in the Actions tab after enabling Pages.
 
-The workflow tests the shared Rust engine and its WebAssembly host, builds `build/web`, uploads only the static site, and deploys it. For `dustMason/breakwater`, the expected address is `https://dustmason.github.io/breakwater/`. No custom domain or base-path configuration is needed: all module, icon, catalog and WAV URLs are relative. No credentials or environment secrets are needed beyond the workflow's scoped `GITHUB_TOKEN`.
+The workflow tests the shared Rust engine and its WebAssembly host, builds `build/web`, uploads only the static site, and deploys it. For `dustMason/breakwater`, the expected address is `https://dustmason.github.io/breakwater/`. Modules and icons use relative paths; the separate asset URL is inserted into the generated site from the repository variable. No AWS credentials are needed to build or deploy Pages.
 
-**Publishing scope:** this site includes the sample WAVs. A Pages site on a personal account is public even if the source repository is private. GitHub Pages from a private personal repository requires GitHub Pro. These files remain subject to the sample provenance described below. See [GitHub's Pages visibility guidance](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site) and [plan availability](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
+**Publishing scope:** the S3 catalog and audio objects are publicly readable; their URL is visible to anyone using the app or site, even though it is not committed here. The dedicated bucket does not permit anonymous listing or writes. The source and derivatives remain subject to the sample provenance described below.
 
 To build for another static host:
 
 ```sh
+source .asset.env # or export BREAKWATER_ASSET_BASE_URL
 python3 Scripts/build_web.py --output build/web
 npm test
 ```
 
-Serve the contents of `build/web` with JavaScript module and WebAssembly MIME types. The web source is in `Web/`; samples are copied from `Samples/` and the favicon/touch icon is the existing native app icon. The build does not expose native source files, development briefs, or repository metadata.
+Serve the contents of `build/web` with JavaScript module and WebAssembly MIME types. The web source is in `Web/`; audio is fetched from the configured library rather than copied into the site. For a self-contained local development preview when the original local WAVs and parts are available, run `python3 Scripts/build_web.py --local-assets`.
+
+### Publishing the sample library
+
+The catalog source and preparation scripts live in the repository; WAV and M4A audio files do not. Keep the working audio library in `Samples/` locally, or restore the exact files for the current catalog from the published library with `python3 Scripts/fetch_assets.py` after setting `BREAKWATER_ASSET_BASE_URL`. Restoration verifies hashes and never overwrites different local files. Set `BREAKWATER_ASSET_BUCKET`, `BREAKWATER_AWS_ACCOUNT_ID`, `BREAKWATER_AWS_REGION`, and `BREAKWATER_ASSET_BASE_URL` in an ignored `.asset.env` file or your shell environment. The AWS account ID is checked against the active credentials before publication. Do not store credentials in this file or in Git.
+
+```sh
+source .asset.env
+python3 -m venv .venv
+.venv/bin/pip install boto3
+# Authenticate to the personal AWS account using your normal credential provider.
+.venv/bin/python Scripts/publish_assets.py
+python3 Scripts/configure_assets.py
+```
+
+The publisher hashes each audio file, uploads only new immutable objects, and publishes the catalog after all uploads succeed. Old objects are intentionally retained so older clients and cached catalogs continue to work; unused old objects continue to incur storage charges until manually cleaned up. `Scripts/provision_assets.py` can create a new dedicated bucket when needed; it refuses to reconfigure an existing one and does not support creating buckets in `us-east-1`. If using 1Password CLI, inject the standard AWS environment variables with `op run --env-file /path/to/private-aws.env -- .venv/bin/python Scripts/publish_assets.py`; keep that file outside the repository and use 1Password secret references rather than literal credentials. The generated `App/Config.local.xcconfig` and `.asset.env` are ignored by Git. A fresh clone can build the app and site without local audio once the asset URL is configured.
+
+Decoded original loops remain in memory for the current session, so visiting very large numbers of loops can still increase memory use. Restarting the player releases them; bounded in-memory loop eviction is future work.
 
 ## Build
 
@@ -68,7 +88,7 @@ See [INSTALL.md](INSTALL.md) for the first physical iPad run and MIDI hookup.
 
 Install Rust and its iOS targets as shown in [INSTALL.md](INSTALL.md), then open `Breakwater.xcodeproj` in Xcode. Select the **Breakwater** scheme, choose your personal Apple development team under Signing & Capabilities, and select the iPad or an iPad Simulator. Xcode builds the dependency-free Rust audio library before linking the app. Apple signing is separate from the GitHub commit identity.
 
-The committed Xcode project can be regenerated with `python3 Scripts/generate_project.py`. The WAV files, compressed parts and `Samples/catalog.json` are already prepared; Python audio-analysis dependencies are not required to build the app. To redo the experimental analysis after changing loops, install NumPy, SciPy, SoundFile and ffmpeg, then run `python3 Scripts/separate_parts.py`. This does not use a pretrained instrument classifier; it groups spectral components separately for each loop.
+The committed Xcode project can be regenerated with `python3 Scripts/generate_project.py`. Python audio-analysis dependencies and local WAVs are not required to build the app. To regenerate parts after changing loops, follow [DrumSep preparation](Docs/DrumSep.md): install the isolated offline dependencies and original checkpoint, then run `Scripts/separate_parts.py`. The model runs only during sample preparation; the app loads the generated audio.
 
 ## Checks
 
@@ -78,7 +98,7 @@ Scripts/test_differential.sh
 Scripts/test_interactions.sh
 ```
 
-The first runs Rust ownership/concurrency tests and tests bar-boundary changes, layered steps, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, per-clip muting and filters. The differential test compares audio and transport against the former C++ engine at 44.1 and 48 kHz; its C++ reference and harness are instrumented with AddressSanitizer and UndefinedBehaviorSanitizer, but the linked Rust library is not. The interaction test checks MIDI parsing and every shipped sample's format and metadata. `npm test` builds the actual WebAssembly module and tests both its audio behavior and worklet loading protocol. Run `python3 Tests/PartsCatalogTests.py` (requires ffprobe) to verify the prepared layer files.
+The first runs Rust ownership/concurrency tests and tests bar-boundary changes, layered steps, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, per-clip muting and filters. The differential test compares audio and transport against the former C++ engine at 44.1 and 48 kHz; its C++ reference and harness are instrumented with AddressSanitizer and UndefinedBehaviorSanitizer, but the linked Rust library is not. The interaction test checks MIDI parsing, catalog metadata, and the native online/offline cache; it also verifies sample formats when local files are present. `npm test` tests the actual WebAssembly module and worklet loading protocol. `python3 Tests/AssetPublisherTests.py` and `python3 Tests/AssetRecoveryTests.py` test publication and restoration without AWS. Run `python3 Tests/PartsCatalogTests.py` (requires ffprobe and local audio) to verify prepared parts.
 
 The engine boundary, threading rules, and migration checks are described in [Docs/audio-core.md](Docs/audio-core.md).
 
@@ -86,4 +106,4 @@ Run native UI tests with `Scripts/test_simulator.sh <iPad Simulator UDID>`. Resu
 
 ## Sample provenance
 
-See [Samples/README.md](Samples/README.md). The WAVs are committed directly for this initial version. They remain separate from the source code's ownership and are not presented as freely licensed sample content.
+See [Samples/README.md](Samples/README.md). The audio remains separate from the source code's ownership and is not presented as freely licensed sample content. Earlier Git history may still contain prior copies of these files.

@@ -28,9 +28,11 @@ Part pointer access, publication and block completion use sequentially
 consistent atomics so a retired buffer cannot be freed while a callback can
 still observe it. UI snapshots use atomics and a sequence counter to read a
 coherent block without locking the audio thread.
-Samples are immutable once published. The iPad loads samples before starting
-audio; the web worklet can publish a new sample between render callbacks on its
-own thread. No sample may be replaced while the native callback is running.
+Samples are immutable once published. The iPad can decode a sample on a worker
+and publish it into an empty bank slot while the callback is running. Slots use
+release/acquire publication and are never replaced or freed until the engine
+has stopped. The web worklet publishes samples between render callbacks on its
+own thread.
 
 The Wasm bridge uses a bounded amount of copying per worklet block when
 loading decoded samples or parts, and acknowledges publication before an

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AudioPlayer } from '../../Web/audio.js';
 
-const clip = id => ({ id, beats: 4, file: `test/${id}.wav` });
+const object = (id, extension = 'wav') => `objects/${id.toString(16).padStart(64, '0')}.${extension}`;
+const clip = id => ({ id, beats: 4, file: object(id) });
 function player() {
   const sent = [];
   const p = new AudioPlayer(() => {}, () => {}, () => {});
@@ -26,8 +27,8 @@ test('on-demand loads fetch only requested IDs and deduplicate overlapping gestu
   release();
   await Promise.all([first, second]);
   assert.equal(fetched.length, 2);
-  assert.ok(fetched.some(path => path.endsWith('/60.wav')));
-  assert.ok(fetched.some(path => path.endsWith('/257.wav')));
+  assert.ok(fetched.some(path => path.endsWith(object(60))));
+  assert.ok(fetched.some(path => path.endsWith(object(257))));
   assert.deepEqual(sent.filter(item => item.type === 'load').map(item => item.id).sort((a,b) => a-b), [60,257]);
   await p.load([clip(60)], new Set());
   assert.equal(fetched.length, 2);
@@ -59,7 +60,7 @@ test('failed samples can retry without re-fetching successes; exclusions are rea
   const fetched = [];
   t.mock.method(globalThis, 'fetch', async url => {
     fetched.push(url.pathname);
-    if (url.pathname.endsWith('/61.wav') && fail) return { ok: false, status: 503 };
+    if (url.pathname.endsWith(object(61)) && fail) return { ok: false, status: 503 };
     disabled.add(60);
     return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
   });
@@ -80,10 +81,10 @@ test('part downloads are shared, retryable, and bounded while active loops stay 
   let fail = true;
   t.mock.method(globalThis, 'fetch', async url => {
     fetched.push(url.pathname);
-    if (fail && url.pathname.endsWith('/3.m4a')) return { ok: false, status: 503 };
+    if (fail && url.pathname.endsWith(object(3, 'm4a'))) return { ok: false, status: 503 };
     return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
   });
-  const sample = id => ({ id, parts: { files: [0,1,2,3].map(n => `parts/${id}/${n}.m4a`) } });
+  const sample = id => ({ id, parts: { files: [0,1,2,3].map(n => object(id * 4 + n, 'm4a')) } });
   for (let id = 0; id < 8; id++) { p.loaded.add(id); p.frameCounts.set(id, 8); }
   await assert.rejects(p.loadParts(sample(0)), /HTTP 503/);
   assert.equal(p.partInFlight.size, 0);

@@ -1,4 +1,5 @@
 import { AudioPlayer } from './audio.js';
+import { assetBase, assetURL } from './assets.js';
 
 const $ = id => document.getElementById(id);
 const storageKey = 'breakwater.web.v1';
@@ -73,7 +74,7 @@ function showSong(id) {
     pad.dataset.id = sample.id;
     pad.setAttribute('aria-describedby', 'keyboard-help');
     pad.title = `${song.name} · ${sample.sourceStart}–${sample.sourceEnd} · ${sample.bpm.toFixed(1)} BPM`;
-    // Numeric waveform data and metadata come from the bundled catalog.
+    // Numeric waveform data and metadata come from the catalog.
     pad.innerHTML = `<span class="sweep"></span><span class="pad-header"><span class="pad-number">${String(sample.number).padStart(2, '0')}</span><span class="pad-bars">${sample.bars} ${sample.bars === 1 ? 'bar' : 'bars'}</span></span><svg class="waveform" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${waveform(sample.waveform)}"/></svg><span class="pad-status"></span>`;
     pads.set(sample.id, { element: pad, status: pad.querySelector('.pad-status'), sample });
     fragment.append(pad);
@@ -541,7 +542,11 @@ window.addEventListener('pagehide', stop);
 async function loadCatalog() {
   notice();
   try {
-    const response = await fetch(new URL('./Samples/catalog.json', import.meta.url));
+    const config = await fetch(new URL('./asset-config.json', import.meta.url), { cache: 'no-cache' });
+    if (!config.ok) throw new Error(`Asset configuration HTTP ${config.status}`);
+    const base = assetBase((await config.json()).assetBaseURL, import.meta.url);
+    audio.assetBaseURL = base;
+    const response = await fetch(assetURL(base, 'catalog.json'), { cache: 'no-cache' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const catalog = await response.json();
     if (!Array.isArray(catalog) || !catalog.length || catalog.some(item => !Array.isArray(item.loops) || !item.loops.length)) throw new Error('Empty sample catalog');

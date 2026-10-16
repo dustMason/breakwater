@@ -1,8 +1,11 @@
+import { assetURL } from './assets.js';
+
 export class AudioPlayer {
   constructor(onState, onProgress, onInterruption) {
     this.onState = onState;
     this.onProgress = onProgress;
     this.onInterruption = onInterruption;
+    this.assetBaseURL = new URL('./local-assets/', import.meta.url);
     this.context = this.node = this.output = null;
     this.loaded = new Set();
     this.initializing = null;
@@ -106,7 +109,7 @@ export class AudioPlayer {
       if (this.loaded.has(sample.id)) return Promise.resolve();
       if (!this.inFlight.has(sample.id)) {
         const pending = (async () => {
-          const response = await fetch(new URL(`./Samples/${sample.file}`, import.meta.url));
+          const response = await fetch(assetURL(this.assetBaseURL, sample.file));
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
           const channels = Array.from({ length: Math.min(2, buffer.numberOfChannels) }, (_, i) => buffer.getChannelData(i).slice());
@@ -151,7 +154,7 @@ export class AudioPlayer {
       const pending = (async () => {
         const frames = this.frameCounts.get(sample.id);
         const parts = await Promise.all(sample.parts.files.map(async path => {
-          const response = await fetch(new URL(`./Samples/${path}`, import.meta.url));
+          const response = await fetch(assetURL(this.assetBaseURL, path));
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
           if (Math.abs(buffer.length - frames) > 2048) throw new Error('Unexpected part duration');

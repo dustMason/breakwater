@@ -1,0 +1,2 @@
+// Local values are deliberately not tracked.
+#include? "Config.local.xcconfig"

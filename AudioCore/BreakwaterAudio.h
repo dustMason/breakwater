@@ -19,7 +19,7 @@ typedef struct {
 } BWSnapshot;
 BWEngine bw_create(double sampleRate);
 void bw_destroy(BWEngine engine);
-// Load each ID once, before the audio engine starts. Audio is copied into owned memory.
+// Load each ID once. May run on a background thread during playback; audio is copied.
 int32_t bw_load_loop(BWEngine engine,int32_t id,const float* interleaved,int32_t frames,int32_t beats,const int32_t* slices,int32_t sliceCount);
 // All commands must come from one serialized producer; render is the consumer.
 void bw_queue(BWEngine engine,const int32_t* ids,int32_t count);

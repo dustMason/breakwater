@@ -268,7 +268,7 @@ pub unsafe extern "C" fn bw_destroy(p: *mut Handle) {
     }
 }
 /// # Safety
-/// The handle must be live and sample publication must not race rendering. PCM and slices must point to the indicated readable lengths.
+/// The handle must be live. Each ID is installed at most once. PCM and slices must point to the indicated readable lengths. This may run concurrently with rendering, but not destruction.
 #[no_mangle]
 pub unsafe extern "C" fn bw_load_loop(
     p: *mut Handle,
@@ -543,7 +543,7 @@ pub unsafe extern "C" fn bw_prepared_loop_pcm(p: *mut Sample) -> *mut f32 {
     p.as_mut().map_or(ptr::null_mut(), |s| s.pcm.as_mut_ptr())
 }
 /// # Safety
-/// The handle and prepared loop must be live. The loop is consumed even on failure; publication must not race rendering.
+/// The handle and prepared loop must be live. The loop is consumed even on failure. Each ID is installed at most once; publication may race rendering, but not destruction.
 #[no_mangle]
 pub unsafe extern "C" fn bw_install_loop(p: *mut Handle, id: i32, s: *mut Sample) -> i32 {
     if s.is_null() {
@@ -762,6 +762,54 @@ mod tests {
             let staged = bw_prepare_loop(32, 4);
             assert_eq!(bw_install_loop(h, 1, staged), 1);
             bw_set_parts(h, 1, bw_prepare_parts(31)); // mismatch is consumed
+            bw_destroy(h);
+        }
+    }
+
+    #[test]
+    fn loops_can_be_published_while_rendering() {
+        unsafe {
+            let h = bw_create(48000.);
+            let address = h as usize;
+            let writer = std::thread::spawn(move || {
+                let h = address as *mut Handle;
+                let pcm = vec![0.1; 512];
+                let slices = [0];
+                for id in 0..256 {
+                    assert_eq!(
+                        bw_load_loop(h, id, pcm.as_ptr(), 256, 4, slices.as_ptr(), 1),
+                        1
+                    );
+                }
+            });
+            let mut left = [0.; 64];
+            let mut right = [0.; 64];
+            for block in 0..4000 {
+                bw_render(
+                    h,
+                    left.as_mut_ptr(),
+                    right.as_mut_ptr(),
+                    64,
+                    block as f64 * 64. / 48000.,
+                );
+                assert!(left
+                    .iter()
+                    .chain(right.iter())
+                    .all(|value| value.is_finite()));
+            }
+            writer.join().unwrap();
+            let ids = [255];
+            bw_queue(h, ids.as_ptr(), 1);
+            for block in 0..4 {
+                bw_render(
+                    h,
+                    left.as_mut_ptr(),
+                    right.as_mut_ptr(),
+                    64,
+                    6. + block as f64 * 64. / 48000.,
+                );
+            }
+            assert!(left.iter().any(|value| *value != 0.));
             bw_destroy(h);
         }
     }

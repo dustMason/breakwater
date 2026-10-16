@@ -14,32 +14,32 @@ for p in sources:
  name=str(p.relative_to(r));typ='sourcecode.swift' if p.suffix=='.swift' else 'sourcecode.cpp.cpp'
  ref=put(name,f'isa = PBXFileReference; lastKnownFileType = {typ}; path = {q(name)}; sourceTree = SOURCE_ROOT;');refs.append(ref)
  builds.append(put(name+'-build',f'isa = PBXBuildFile; fileRef = {ref};'))
-samples=put('samples','isa = PBXFileReference; lastKnownFileType = folder; path = Samples; sourceTree = SOURCE_ROOT;')
-resource=put('samples-build',f'isa = PBXBuildFile; fileRef = {samples};')
 assets=put('assets','isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = App/Assets.xcassets; sourceTree = SOURCE_ROOT;')
+configRef=put('local-config','isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App/Config.xcconfig; sourceTree = SOURCE_ROOT;')
 assetBuild=put('assets-build',f'isa = PBXBuildFile; fileRef = {assets};')
 product=put('product','isa = PBXFileReference; explicitFileType = wrapper.application; path = Breakwater.app; sourceTree = BUILT_PRODUCTS_DIR;')
 uiProduct=put('ui-product','isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = BreakwaterUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
 uiRef=put('ui-test-file','isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/BreakwaterUITests.swift; sourceTree = SOURCE_ROOT;')
 uiBuild=put('ui-test-build',f'isa = PBXBuildFile; fileRef = {uiRef};')
 products=put('products',f'isa = PBXGroup; children = {arr([product,uiProduct])}; name = Products; sourceTree = "<group>";')
-main=put('main',f'isa = PBXGroup; children = {arr(refs+[samples,assets,uiRef,products])}; sourceTree = "<group>";')
+main=put('main',f'isa = PBXGroup; children = {arr(refs+[assets,configRef,uiRef,products])}; sourceTree = "<group>";')
 src=put('sources',f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {arr(builds)}; runOnlyForDeploymentPostprocessing = 0;')
-res=put('resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {arr([resource,assetBuild])}; runOnlyForDeploymentPostprocessing = 0;')
+res=put('resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {arr([assetBuild])}; runOnlyForDeploymentPostprocessing = 0;')
 frameworks=put('frameworks','isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
 rust=put('rust-build','isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Build Rust audio core"; outputPaths = ("$(BUILT_PRODUCTS_DIR)/libbreakwater_audio.a",); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "\\\"$SRCROOT/Scripts/build_rust_ios.sh\\\"";')
 uiSrc=put('ui-sources',f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {arr([uiBuild])}; runOnlyForDeploymentPostprocessing = 0;')
 common={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','CLANG_CXX_LANGUAGE_STANDARD':'"c++17"','CLANG_CXX_LIBRARY':'"libc++"','CLANG_ENABLE_MODULES':'YES','SWIFT_VERSION':'5.0','TARGETED_DEVICE_FAMILY':'2','SUPPORTED_PLATFORMS':'"iphoneos iphonesimulator"','ENABLE_USER_SCRIPT_SANDBOXING':'YES','CODE_SIGN_STYLE':'Automatic'}
 app={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','PRODUCT_NAME':'"$(TARGET_NAME)"','PRODUCT_BUNDLE_IDENTIFIER':'com.dustmason.breakwater','INFOPLIST_FILE':'App/Info.plist','SWIFT_OBJC_BRIDGING_HEADER':'"App/Breakwater-Bridging-Header.h"','HEADER_SEARCH_PATHS':'"$(SRCROOT)/AudioCore"','MARKETING_VERSION':'1.0','CURRENT_PROJECT_VERSION':'6','SWIFT_EMIT_LOC_STRINGS':'YES','ENABLE_PREVIEWS':'YES','ENABLE_USER_SCRIPT_SANDBOXING':'NO','LIBRARY_SEARCH_PATHS':'("$(inherited)","$(BUILT_PRODUCTS_DIR)")','OTHER_LDFLAGS':'("$(inherited)","-lbreakwater_audio")'}
 ui={'PRODUCT_NAME':'"$(TARGET_NAME)"','PRODUCT_BUNDLE_IDENTIFIER':'com.dustmason.breakwater.uitests','GENERATE_INFOPLIST_FILE':'YES','TEST_TARGET_NAME':'Breakwater'}
-def configs(name,extra):
+def configs(name,extra,base=None):
  ids=[]
  for cfg in ['Debug','Release']:
   values={**common,**extra,'SWIFT_OPTIMIZATION_LEVEL':'"-Onone"' if cfg=='Debug' else '"-O"','GCC_OPTIMIZATION_LEVEL':'0' if cfg=='Debug' else 's','DEBUG_INFORMATION_FORMAT':'dwarf' if cfg=='Debug' else '"dwarf-with-dsym"'}
   if cfg=='Debug':values['SWIFT_ACTIVE_COMPILATION_CONDITIONS']='DEBUG';values['GCC_PREPROCESSOR_DEFINITIONS']='("DEBUG=1","$(inherited)")'
-  ids.append(put(name+cfg,'isa = XCBuildConfiguration; buildSettings = {'+' '.join(k+' = '+v+';' for k,v in values.items())+'}; name = '+cfg+';'))
+  baseReference = 'baseConfigurationReference = '+base+'; ' if base else ''
+  ids.append(put(name+cfg,'isa = XCBuildConfiguration; '+baseReference+'buildSettings = {'+' '.join(k+' = '+v+';' for k,v in values.items())+'}; name = '+cfg+';'))
  return put(name+'configs',f'isa = XCConfigurationList; buildConfigurations = {arr(ids)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
-projConfig=configs('project',{});appConfig=configs('app',app);uiConfig=configs('ui',ui)
+projConfig=configs('project',{});appConfig=configs('app',app,configRef);uiConfig=configs('ui',ui)
 target=put('target',f'isa = PBXNativeTarget; buildConfigurationList = {appConfig}; buildPhases = {arr([rust,src,frameworks,res])}; buildRules = (); dependencies = (); name = Breakwater; productName = Breakwater; productReference = {product}; productType = "com.apple.product-type.application";')
 proxy=put('proxy',f'isa = PBXContainerItemProxy; containerPortal = {uid("project")}; proxyType = 1; remoteGlobalIDString = {target}; remoteInfo = Breakwater;')
 dep=put('dependency',f'isa = PBXTargetDependency; target = {target}; targetProxy = {proxy};')
