@@ -6,9 +6,9 @@
 ios, web
 
 ## Stack
-Native iPad app, as agreed in the discussion: SwiftUI and UIKit for multi-touch performance controls; AVAudioEngine and Core MIDI; a portable C++ real-time audio engine. iPadOS 17+, targeting an A12 iPad. Xcode project, no runtime package dependencies.
+Native iPad app: SwiftUI and UIKit for multi-touch performance controls; AVAudioEngine and Core MIDI; a shared Rust real-time audio engine. iPadOS 17+, targeting an A12 iPad. Xcode project, no runtime package dependencies.
 
-Browser adaptation: static HTML, CSS and JavaScript with Web Audio and an AudioWorklet. The same committed sample library supplies both platforms. No server or runtime package dependencies; browser audio requires HTTPS or localhost and a user gesture to start.
+Browser adaptation: static HTML, CSS and JavaScript with Web Audio and an AudioWorklet hosting the same engine as WebAssembly. The same committed sample library supplies both platforms. No server or runtime package dependencies; browser audio requires HTTPS or localhost and a user gesture to start.
 
 ## Users
 Jordan, playing a live synth jam with an external MIDI clock source and a CME U2MIDI Pro connected through Apple's camera adapter on iPad, or choosing songs and playing loops with an internal tempo in a browser.

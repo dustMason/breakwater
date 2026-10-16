@@ -15,6 +15,8 @@ export class AudioPlayer {
     this.volume = .8;
     this.filter = { mode: 0, hz: 1200 };
     this.masks = new Map();
+    this.requests = new Map();
+    this.nextRequest = 1;
   }
 
   async unlock() {
@@ -34,6 +36,9 @@ export class AudioPlayer {
     const resumed = this.context.resume();
     if (!this.initializing) this.initializing = this.initialize().catch(error => {
       this.initializing = null;
+      this.node?.disconnect();
+      this.output?.disconnect();
+      this.node = this.output = null;
       throw error;
     });
     await Promise.all([resumed, this.initializing]);
@@ -41,16 +46,56 @@ export class AudioPlayer {
 
   async initialize() {
     if (!this.context.audioWorklet) throw new Error('AudioWorklet is unavailable. Try a current Safari, Chrome, or Firefox.');
-    await this.context.audioWorklet.addModule(new URL('./audio-worklet.js', import.meta.url));
-    this.node = new AudioWorkletNode(this.context, 'breakwater', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+    const [response] = await Promise.all([
+      fetch(new URL('./breakwater_audio.wasm', import.meta.url)),
+      this.context.audioWorklet.addModule(new URL('./audio-worklet.js', import.meta.url)),
+    ]);
+    if (!response.ok) throw new Error(`Couldn't load the audio engine (HTTP ${response.status}).`);
+    const module = await WebAssembly.compile(await response.arrayBuffer());
+    this.node = new AudioWorkletNode(this.context, 'breakwater', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { module } });
     this.output = this.context.createGain();
     this.output.gain.value = this.volume;
     this.node.connect(this.output).connect(this.context.destination);
-    this.node.port.onmessage = ({ data }) => this.onState(data);
-    this.node.onprocessorerror = () => this.onInterruption('Audio stopped unexpectedly. Reload the page to restart it.');
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Audio engine did not start. Reload the page to retry.')), 15000);
+      this.node.port.onmessage = ({ data }) => {
+        if (data.type === 'ready' || data.type === 'ready-error') {
+          clearTimeout(timeout);
+          if (data.type === 'ready') resolve(); else reject(new Error(data.error));
+        } else this.receive(data);
+      };
+      this.node.onprocessorerror = () => {
+        clearTimeout(timeout);
+        const error = new Error('Audio stopped unexpectedly. Reload the page to restart it.');
+        for (const request of this.requests.values()) request.reject(error);
+        this.requests.clear();
+        reject(error);
+        this.onInterruption(error.message);
+      };
+      this.node.port.postMessage({ type: 'init' });
+    });
     this.setTempo(this.tempo);
     this.setFilter(this.filter.mode, this.filter.hz);
     for (const [id, mask] of this.masks) this.command({ type: 'part-mask', ids: [id], mask });
+  }
+
+  receive(data) {
+    if (data.type === 'state') { this.onState(data.state); return; }
+    if (data.type === 'load-complete' || data.type === 'load-error') {
+      const request = this.requests.get(data.request);
+      if (!request) return;
+      this.requests.delete(data.request);
+      if (data.type === 'load-error') request.reject(new Error(data.error)); else request.resolve();
+    }
+  }
+
+  transfer(data, buffers) {
+    const request = this.nextRequest++;
+    return new Promise((resolve, reject) => {
+      this.requests.set(request, { resolve, reject });
+      try { this.node.port.postMessage({ ...data, request }, buffers); }
+      catch (error) { this.requests.delete(request); reject(error); }
+    });
   }
 
   async load(samples, disabled, onProgress = this.onProgress) {
@@ -64,9 +109,9 @@ export class AudioPlayer {
           const response = await fetch(new URL(`./Samples/${sample.file}`, import.meta.url));
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
-          const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i).slice());
+          const channels = Array.from({ length: Math.min(2, buffer.numberOfChannels) }, (_, i) => buffer.getChannelData(i).slice());
           this.frameCounts.set(sample.id, channels[0].length);
-          this.node.port.postMessage({ type: 'load', id: sample.id, beats: sample.beats, channels }, channels.map(channel => channel.buffer));
+          await this.transfer({ type: 'load', id: sample.id, beats: sample.beats, channels }, channels.map(channel => channel.buffer));
           this.enable(sample.id, !disabled.has(sample.id));
           this.loaded.add(sample.id);
         })().finally(() => this.inFlight.delete(sample.id));
@@ -117,7 +162,7 @@ export class AudioPlayer {
             return out;
           });
         }));
-        this.node.port.postMessage({ type: 'parts', id: sample.id, parts }, parts.flat().map(channel => channel.buffer));
+        await this.transfer({ type: 'parts', id: sample.id, parts }, parts.flat().map(channel => channel.buffer));
         this.partCache.set(sample.id, true);
         const pinned = new Set([sample.id, ...this.partPins]);
         for (const id of this.partCache.keys()) {

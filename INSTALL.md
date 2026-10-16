@@ -1,6 +1,12 @@
 # Run Breakwater on your iPad
 
-1. Clone this repository on the Mac and open `Breakwater.xcodeproj`.
+1. Install the Rust toolchain with rustup, then install the iPad and Simulator targets:
+
+   ```sh
+   rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+   ```
+
+   Clone this repository on the Mac and open `Breakwater.xcodeproj`. Xcode builds the Rust library automatically. The x86-64 target is needed when Xcode builds a universal Simulator library.
 2. In Xcode, select the **Breakwater** app target → **Signing & Capabilities**. Choose your personal Apple development team. Leave automatic signing enabled; change the bundle identifier only if Xcode reports it is unavailable to your team.
 3. Connect and unlock the iPad. Select it as the run destination, then press Run. Follow the iPad's Developer Mode or trust prompts if shown.
 4. Open Breakwater and wait for the bundled samples to load. The current library contains 222 loops across 13 songs. Tap a waveform to start. Tap another to switch at the next bar; tap the song name to scroll through the library without stopping playback.

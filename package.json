@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --check Web/app.js && node --test Tests/Web/*.test.js",
+    "test": "cargo build --locked --release --target wasm32-unknown-unknown --target-dir Rust/target --manifest-path Rust/Cargo.toml && node --check Web/app.js && node --test Tests/Web/*.test.js",
     "build": "python3 Scripts/build_web.py",
     "start": "python3 Scripts/serve_web.py"
   }

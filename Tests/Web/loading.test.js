@@ -7,7 +7,7 @@ function player() {
   const sent = [];
   const p = new AudioPlayer(() => {}, () => {}, () => {});
   p.context = { decodeAudioData: async () => ({ numberOfChannels: 1, getChannelData: () => new Float32Array(8) }) };
-  p.node = { port: { postMessage: data => sent.push(data) } };
+  p.node = { port: { postMessage: data => { sent.push(data); if (data.request) queueMicrotask(() => p.receive({ type: 'load-complete', request: data.request })); } } };
   return { p, sent };
 }
 
@@ -31,6 +31,25 @@ test('on-demand loads fetch only requested IDs and deduplicate overlapping gestu
   assert.deepEqual(sent.filter(item => item.type === 'load').map(item => item.id).sort((a,b) => a-b), [60,257]);
   await p.load([clip(60)], new Set());
   assert.equal(fetched.length, 2);
+});
+
+test('a decoded sample is not published until the worklet confirms it, and a failed transfer can retry', async t => {
+  const { p, sent } = player();
+  p.node.port.postMessage = data => sent.push(data);
+  t.mock.method(globalThis, 'fetch', async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) }));
+  const first = p.load([clip(60)], new Set());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(p.loaded.has(60), false);
+  const initial = sent.find(item => item.type === 'load');
+  p.receive({ type: 'load-error', request: initial.request, error: 'transfer failed' });
+  await assert.rejects(first, /transfer failed/);
+  assert.equal(p.requests.size, 0);
+  const retry = p.load([clip(60)], new Set());
+  await new Promise(resolve => setImmediate(resolve));
+  const last = sent.filter(item => item.type === 'load').at(-1);
+  p.receive({ type: 'load-complete', request: last.request });
+  await retry;
+  assert.equal(p.loaded.has(60), true);
 });
 
 test('failed samples can retry without re-fetching successes; exclusions are read after decoding', async t => {

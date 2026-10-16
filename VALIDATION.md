@@ -1,5 +1,12 @@
 # Validation
 
+## Shared Rust audio engine — 2026-10-15
+
+- iPad and browser playback now use the same Rust engine. Native links a static library through the existing C interface; the browser runs its WebAssembly build in an AudioWorklet. The prior C++ implementation is kept solely as a differential test reference. The sample catalog and audio files are unchanged.
+- The native audio behavior suite, five Rust ownership/concurrency and allocation tests, MIDI/catalog interaction checks, strict Clippy, and 25 Wasm/browser protocol tests pass. At 44.1 and 48 kHz, differential traces covering layered parts, filters, nudge, slices and synthetic MIDI clock differed from the former engine by at most `7.46e-9` per PCM sample. The C++ reference and differential harness use ASan/UBSan; this does not instrument the Rust library.
+- The unsigned Release device build and the iPad Simulator build succeed. All 10 muted Simulator UI tests passed, including synthetic MIDI, parts, layered sequences and nudge; the two focused parts/MIDI and nudge/MIDI checks also passed on the final memory-ordering change. The local browser was checked with audio muted for sample loading, part toggles, filtering, next-bar layering and nudge. The automated Wasm tests also verify nonzero PCM, silence when all parts are off, sample-rate changes and worklet transfer acknowledgement.
+- Physical A12 iPad performance, USB MIDI timing, wired audio latency and audible results remain unverified. The browser worklet copies transferred samples in bounded chunks, but creating Wasm buffers or growing memory still happens on the audio thread and may cause a short interruption on slower devices.
+
 ## Layered sequence and per-clip Parts — 2026-10-15
 
 - Both players use a bottom arrangement of ordered steps, with multiple clips per step and separate Parts settings per clip. The longest clip determines step duration; shorter clips repeat. Changes are applied at a bar boundary, future-step edits preserve the current phrase, and changes to the current step re-cue its layers together. Layers are averaged for headroom. The original catalog and sample assets are unchanged.

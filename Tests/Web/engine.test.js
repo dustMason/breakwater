@@ -1,7 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { LoopEngine } from '../../Web/engine.js';
+import { WasmEngine } from '../../Web/wasm-engine.js';
+const module = new WebAssembly.Module(readFileSync(new URL('../../Rust/target/wasm32-unknown-unknown/release/breakwater_audio.wasm', import.meta.url)));
+class LoopEngine extends WasmEngine {
+  constructor(rate) { super(new WebAssembly.Instance(module), rate); }
+  get active() { return this.snapshot().active; }
+  get beat() { return this.snapshot().beat; }
+  get bpm() { return this.snapshot().bpm; }
+  get running() { return this.snapshot().playing; }
+  get cycle() { return this.snapshot().queue; }
+  get pending() { return this.snapshot().pending ? true : null; }
+}
 
 const rate = 48000;
 function engine() {
@@ -69,7 +79,7 @@ test('tempo slews without jumping phase; boundary follows the integrated beat', 
   assert.equal(e.active, 2);
   advance(e, .01);
   assert.equal(e.active, 30);
-  assert.ok(Math.abs(e.startBeat - 4) < 1e-8);
+  assert.ok(e.snapshot().progress < .01);
 });
 
 test('nudge changes phase smoothly in either direction and carries through queued loops', () => {
@@ -86,8 +96,8 @@ test('nudge changes phase smoothly in either direction and carries through queue
   assert.ok(Math.abs((e.beat - ref.beat) - .02) < .001);
   e.nudge(-10); advance(ref, 1); advance(e, 1);
   assert.ok(Math.abs(e.beat - ref.beat) < .001);
-  e.nudge(10); e.stop(); e.queue([0]);
-  assert.equal(e.nudgeRemaining, 0);
+  e.nudge(10); e.stop(); advance(e, .01); e.queue([0]); advance(e, .01);
+  assert.ok(e.snapshot().progress < .01);
 });
 
 test('rate scaling changes the pitch and playback duration together', () => {
@@ -120,6 +130,7 @@ test('exclusions remove queued pads and replace the playing pad at the next bar'
   assert.equal(e.running, false);
   e.enable(0, true);
   e.queue([0]);
+  advance(e, 1 / rate);
   assert.equal(e.active, 0);
 });
 
@@ -145,7 +156,8 @@ test('stop fades to silence, clears pending launch, and restart starts on a down
   assert.equal(e.pending, null);
   assert.ok(signal.slice(-128).every(value => value === 0));
   e.queue([30]);
-  assert.equal(e.beat, 0);
+  advance(e, 1 / rate);
+  assert.ok(e.beat < .001);
   assert.equal(e.active, 30);
 });
 
@@ -227,11 +239,11 @@ test('layered steps repeat the shorter loop, advance after the longest and apply
   e.arrange([{id:0,token:101,step:0,mask:15}, {id:1,token:102,step:0,mask:15}, {id:2,token:103,step:1,mask:15}]);
   advance(e, 2.01);
   assert.deepEqual(e.snapshot().activeTokens, [101,102]);
-  assert.ok(e.layers[0].position < rate / 4, 'shorter loop repeated');
+  assert.ok(e.snapshot().activeProgress[0] < .25, 'shorter loop repeated');
   advance(e, 1.98); assert.deepEqual(e.snapshot().activeTokens, [101,102]);
   advance(e, .02); assert.deepEqual(e.snapshot().activeTokens, [103]);
   e.arrange([{id:0,token:101,step:0,mask:15}, {id:1,token:102,step:1,mask:15}, {id:2,token:103,step:1,mask:15}]);
-  assert.equal(e.snapshot().pending, true); advance(e, 2);
+  advance(e, 1 / rate); assert.equal(e.snapshot().pending, true); advance(e, 2);
   assert.deepEqual(e.snapshot().activeTokens, [102,103]);
   assert.equal(e.snapshot().activeStep, 1);
   e.enable(1, false); advance(e, 2); assert.deepEqual(e.snapshot().activeTokens, [103]);
@@ -269,4 +281,29 @@ test('a short layer crossfades when it wraps underneath a longer one', () => {
   let previous = advance(e, 1.98).at(-1), jump = 0;
   for (const value of advance(e, .06)) { jump = Math.max(jump, Math.abs(value-previous)); previous=value; }
   assert.ok(jump < .01, `wrap jump ${jump}`);
+});
+
+test('Wasm honors a 44.1 kHz audio context and handles changing host block sizes', () => {
+  const sr = 44100, e = new LoopEngine(sr), source = new Float32Array(sr * 2).fill(.25);
+  e.load(4, [source], 4); e.queue([4]);
+  let frames = 0;
+  for (const size of [64, 128, 257, 2048, 4097, 73]) {
+    const left = new Float32Array(size), right = new Float32Array(size);
+    e.render(left, right); frames += size;
+    assert.ok(left.every(Number.isFinite));
+    assert.deepEqual(left, right);
+  }
+  assert.equal(e.snapshot().active, 4);
+  assert.ok(Math.abs(e.snapshot().beat - frames * 2 / sr) < 1e-8);
+  e.destroy();
+});
+
+test('eight simultaneous clips keep independent tokens and the ninth is rejected', () => {
+  const e = new LoopEngine(rate), data = new Float32Array(rate * 2).fill(.4);
+  e.load(0, [data], 4);
+  e.arrange(Array.from({ length: 9 }, (_, i) => ({ id: 0, token: i + 1, step: 0, mask: 15 })));
+  const audio = advance(e, .1), snapshot = e.snapshot();
+  assert.deepEqual(snapshot.activeTokens, [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.ok(Math.abs(audio.at(-1) - .4) < 1e-5, 'layers are averaged for headroom');
+  e.destroy();
 });

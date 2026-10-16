@@ -29,9 +29,10 @@ The app requests a 256-frame audio buffer at 48 kHz; iPadOS chooses the availabl
 
 ## Browser player
 
-Run locally with Python 3; no npm install or bundler is required:
+Install Rust with the `wasm32-unknown-unknown` target, then run locally with Python 3; no npm install or bundler is required:
 
 ```sh
+rustup target add wasm32-unknown-unknown
 python3 Scripts/serve_web.py
 # Open http://127.0.0.1:8765/
 ```
@@ -48,7 +49,7 @@ Use a current browser with AudioWorklet support. HTTPS or localhost is required;
 2. In **Settings → Pages → Build and deployment → Source**, choose **GitHub Actions**.
 3. Push to `main`, or run **Deploy web player to GitHub Pages** in the Actions tab after enabling Pages.
 
-The workflow tests the JavaScript engine, builds `build/web`, uploads only the static site, and deploys it. For `dustMason/breakwater`, the expected address is `https://dustmason.github.io/breakwater/`. No custom domain or base-path configuration is needed: all module, icon, catalog and WAV URLs are relative. No credentials or environment secrets are needed beyond the workflow's scoped `GITHUB_TOKEN`.
+The workflow tests the shared Rust engine and its WebAssembly host, builds `build/web`, uploads only the static site, and deploys it. For `dustMason/breakwater`, the expected address is `https://dustmason.github.io/breakwater/`. No custom domain or base-path configuration is needed: all module, icon, catalog and WAV URLs are relative. No credentials or environment secrets are needed beyond the workflow's scoped `GITHUB_TOKEN`.
 
 **Publishing scope:** this site includes the sample WAVs. A Pages site on a personal account is public even if the source repository is private. GitHub Pages from a private personal repository requires GitHub Pro. These files remain subject to the sample provenance described below. See [GitHub's Pages visibility guidance](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site) and [plan availability](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
 
@@ -56,16 +57,16 @@ To build for another static host:
 
 ```sh
 python3 Scripts/build_web.py --output build/web
-node --test Tests/Web/*.test.js
+npm test
 ```
 
-Serve the contents of `build/web` with JavaScript module MIME types. The web source is in `Web/`; samples are copied from `Samples/` and the favicon/touch icon is the existing native app icon. The build does not expose native source files, development briefs, or repository metadata.
+Serve the contents of `build/web` with JavaScript module and WebAssembly MIME types. The web source is in `Web/`; samples are copied from `Samples/` and the favicon/touch icon is the existing native app icon. The build does not expose native source files, development briefs, or repository metadata.
 
 ## Build
 
 See [INSTALL.md](INSTALL.md) for the first physical iPad run and MIDI hookup.
 
-Open `Breakwater.xcodeproj` in Xcode. Select the **Breakwater** scheme, choose your personal Apple development team under Signing & Capabilities, and select the iPad or an iPad Simulator. The app requires no package downloads. Apple signing is separate from the GitHub commit identity.
+Install Rust and its iOS targets as shown in [INSTALL.md](INSTALL.md), then open `Breakwater.xcodeproj` in Xcode. Select the **Breakwater** scheme, choose your personal Apple development team under Signing & Capabilities, and select the iPad or an iPad Simulator. Xcode builds the dependency-free Rust audio library before linking the app. Apple signing is separate from the GitHub commit identity.
 
 The committed Xcode project can be regenerated with `python3 Scripts/generate_project.py`. The WAV files, compressed parts and `Samples/catalog.json` are already prepared; Python audio-analysis dependencies are not required to build the app. To redo the experimental analysis after changing loops, install NumPy, SciPy, SoundFile and ffmpeg, then run `python3 Scripts/separate_parts.py`. This does not use a pretrained instrument classifier; it groups spectral components separately for each loop.
 
@@ -73,10 +74,13 @@ The committed Xcode project can be regenerated with `python3 Scripts/generate_pr
 
 ```sh
 Scripts/test_core.sh
+Scripts/test_differential.sh
 Scripts/test_interactions.sh
 ```
 
-The first compiles the portable audio engine with AddressSanitizer and UndefinedBehaviorSanitizer. It tests bar-boundary changes, layered steps, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, per-clip muting and output filters. The second tests MIDI parsing and every shipped sample's format and metadata. Run `npm test` for the browser engine and `python3 Tests/PartsCatalogTests.py` (requires ffprobe) to verify the prepared layer files.
+The first runs Rust ownership/concurrency tests and tests bar-boundary changes, layered steps, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, per-clip muting and filters. The differential test compares audio and transport against the former C++ engine at 44.1 and 48 kHz; its C++ reference and harness are instrumented with AddressSanitizer and UndefinedBehaviorSanitizer, but the linked Rust library is not. The interaction test checks MIDI parsing and every shipped sample's format and metadata. `npm test` builds the actual WebAssembly module and tests both its audio behavior and worklet loading protocol. Run `python3 Tests/PartsCatalogTests.py` (requires ffprobe) to verify the prepared layer files.
+
+The engine boundary, threading rules, and migration checks are described in [Docs/audio-core.md](Docs/audio-core.md).
 
 Run native UI tests with `Scripts/test_simulator.sh <iPad Simulator UDID>`. Results and physical-device limitations are recorded in [VALIDATION.md](VALIDATION.md).
 

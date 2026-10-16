@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import shutil
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -14,6 +15,10 @@ def build(output: Path) -> Path:
     if output == ROOT or output == ROOT / "Web" or output == ROOT / "Samples":
         raise ValueError("Choose a separate output directory, such as build/web")
     output.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "--target-dir", str(ROOT / "Rust/target"), "--manifest-path", str(ROOT / "Rust/Cargo.toml")], check=True, cwd=ROOT)
+    shutil.copy2(ROOT / "Rust/target/wasm32-unknown-unknown/release/breakwater_audio.wasm", output / "breakwater_audio.wasm")
+    # Retire the pre-port JavaScript DSP if this directory was built before.
+    (output / "engine.js").unlink(missing_ok=True)
     for source in (ROOT / "Web").iterdir():
         if source.suffix in {".html", ".css", ".js", ".png"}:
             shutil.copy2(source, output / source.name)

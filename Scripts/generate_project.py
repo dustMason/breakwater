@@ -8,7 +8,7 @@ objects={}
 def put(name,body):objects[uid(name)]=body;return uid(name)
 def q(s):return '"'+s+'"'
 def arr(xs):return '('+','.join(xs)+',)'
-sources=sorted([*r.glob('App/*.swift'),*r.glob('AudioCore/*.cpp')])
+sources=sorted(r.glob('App/*.swift'))
 refs=[];builds=[]
 for p in sources:
  name=str(p.relative_to(r));typ='sourcecode.swift' if p.suffix=='.swift' else 'sourcecode.cpp.cpp'
@@ -27,9 +27,10 @@ main=put('main',f'isa = PBXGroup; children = {arr(refs+[samples,assets,uiRef,pro
 src=put('sources',f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {arr(builds)}; runOnlyForDeploymentPostprocessing = 0;')
 res=put('resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {arr([resource,assetBuild])}; runOnlyForDeploymentPostprocessing = 0;')
 frameworks=put('frameworks','isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
+rust=put('rust-build','isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Build Rust audio core"; outputPaths = ("$(BUILT_PRODUCTS_DIR)/libbreakwater_audio.a",); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "\\\"$SRCROOT/Scripts/build_rust_ios.sh\\\"";')
 uiSrc=put('ui-sources',f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {arr([uiBuild])}; runOnlyForDeploymentPostprocessing = 0;')
 common={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','CLANG_CXX_LANGUAGE_STANDARD':'"c++17"','CLANG_CXX_LIBRARY':'"libc++"','CLANG_ENABLE_MODULES':'YES','SWIFT_VERSION':'5.0','TARGETED_DEVICE_FAMILY':'2','SUPPORTED_PLATFORMS':'"iphoneos iphonesimulator"','ENABLE_USER_SCRIPT_SANDBOXING':'YES','CODE_SIGN_STYLE':'Automatic'}
-app={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','PRODUCT_NAME':'"$(TARGET_NAME)"','PRODUCT_BUNDLE_IDENTIFIER':'com.dustmason.breakwater','INFOPLIST_FILE':'App/Info.plist','SWIFT_OBJC_BRIDGING_HEADER':'"App/Breakwater-Bridging-Header.h"','HEADER_SEARCH_PATHS':'"$(SRCROOT)/AudioCore"','MARKETING_VERSION':'1.0','CURRENT_PROJECT_VERSION':'6','SWIFT_EMIT_LOC_STRINGS':'YES','ENABLE_PREVIEWS':'YES'}
+app={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','PRODUCT_NAME':'"$(TARGET_NAME)"','PRODUCT_BUNDLE_IDENTIFIER':'com.dustmason.breakwater','INFOPLIST_FILE':'App/Info.plist','SWIFT_OBJC_BRIDGING_HEADER':'"App/Breakwater-Bridging-Header.h"','HEADER_SEARCH_PATHS':'"$(SRCROOT)/AudioCore"','MARKETING_VERSION':'1.0','CURRENT_PROJECT_VERSION':'6','SWIFT_EMIT_LOC_STRINGS':'YES','ENABLE_PREVIEWS':'YES','ENABLE_USER_SCRIPT_SANDBOXING':'NO','LIBRARY_SEARCH_PATHS':'("$(inherited)","$(BUILT_PRODUCTS_DIR)")','OTHER_LDFLAGS':'("$(inherited)","-lbreakwater_audio")'}
 ui={'PRODUCT_NAME':'"$(TARGET_NAME)"','PRODUCT_BUNDLE_IDENTIFIER':'com.dustmason.breakwater.uitests','GENERATE_INFOPLIST_FILE':'YES','TEST_TARGET_NAME':'Breakwater'}
 def configs(name,extra):
  ids=[]
@@ -39,7 +40,7 @@ def configs(name,extra):
   ids.append(put(name+cfg,'isa = XCBuildConfiguration; buildSettings = {'+' '.join(k+' = '+v+';' for k,v in values.items())+'}; name = '+cfg+';'))
  return put(name+'configs',f'isa = XCConfigurationList; buildConfigurations = {arr(ids)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
 projConfig=configs('project',{});appConfig=configs('app',app);uiConfig=configs('ui',ui)
-target=put('target',f'isa = PBXNativeTarget; buildConfigurationList = {appConfig}; buildPhases = {arr([src,frameworks,res])}; buildRules = (); dependencies = (); name = Breakwater; productName = Breakwater; productReference = {product}; productType = "com.apple.product-type.application";')
+target=put('target',f'isa = PBXNativeTarget; buildConfigurationList = {appConfig}; buildPhases = {arr([rust,src,frameworks,res])}; buildRules = (); dependencies = (); name = Breakwater; productName = Breakwater; productReference = {product}; productType = "com.apple.product-type.application";')
 proxy=put('proxy',f'isa = PBXContainerItemProxy; containerPortal = {uid("project")}; proxyType = 1; remoteGlobalIDString = {target}; remoteInfo = Breakwater;')
 dep=put('dependency',f'isa = PBXTargetDependency; target = {target}; targetProxy = {proxy};')
 uiTarget=put('ui-target',f'isa = PBXNativeTarget; buildConfigurationList = {uiConfig}; buildPhases = {arr([uiSrc])}; buildRules = (); dependencies = {arr([dep])}; name = BreakwaterUITests; productName = BreakwaterUITests; productReference = {uiProduct}; productType = "com.apple.product-type.bundle.ui-testing";')

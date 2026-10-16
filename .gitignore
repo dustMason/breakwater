@@ -9,3 +9,4 @@ xcuserdata/
 .impeccable/config.local.json
 __pycache__/
 *.pyc
+Rust/target/

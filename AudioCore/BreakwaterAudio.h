@@ -19,7 +19,7 @@ typedef struct {
 } BWSnapshot;
 BWEngine bw_create(double sampleRate);
 void bw_destroy(BWEngine engine);
-// Load only before the audio engine starts. Audio is copied into owned memory.
+// Load each ID once, before the audio engine starts. Audio is copied into owned memory.
 int32_t bw_load_loop(BWEngine engine,int32_t id,const float* interleaved,int32_t frames,int32_t beats,const int32_t* slices,int32_t sliceCount);
 // All commands must come from one serialized producer; render is the consumer.
 void bw_queue(BWEngine engine,const int32_t* ids,int32_t count);
@@ -39,6 +39,7 @@ void bw_offset(BWEngine engine,double milliseconds);
 void bw_nudge(BWEngine engine,double milliseconds);
 // Construct/decode on a worker. Install/retire on the serialized control queue.
 // Parts are planar by part, then interleaved stereo, with exactly `frames` frames.
+// bw_set_parts consumes its parts argument, including for an invalid ID/length.
 BWParts bw_create_parts(const float* pcm,int32_t frames);
 void bw_set_parts(BWEngine engine,int32_t id,BWParts parts);
 void bw_part_mask(BWEngine engine,int32_t id,int32_t mask);

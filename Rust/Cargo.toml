@@ -1,0 +1,15 @@
+[package]
+name = "breakwater-audio"
+version = "0.1.0"
+edition = "2021"
+license = "UNLICENSED"
+
+[lib]
+name = "breakwater_audio"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
