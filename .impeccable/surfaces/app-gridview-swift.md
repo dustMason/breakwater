@@ -5,18 +5,24 @@ primary_target: "App/GridView.swift"
 related_targets: []
 ---
 
-# Library and timeline
+# Library and two stacks
 Mode: Operate. Target: App/GridView.swift. iPad landscape and portrait.
 
 ## Direction contract
-THESIS: Browse real loop waveforms in song folders and build a playable, layered arrangement on a bar-oriented timeline.
+THESIS: Browse real loop waveforms in song folders and blend two independently looping stacks.
 OWN-WORLD: Continue the established crisp semantic surfaces, thin rules, native SF text, monospaced timing numerals and strong blue playback state. Real waveform geometry remains the visual content; no decorative texture or illustration is introduced.
-STORY: Open a folder, choose or drag a loop into the sequence, shape each clip directly, and continue arranging across songs while playback remains visible. Edit exclusions explicitly.
-FIRST VIEWPORT: The current source and approximate BPM sit in the header; a scrollable Library is left of the Timeline and transport is below. Bar-labeled steps show stacked clip waveforms with embedded part switches, a filter knob and a vertical level fader, plus selection outlines and blue active clips with a moving playhead. Crowded steps scroll horizontally. Landscape and portrait retain the same organization; the compact dock uses two rows.
-FORM: An extension of the approved waveform-instrument world, using folder rows and a proportional timeline in place of the earlier full-screen pad grid and bottom sequence tray. The earlier approved comp and dropdown substitution remain historical provenance, not the current layout contract.
-FINISH: The supplied independent timeline reviewer scored all five material fixes resolved. The source and capture evidence and its limits are recorded below.
+STORY: Tap a loop to add it to the quieter side, or drag to A or B; shape each clip and crossfade the running stacks.
+FIRST VIEWPORT: A scrollable Library sits left of side-by-side A and B stacks; a crossfader sits below them and transport remains at the bottom. Contiguous clip rows carry waveforms, four part switches, a filter knob and vertical level fader.
+FORM: Extend the established waveform-instrument world with two concurrent stacks and a direct crossfader; preserve the existing neutral surfaces, blue playing treatment and touch-sized controls.
+FINISH: The A/B redesign was checked in a muted desktop browser; the native simulator is currently unavailable because CoreSimulator and Xcode versions do not match. Earlier captures below are historical.
 
-## Timeline extension — 2026-10-15
+
+## Current A/B stack extension — 2026-10-16
+
+Each side holds up to eight concurrently looping clips; clips added during playback start at the next bar while retained clips keep phase. Crossfade position determines the quieter side for library taps; a centered tie uses the less-populated side and then A. Dragging targets either side explicitly. Four part switches start enabled for each new clip.
+
+## Historical timeline extension — 2026-10-15
+This section is superseded by the A/B stack extension above.
 The Library expands song folders to reveal numbered waveform rows and loop lengths. The Add menu sets the tap action to add at the end, insert before or after the selected step, or add a layer; dragging a row places it directly. Named accessibility actions offer the insert and layer choices. Edit changes row activation to exclude or restore a loop. The header's Use source applies the active folder's source BPM and is disabled under external MIDI clock.
 
 Steps run horizontally, with widths proportional to the longest clip in each step subject to a minimum width for the controls. Drop at a step edge or plus margin to insert; drop beneath the clips to layer. Shorter clips repeat across the step and their waveform repeats visually. The timeline scrolls in both directions as needed and offers zoom, Fit and Clear; tapping a waveform selects a clip, and its remove control is separate. The selected outline, active blue fill and moving playhead communicate distinct states.

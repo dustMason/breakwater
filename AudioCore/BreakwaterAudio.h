@@ -17,8 +17,8 @@ typedef struct {
  int32_t playing, activeLoop, mode, externalClock, clockState, pending, queueCount;
  int32_t queue[64];
  int32_t activeCount, activeStep;
- int32_t activeLoops[8], activeTokens[8];
- double activeProgress[8];
+ int32_t activeLoops[16], activeTokens[16];
+ double activeProgress[16];
  uint32_t droppedCommands;
 } BWSnapshot;
 BWEngine bw_create(double sampleRate);
@@ -35,6 +35,10 @@ void bw_arrange_with_filters(BWEngine engine,const BWClipWithFilter* clips,int32
 void bw_edit_arrangement_with_filters(BWEngine engine,const BWClipWithFilter* clips,int32_t count);
 void bw_arrange_with_levels(BWEngine engine,const BWClipWithLevel* clips,int32_t count);
 void bw_edit_arrangement_with_levels(BWEngine engine,const BWClipWithLevel* clips,int32_t count);
+// Two concurrent stacks; descriptor step selects A (0) or B (1), up to eight clips each.
+void bw_stacks(BWEngine engine,const BWClipWithLevel* clips,int32_t count,int32_t start);
+// 0 = A, 0.5 = equal-power center, 1 = B. Smoothed on the audio thread.
+void bw_crossfade(BWEngine engine,double position);
 void bw_clip_mask(BWEngine engine,int32_t token,int32_t mask);
 void bw_clip_filter(BWEngine engine,int32_t token,int32_t type,double cutoffHz);
 void bw_clip_level(BWEngine engine,int32_t token,double level);

@@ -1,5 +1,11 @@
 # Validation
 
+## Two crossfaded stacks — 2026-10-16
+
+- Both players now provide A and B stacks, an equal-power crossfader, quiet-side tap placement, explicit drag-to-side placement and independent per-clip controls. New clips start with all four parts on. Each side holds up to eight clips; both continue running when faded out. Changes launch on a bar boundary without restarting retained clips.
+- All 40 WebAssembly/worklet tests pass, including crossfader gain and continuity, independent phase and part controls, silent-side progress and the per-side layer limit. `Scripts/test_core.sh` passes, including synthetic MIDI clock, tempo changes, nudge, playback-mode changes, Stop/Continue and Song Position Pointer for two stacks. The differential and interaction suites pass, as does strict Rust Clippy. These are deterministic digital checks, not a listening test.
+- The rebuilt local web player was checked with audio muted at desktop and tablet widths: placement, drag targeting, independent part masks and simultaneous active indicators worked. Volume was restored afterward. The unsigned iOS device build and simulator UI test bundle compile. Simulator execution was unavailable because the installed CoreSimulator version is older than the current Xcode requires. Physical iPad performance, touch, USB MIDI, latency and audible quality remain unverified.
+
 ## Embedded timeline controls — 2026-10-15
 
 - On iPad and web, contiguous timeline clips now contain their own four part switches, center-bypass low-pass/high-pass knob, and vertical level fader. Simplified waveform strokes indicate enabled parts over a faint original. A minimum step width retains accessible controls; long sequences scroll horizontally. The master filter stays in the transport bar.

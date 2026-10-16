@@ -1,4 +1,4 @@
-import { WasmEngine } from './wasm-engine.js';
+import { WasmEngine } from './wasm-engine.js?v=6';
 
 const COPY_FLOATS_PER_BLOCK = 16384;
 class BreakwaterProcessor extends AudioWorkletProcessor {
@@ -24,6 +24,8 @@ class BreakwaterProcessor extends AudioWorkletProcessor {
             break;
           case 'queue': e.queue(data.ids); break;
           case 'arrange': e.arrange(data.items); break;
+          case 'stacks': e.stacks(data.items, data.start); break;
+          case 'crossfade': e.setCrossfade(data.position); break;
           case 'clip-mask': e.setClipMask(data.token, data.mask); break;
           case 'clip-filter': e.setClipFilter(data.token, data.mode, data.hz); break;
           case 'clip-level': e.setClipLevel(data.token, data.level); break;

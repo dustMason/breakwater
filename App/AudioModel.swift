@@ -15,7 +15,7 @@ final class AudioModel: ObservableObject {
         didSet {
             guard songs.indices.contains(selectedSong) else { return }
             let ids = songs[selectedSong].midiPads
-            control.async { [weak self] in self?.midiPads = ids; self?.heldNotes.removeAll(); self?.midiChord.removeAll() }
+            control.async { [weak self] in self?.midiPads = ids }
         }
     }
     let playback = PlaybackMonitor()
@@ -34,7 +34,8 @@ final class AudioModel: ObservableObject {
     @Published var outputName = "iPad audio"
     @Published var partMasks: [String: Int] = [:]
     @Published var partStatus: String?
-    @Published var arrangement: [ArrangementStep] = []
+    @Published var arrangement: [ArrangementStep] = [ArrangementStep(clips: []), ArrangementStep(clips: [])]
+    @Published var crossfade = 0.5
     @Published var selectedClipID: Int32?
     @Published var arrangementStatus: String?
     @Published private(set) var waitingForLoop = false
@@ -54,8 +55,6 @@ final class AudioModel: ObservableObject {
     #endif
     private var observers: [NSObjectProtocol] = []
     private var midiPads: [Int32: Int32] = [:]
-    private var heldNotes: Set<Int32> = []
-    private var midiChord: [Int32] = []
     private var startAttempted = false
     private var warnedOverflow = false
     private var hostScale = 0.0
@@ -131,12 +130,8 @@ final class AudioModel: ObservableObject {
             let note = value & 0xFF, velocity = value >> 8, kind = status & 0xF0
             guard let id = self.midiPads[note] else { return }
             if kind == 0x90 && velocity > 0 {
-                if self.heldNotes.isEmpty { self.midiChord = [] }
-                self.heldNotes.insert(note)
-                if !self.midiChord.contains(id) { self.midiChord.append(id) }
-                let chord = self.midiChord
-                DispatchQueue.main.async { [weak self] in self?.queue(chord) }
-            } else if kind == 0x80 || kind == 0x90 { self.heldNotes.remove(note) }
+                DispatchQueue.main.async { [weak self] in self?.addSample(id) }
+            }
         }
         midi?.sourcesChanged = { [weak self] in self?.midiSources = $0 }
         midi?.selectedID = midiSourceID; midi?.refresh()
@@ -208,13 +203,7 @@ final class AudioModel: ObservableObject {
     func retry() { if songs.isEmpty { loadLibrary() } else { retryAudio() } }
     private func updateOutput() { outputName = AVAudioSession.sharedInstance().currentRoute.outputs.map(\.portName).joined(separator: ", ") }
     func queue(_ ids: [Int32]) {
-        guard ready else { return }
-        let accepted = ids.filter { !disabled.contains($0) }
-        guard !accepted.isEmpty else { return }
-        failedLoops.subtract(accepted)
-        arrangement = accepted.map { ArrangementStep(clips: [makeClip($0)]) }
-        selectedClipID = arrangement.first?.clips.first?.id
-        submitArrangement()
+        for id in ids { addSample(id) }
     }
     var selectedClip: ArrangementClip? { arrangement.flatMap(\.clips).first { $0.id == selectedClipID } }
     var selectedSample: LoopSample? { selectedClip.flatMap { sampleByID[$0.sampleID] } }
@@ -223,36 +212,45 @@ final class AudioModel: ObservableObject {
     func songForSample(_ id: Int32) -> Song? { songs.first { $0.id == songByLoop[id] } }
     private func makeClip(_ id: Int32) -> ArrangementClip {
         let token = nextClipID; nextClipID = nextClipID == Int32.max ? 1 : nextClipID + 1
-        return ArrangementClip(id: token, sampleID: id, mask: (partMasks[songByLoop[id] ?? ""] ?? 15) & 15)
+        return ArrangementClip(id: token, sampleID: id, mask: 15)
     }
-    func addSample(_ id: Int32, at index: Int, layer: Bool) {
+    var quieterSide: Int {
+        if crossfade < 0.5 { return 1 }
+        if crossfade > 0.5 { return 0 }
+        return arrangement[0].clips.count <= arrangement[1].clips.count ? 0 : 1
+    }
+    func setCrossfade(_ value: Double) {
+        guard value.isFinite else { return }
+        crossfade = min(1, max(0, value))
+        let position = crossfade
+        control.async { [dsp] in bw_crossfade(dsp, position) }
+    }
+    func addSample(_ id: Int32, side: Int? = nil) {
         guard ready, !disabled.contains(id), sampleByID[id] != nil else { return }
         failedLoops.remove(id)
-        guard arrangement.reduce(0, { $0 + $1.clips.count }) < 64 else { arrangementStatus = "The sequence can hold up to 64 samples."; return }
-        if layer, arrangement.indices.contains(index), arrangement[index].clips.count >= 8 {
-            arrangementStatus = "A step can contain up to 8 layers."; return
-        }
+        let index = side ?? quieterSide
+        guard arrangement.indices.contains(index) else { return }
+        guard arrangement[index].clips.count < 8 else { arrangementStatus = "Side \(index == 0 ? "A" : "B") can hold up to 8 samples."; return }
         let clip = makeClip(id)
-        if layer, arrangement.indices.contains(index) { arrangement[index].clips.append(clip) }
-        else { arrangement.insert(ArrangementStep(clips: [clip]), at: min(arrangement.count, max(0, index))) }
+        arrangement[index].clips.append(clip)
         selectedClipID = clip.id; arrangementStatus = nil; submitArrangement()
     }
     func removeClip(_ token: Int32) {
         for i in arrangement.indices { arrangement[i].clips.removeAll { $0.id == token } }
-        arrangement.removeAll { $0.clips.isEmpty }
         if selectedClipID == token { selectedClipID = nil }
         submitArrangement(startIfStopped: false)
     }
     func clearArrangement() {
-        arrangement.removeAll(); selectedClipID = nil; arrangementStatus = nil
+        arrangement = [ArrangementStep(clips: []), ArrangementStep(clips: [])]; selectedClipID = nil; arrangementStatus = nil
         submitArrangement(startIfStopped: false)
     }
     private func submitArrangement(startIfStopped: Bool = true) {
-        arrangementStartsPlayback = startIfStopped
         let ids = Set(arrangement.flatMap(\.clips).map(\.sampleID))
+        let shouldStart = startIfStopped || (!ids.isEmpty && waitingForLoop && arrangementStartsPlayback)
+        arrangementStartsPlayback = shouldStart
         let missing = ids.subtracting(loadedLoops)
         if !missing.isEmpty {
-            waitingForLoop = startIfStopped
+            waitingForLoop = shouldStart
             arrangementStatus = missing.contains(where: { failedLoops.contains($0) })
                 ? "A loop couldn't load. Retry samples."
                 : "Loading loops · current playback continues"
@@ -267,8 +265,7 @@ final class AudioModel: ObservableObject {
             group.clips.map { BWClipWithLevel(loop: $0.sampleID, token: $0.id, step: Int32(step), mask: Int32($0.mask), filterType: Int32($0.filterType), filterHz: Int32($0.filterCutoff.rounded()), levelMilli: Int32(($0.level * 1000).rounded())) }
         }
         control.async { [dsp] in clips.withUnsafeBufferPointer {
-            if startIfStopped { bw_arrange_with_levels(dsp, $0.baseAddress, Int32($0.count)) }
-            else { bw_edit_arrangement_with_levels(dsp, $0.baseAddress, Int32($0.count)) }
+            bw_stacks(dsp, $0.baseAddress, Int32($0.count), shouldStart ? 1 : 0)
         } }
     }
     func retrySamples() { failedLoops.removeAll(); submitArrangement(startIfStopped: arrangementStartsPlayback) }
@@ -315,7 +312,6 @@ final class AudioModel: ObservableObject {
         control.async { [dsp] in bw_enable(dsp, id, enabled) }
         if enabled == 0 {
             for i in arrangement.indices { arrangement[i].clips.removeAll { $0.sampleID == id } }
-            arrangement.removeAll { $0.clips.isEmpty }
             if selectedClip == nil { selectedClipID = nil }
             submitArrangement(startIfStopped: false)
         }
@@ -379,11 +375,7 @@ final class AudioModel: ObservableObject {
         return orders
     }
     private var upcomingParts: [ArrangementClip] {
-        guard !arrangement.isEmpty else { return [] }
-        let index = arrangement.firstIndex { step in step.clips.contains { state.activeTokens.contains($0.id) } } ?? 0
-        var clips = arrangement[index].clips + arrangement[(index + 1) % arrangement.count].clips
-        if let selectedClip { clips.append(selectedClip) }
-        return clips
+        arrangement.flatMap(\.clips)
     }
     private func refreshParts() {
         for id in Set(upcomingParts.filter { $0.mask != 15 }.map(\.sampleID)) {
@@ -441,7 +433,7 @@ final class AudioModel: ObservableObject {
         waitingForLoop = false
         control.async { [dsp] in bw_transport(dsp,0) }
     }
-    func play() { if !arrangement.isEmpty { submitArrangement() }; control.async { [dsp] in bw_transport(dsp,2) } }
+    func play() { if arrangement.contains(where: { !$0.clips.isEmpty }) { submitArrangement() }; control.async { [dsp] in bw_transport(dsp,2) } }
     func nudge(_ milliseconds: Double) { control.async { [dsp] in bw_nudge(dsp, milliseconds) } }
     func align() { control.async { [dsp] in bw_transport(dsp,3) } }
     private func poll() {
@@ -449,9 +441,9 @@ final class AudioModel: ObservableObject {
         let count=Int(s.queueCount)
         let ids=withUnsafePointer(to:&s.queue) { pointer in pointer.withMemoryRebound(to:Int32.self,capacity:64) { Array(UnsafeBufferPointer(start:$0,count:count)) } }
         let activeCount = Int(s.activeCount)
-        let activeLoops = withUnsafePointer(to:&s.activeLoops) { pointer in pointer.withMemoryRebound(to:Int32.self,capacity:8) { Array(UnsafeBufferPointer(start:$0,count:activeCount)) } }
-        let activeTokens = withUnsafePointer(to:&s.activeTokens) { pointer in pointer.withMemoryRebound(to:Int32.self,capacity:8) { Array(UnsafeBufferPointer(start:$0,count:activeCount)) } }
-        let activeProgress = withUnsafePointer(to:&s.activeProgress) { pointer in pointer.withMemoryRebound(to:Double.self,capacity:8) { Array(UnsafeBufferPointer(start:$0,count:activeCount)) } }
+        let activeLoops = withUnsafePointer(to:&s.activeLoops) { pointer in pointer.withMemoryRebound(to:Int32.self,capacity:16) { Array(UnsafeBufferPointer(start:$0,count:activeCount)) } }
+        let activeTokens = withUnsafePointer(to:&s.activeTokens) { pointer in pointer.withMemoryRebound(to:Int32.self,capacity:16) { Array(UnsafeBufferPointer(start:$0,count:activeCount)) } }
+        let activeProgress = withUnsafePointer(to:&s.activeProgress) { pointer in pointer.withMemoryRebound(to:Double.self,capacity:16) { Array(UnsafeBufferPointer(start:$0,count:activeCount)) } }
         playback.state=PlaybackState(beat:s.beat,bpm:s.bpm,progress:s.loopProgress,playing:s.playing != 0,active:s.activeLoop,pending:s.pending != 0,queue:ids,activeLoops:activeLoops,activeTokens:activeTokens,activeProgress:activeProgress,activeStep:Int(s.activeStep),clockState:Int(s.clockState))
         refreshParts()
         if s.droppedCommands>0 && !warnedOverflow { warnedOverflow=true; error="MIDI input overflowed. Check for a MIDI feedback loop, then restart the app."; stop() }

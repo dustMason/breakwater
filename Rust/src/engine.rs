@@ -2,7 +2,8 @@ use crate::dsp::{Filter, MasterDynamics, Stereo, Voice};
 use crate::sample::{Bank, MAX_LOOPS};
 
 pub const MAX_QUEUE: usize = 64;
-pub const MAX_LAYERS: usize = 8;
+pub const MAX_LAYERS: usize = 16;
+const MAX_SIDE_LAYERS: usize = 8;
 #[derive(Clone, Copy, Default, Debug)]
 #[repr(C)]
 pub struct Clip {
@@ -54,6 +55,8 @@ pub const WEB_STOP: u8 = 13;
 pub const WEB_TEMPO: u8 = 14;
 pub const CLIP_FILTER: u8 = 15;
 pub const CLIP_LEVEL: u8 = 16;
+pub const STACKS: u8 = 17;
+pub const CROSSFADE: u8 = 18;
 
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -126,6 +129,11 @@ pub struct Core {
     arrangement_count: usize,
     pending_arrangement_count: usize,
     arranged: bool,
+    stacks: bool,
+    pending_stacks: bool,
+    crossfade: f64,
+    crossfade_target: f64,
+    side_gain: [f64; 2],
     arrangement_pending: bool,
     arrangement_step: i32,
     step_beats: i32,
@@ -181,6 +189,11 @@ impl Core {
             arrangement_count: 0,
             pending_arrangement_count: 0,
             arranged: false,
+            stacks: false,
+            pending_stacks: false,
+            crossfade: 0.5,
+            crossfade_target: 0.5,
+            side_gain: [std::f64::consts::FRAC_1_SQRT_2; 2],
             arrangement_pending: false,
             arrangement_step: 0,
             step_beats: 4,
@@ -247,6 +260,10 @@ impl Core {
         }
     }
     fn launch_step(&mut self, b: &Bank, step: i32, at: f64, phase: f64) {
+        if self.stacks {
+            self.launch_stacks(b, at, false, phase);
+            return;
+        }
         if self.arranged {
             self.old_layers = self.layers;
             self.old_layer_count = self.layer_count;
@@ -290,12 +307,83 @@ impl Core {
             }
         }
     }
-    fn apply_arrangement(&mut self, b: &Bank, at: f64) {
+    // Replace the stack membership on a bar boundary while preserving the
+    // phase and filter state of every retained clip. New clips start at beat 1.
+    fn launch_stacks(&mut self, b: &Bank, at: f64, preserve: bool, phase: f64) {
+        self.old_layers = self.layers;
+        self.old_layer_count = if self.arranged { self.layer_count } else { 0 };
+        self.layer_transition = (self.sr * 0.005) as i32;
+        self.layer_count = 0;
+        self.step_beats = 4;
+        self.start_beat = at;
+        self.arrangement_step = 0;
+        self.active = -1;
+        for c in &self.arrangement[..self.arrangement_count] {
+            if !self.valid(b, c.loop_id) || self.layer_count >= MAX_LAYERS {
+                continue;
+            }
+            let retained = if preserve {
+                self.old_layers[..self.old_layer_count]
+                    .iter()
+                    .find(|v| v.token == c.token && v.id == c.loop_id)
+                    .copied()
+            } else {
+                None
+            };
+            let mut v = if let Some(v) = retained {
+                v
+            } else {
+                let mut v = Voice::default();
+                v.token = c.token;
+                v.start_beat = at;
+                v.mask(c.mask, true);
+                v.prepare_filter(self.sr, c.filter_type, c.filter_hz as f64);
+                v.set_level(c.level_milli as f32 / 1000., true);
+                v.begin(
+                    b,
+                    c.loop_id,
+                    self.mode,
+                    phase.max(0.) % Self::beats(b, c.loop_id) as f64,
+                );
+                v
+            };
+            v.side = c.step as usize;
+            v.mask(c.mask, false);
+            v.set_filter(c.filter_type, c.filter_hz as f64);
+            v.set_level(c.level_milli as f32 / 1000., false);
+            self.layers[self.layer_count] = v;
+            self.layer_count += 1;
+            if self.active < 0 {
+                self.active = c.loop_id;
+            }
+        }
+    }
+    fn rephase_stacks(&mut self, b: &Bank) {
+        self.old_layers = self.layers;
+        self.old_layer_count = self.layer_count;
+        self.layer_transition = (self.sr * 0.005) as i32;
+        for voice in &mut self.layers[..self.layer_count] {
+            let phase = (self.beat - voice.start_beat).rem_euclid(Self::beats(b, voice.id) as f64);
+            voice.start_beat = self.beat - phase;
+            voice.begin(b, voice.id, self.mode, phase);
+        }
+    }
+    fn apply_arrangement(&mut self, b: &Bank, at: f64, preserve_existing: bool) {
+        let was_stacks = self.stacks;
+        self.stacks = self.pending_stacks;
         self.arrangement_count = self.pending_arrangement_count;
         self.arrangement[..self.arrangement_count]
             .copy_from_slice(&self.pending_arrangement[..self.arrangement_count]);
         self.arrangement_pending = false;
         self.pending = false;
+        if self.stacks {
+            self.launch_stacks(b, at, preserve_existing && was_stacks, 0.);
+            self.arranged = true;
+            if self.layer_count == 0 && !self.external {
+                self.running = false;
+            }
+            return;
+        }
         let mut step = -1;
         for c in &self.arrangement[..self.arrangement_count] {
             if self.valid(b, c.loop_id) && (step < 0 || c.step < step) {
@@ -356,6 +444,7 @@ impl Core {
         }
     }
     fn apply_pending(&mut self, b: &Bank, at: f64) {
+        self.stacks = false;
         self.cycle_count = 0;
         for i in 0..self.pending_count {
             let id = self.pending_ids[i];
@@ -419,9 +508,14 @@ impl Core {
             self.clock_pulse = -1.;
         }
         if self.arrangement_pending {
-            self.apply_arrangement(b, self.beat)
+            self.apply_arrangement(b, self.beat, !reset);
+            if self.stacks && !reset {
+                self.rephase_stacks(b);
+            }
         } else if self.pending {
             self.apply_pending(b, self.beat)
+        } else if self.arranged && self.arrangement_count > 0 && self.stacks && !reset {
+            self.rephase_stacks(b);
         } else if self.arranged && self.arrangement_count > 0 {
             let step = if reset {
                 self.next_step(b, -1)
@@ -507,7 +601,9 @@ impl Core {
                 self.beat = value as f64 * 0.25;
                 self.clock_pulse = self.beat * 24. - 1.;
                 self.next_bar = (self.beat / 4.).floor() * 4. + 4.;
-                if self.arranged && self.layer_count > 0 {
+                if self.arranged && self.layer_count > 0 && self.stacks {
+                    self.rephase_stacks(b);
+                } else if self.arranged && self.layer_count > 0 {
                     self.start_beat =
                         (self.beat / self.step_beats as f64).floor() * self.step_beats as f64;
                     self.launch_step(
@@ -529,7 +625,10 @@ impl Core {
         }
     }
     pub fn command(&mut self, b: &Bank, c: Command) {
-        if self.web_rewind && !self.running && (c.kind == QUEUE || c.kind == ARRANGE) {
+        let was_rewound = self.web_rewind
+            && !self.running
+            && (c.kind == QUEUE || c.kind == ARRANGE || c.kind == STACKS);
+        if was_rewound {
             self.beat = 0.;
             self.next_bar = 4.;
             self.web_rewind = false;
@@ -557,8 +656,9 @@ impl Core {
                     }
                 }
             }
-            ARRANGE => {
+            ARRANGE | STACKS => {
                 self.pending_arrangement_count = 0;
+                self.pending_stacks = c.kind == STACKS;
                 let mut per_step = [0; MAX_QUEUE];
                 for i in 0..c.count as usize {
                     let mut clip = c.clips[i];
@@ -566,7 +666,8 @@ impl Core {
                         && clip.step >= 0
                         && (clip.step as usize) < MAX_QUEUE
                         && clip.token > 0
-                        && per_step[clip.step as usize] < MAX_LAYERS
+                        && (!self.pending_stacks || clip.step < 2)
+                        && per_step[clip.step as usize] < MAX_SIDE_LAYERS
                     {
                         clip.mask &= 15;
                         clip.filter_type = clip.filter_type.clamp(0, 3);
@@ -580,11 +681,16 @@ impl Core {
                 self.arrangement_pending = true;
                 self.pending = false;
                 if c.value != 0 && !self.running && !self.external {
-                    self.apply_arrangement(b, self.beat);
+                    self.apply_arrangement(b, self.beat, !was_rewound);
                     if self.active >= 0 {
                         self.running = true;
                         self.next_bar = (self.beat / 4.).floor() * 4. + 4.;
                     }
+                }
+            }
+            CROSSFADE => {
+                if c.number.is_finite() {
+                    self.crossfade_target = c.number.clamp(0., 1.);
                 }
             }
             ENABLE => {
@@ -594,6 +700,7 @@ impl Core {
                         && !self.enabled[c.value as usize]
                     {
                         if !self.arrangement_pending {
+                            self.pending_stacks = self.stacks;
                             self.pending_arrangement_count = self.arrangement_count;
                             self.pending_arrangement[..self.arrangement_count]
                                 .copy_from_slice(&self.arrangement[..self.arrangement_count]);
@@ -621,7 +728,9 @@ impl Core {
             MODE => {
                 if self.mode != c.value {
                     self.mode = if c.value != 0 { 1 } else { 0 };
-                    if self.arranged && self.layer_count > 0 {
+                    if self.arranged && self.layer_count > 0 && self.stacks {
+                        self.rephase_stacks(b);
+                    } else if self.arranged && self.layer_count > 0 {
                         self.launch_step(
                             b,
                             self.arrangement_step,
@@ -811,6 +920,16 @@ impl Core {
     pub fn render(&mut self, b: &Bank, left: &mut [f32], right: &mut [f32], host: f64) {
         let tempo_slew = 1. - (-1. / (self.sr * 0.09)).exp();
         for i in 0..left.len() {
+            let previous = self.crossfade;
+            self.crossfade += (self.crossfade_target - self.crossfade)
+                .clamp(-1. / (self.sr * 0.008), 1. / (self.sr * 0.008));
+            if self.crossfade != previous {
+                self.side_gain = [
+                    (self.crossfade * std::f64::consts::FRAC_PI_2).cos(),
+                    (self.crossfade * std::f64::consts::FRAC_PI_2).sin(),
+                ];
+            }
+            let side_gain = self.side_gain;
             let now = host + i as f64 / self.sr;
             self.bpm += (self.target_bpm - self.bpm) * tempo_slew;
             let mut correction = 0.;
@@ -853,12 +972,13 @@ impl Core {
                     let boundary = self.next_bar;
                     self.next_bar += 4.;
                     if self.arrangement_pending {
-                        self.apply_arrangement(b, boundary)
+                        self.apply_arrangement(b, boundary, true)
                     } else if self.pending {
                         self.apply_pending(b, boundary)
                     }
                 }
                 if self.arranged
+                    && !self.stacks
                     && self.layer_count > 0
                     && self.beat - self.start_beat + 1e-9 >= self.step_beats as f64
                 {
@@ -888,12 +1008,19 @@ impl Core {
                 as f32;
             let mut sample = Stereo::default();
             if self.gain > 0. && self.arranged {
-                let mut weights_squared = 0.;
+                let mut groups = [Stereo::default(); 2];
+                let mut weights_squared = [0.; 2];
                 for v in 0..self.layer_count {
                     let layer = &mut self.layers[v];
                     layer.advance_parts(b, self.sr);
-                    let phase =
-                        (self.beat - self.start_beat).max(0.) % Self::beats(b, layer.id) as f64;
+                    let phase = (self.beat
+                        - if self.stacks {
+                            layer.start_beat
+                        } else {
+                            self.start_beat
+                        })
+                    .max(0.)
+                        % Self::beats(b, layer.id) as f64;
                     let part = if self.running {
                         layer.wrapped(b, phase, delta, self.sr)
                     } else {
@@ -901,30 +1028,41 @@ impl Core {
                     };
                     let part = layer.filter_sample(part);
                     let weight = layer.mix_weight();
-                    weights_squared += weight * weight;
-                    sample.l += part.l;
-                    sample.r += part.r;
+                    let side = if self.stacks { layer.side } else { 0 };
+                    weights_squared[side] += weight * weight;
+                    groups[side].l += part.l;
+                    groups[side].r += part.r;
                 }
-                // Equal-power mixing for full-level clips; zero-level and
-                // fully muted clips gradually stop consuming headroom.
-                let normalizer = 1. / f64::sqrt(f64::max(1., weights_squared));
-                sample.l = (sample.l as f64 * normalizer) as f32;
-                sample.r = (sample.r as f64 * normalizer) as f32;
+                for side in 0..2 {
+                    let normalizer = 1. / f64::sqrt(f64::max(1., weights_squared[side]));
+                    let gain = normalizer * if self.stacks { side_gain[side] } else { 1. };
+                    sample.l += (groups[side].l as f64 * gain) as f32;
+                    sample.r += (groups[side].r as f64 * gain) as f32;
+                }
                 if self.layer_transition > 0 {
                     let mut old = Stereo::default();
-                    let mut old_weights_squared = 0.;
+                    let mut groups = [Stereo::default(); 2];
+                    let mut old_weights_squared = [0.; 2];
                     for v in 0..self.old_layer_count {
                         self.old_layers[v].advance_parts(b, self.sr);
                         let x = self.old_layers[v].tail(b, delta, self.sr);
                         let x = self.old_layers[v].filter_sample(x);
                         let weight = self.old_layers[v].mix_weight();
-                        old_weights_squared += weight * weight;
-                        old.l += x.l;
-                        old.r += x.r;
+                        let side = if self.stacks {
+                            self.old_layers[v].side
+                        } else {
+                            0
+                        };
+                        old_weights_squared[side] += weight * weight;
+                        groups[side].l += x.l;
+                        groups[side].r += x.r;
                     }
-                    let normalizer = 1. / f64::sqrt(f64::max(1., old_weights_squared));
-                    old.l = (old.l as f64 * normalizer) as f32;
-                    old.r = (old.r as f64 * normalizer) as f32;
+                    for side in 0..2 {
+                        let normalizer = 1. / f64::sqrt(f64::max(1., old_weights_squared[side]));
+                        let gain = normalizer * if self.stacks { side_gain[side] } else { 1. };
+                        old.l += (groups[side].l as f64 * gain) as f32;
+                        old.r += (groups[side].r as f64 * gain) as f32;
+                    }
                     let f = self.layer_transition as f64 / (self.sr * 0.005);
                     sample.l = ((sample.l as f64 * (1. - f)) as f32) + ((old.l as f64 * f) as f32);
                     sample.r = ((sample.r as f64 * (1. - f)) as f32) + ((old.r as f64 * f) as f32);
@@ -1024,7 +1162,12 @@ impl Core {
                 self.active
             };
             let beats = Self::beats(b, id) as f64;
-            s.active_progress[i] = (self.beat - self.start_beat).max(0.) % beats / beats;
+            let start = if self.arranged && self.stacks {
+                self.layers[i].start_beat
+            } else {
+                self.start_beat
+            };
+            s.active_progress[i] = (self.beat - start).max(0.) % beats / beats;
         }
         s
     }

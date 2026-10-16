@@ -23,6 +23,8 @@ impl Stereo {
 pub struct Voice {
     pub id: i32,
     pub token: i32,
+    pub side: usize,
+    pub start_beat: f64,
     mode: i32,
     slice: i32,
     previous_slice: i32,
@@ -46,6 +48,8 @@ impl Default for Voice {
         Self {
             id: -1,
             token: 0,
+            side: 0,
+            start_beat: 0.,
             mode: 0,
             slice: -1,
             previous_slice: -1,

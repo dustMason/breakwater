@@ -5,21 +5,27 @@ primary_target: "Web/index.html"
 related_targets: ["Web/app.js","Web/style.css"]
 ---
 
-# Browser library and timeline
+# Browser library and two stacks
 Mode: Operate. Static HTML/CSS/JavaScript port of the approved native performance surface; desktop, tablet and small screens.
 
 ## Direction contract
-THESIS: Browse the shared loop catalog by folder and build a playable, layered arrangement on a bar-oriented browser timeline.
+THESIS: Browse real loop waveforms in song folders and blend two independently looping stacks.
 OWN-WORLD: Continue the established neutral surfaces, system typography, thin borders, blue playback state, real waveforms and approved B icon.
-STORY: Open a song folder, add or drag loops into the timeline, shape each clip directly, change tempo and edit exclusions. Browsing preserves playback.
-FIRST VIEWPORT: The source and approximate BPM are in the header; a scrollable Library is left of the Timeline and transport is below. Timeline steps contain stacked waveform clips with embedded part switches, a filter knob and a vertical level fader. Selection outlines, a blue playing state and a playhead distinguish state. Crowded steps scroll horizontally; the dock wraps on narrow screens.
-FORM: Extend the established waveform-instrument world with the native timeline composition and browser-appropriate controls. No new visual world or comp round. Browser playback omits MIDI and slicing.
-FINISH: The supplied independent timeline reviewer scored all five material fixes resolved. The source and capture evidence and its limits are recorded below.
+STORY: Tap a loop to add it to the quieter side, or drag to A or B; shape each clip and crossfade the running stacks.
+FIRST VIEWPORT: A scrollable Library sits left of side-by-side A and B stacks; a crossfader sits below them and transport remains at the bottom. Contiguous clip rows carry waveforms, four part switches, a filter knob and vertical level fader.
+FORM: Extend the established waveform-instrument world with two concurrent stacks and a direct crossfader; preserve the existing neutral surfaces, blue playing treatment and touch-sized controls.
+FINISH: The A/B redesign was checked in a muted desktop browser; the native simulator is currently unavailable because CoreSimulator and Xcode versions do not match. Earlier captures below are historical.
+
+
+## Current A/B stack extension — 2026-10-16
+
+Each side holds up to eight concurrently looping clips; clips added during playback start at the next bar while retained clips keep phase. Crossfade position determines the quieter side for library taps; a centered tie uses the less-populated side and then A. Dragging targets either side explicitly. Four part switches start enabled for each new clip.
 
 ## Constraints
 Static hosting only; local preview uses an ordinary HTTP server. Web Audio runs on the audio thread, keeps phase during tempo changes, and handles context interruptions explicitly. No automatic audio playback. The established visual design system remains unchanged while the native and web timeline evolve together.
 
-## Timeline extension — 2026-10-15
+## Historical timeline extension — 2026-10-15
+This section is superseded by the A/B stack extension above.
 The Library expands song folders into numbered waveform rows and loop lengths. Activating a row adds it at the end; dragging places it directly. Keyboard activation and Alt/Option shortcuts provide layer and before/after placement relative to the selected step. Edit makes row activation exclude or restore a loop. The current source BPM remains visible, with Use source in the dock.
 
 Steps run horizontally and their widths follow the longest clip in each step, subject to a minimum width for the controls. Drop at a step edge or plus margin to insert; drop beneath the clips to layer. Shorter clips repeat across the step and their waveform repeats visually. Zoom, Fit and Clear sit above the scrolling timeline. A waveform selects a clip and a separate control removes it. Selection, active playback and playhead progress have distinct visual treatments.

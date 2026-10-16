@@ -43,56 +43,18 @@ struct GridView: View {
     }
 }
 
-private enum LibraryPlacement {
-    case end, before, after, layer
-    var accessibilityValue: String {
-        switch self {
-        case .end: return "Add to end"
-        case .before: return "Insert before selected step"
-        case .after: return "Insert after selected step"
-        case .layer: return "Add as layer"
-        }
-    }
-    var accessibilityHint: String {
-        switch self {
-        case .end: return "Add to the end of the timeline, or drag to place it"
-        case .before: return "Insert before the selected step, or at the beginning if none is selected"
-        case .after: return "Insert after the selected step, or at the end if none is selected"
-        case .layer: return "Add as a layer to the selected step, or the last step if none is selected"
-        }
-    }
-    var hint: String {
-        switch self {
-        case .end: return "Tap to add at end · drag to place"
-        case .before: return "Tap to insert before selection"
-        case .after: return "Tap to insert after selection"
-        case .layer: return "Tap to layer on selection"
-        }
-    }
-}
-
 private struct LibrarySidebar: View {
     @ObservedObject var audio: AudioModel
     @State private var expanded: Set<String> = []
-    @State private var placement = LibraryPlacement.end
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Library").font(.headline)
                 Spacer(minLength: 0)
-                Menu {
-                    Button("Add to end") { placement = .end }
-                    Button("Insert before selected step") { placement = .before }
-                    Button("Insert after selected step") { placement = .after }
-                    Button("Add as layer") { placement = .layer }
-                } label: {
-                    HStack(spacing: 2) { Text("Add"); Image(systemName: "chevron.down").font(.caption2) }
-                        .frame(minHeight: 44)
-                }.accessibilityLabel("Library tap action").accessibilityValue(placement.accessibilityValue).accessibilityIdentifier("placementMenu")
                 Button(audio.editing ? "Done" : "Edit") { audio.editing.toggle() }
                     .frame(minHeight: 44).accessibilityIdentifier("editPads")
             }.padding(.horizontal, 10)
-            Text(audio.editing ? "Tap to exclude or restore" : placement.hint)
+            Text(audio.editing ? "Tap to exclude or restore" : "Tap for the quieter side · drag to A or B")
                 .font(.caption2).foregroundStyle(Palette.secondary).padding(.horizontal, 10).padding(.bottom, 8)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -110,7 +72,7 @@ private struct LibrarySidebar: View {
                         .buttonStyle(.plain).foregroundStyle(index == audio.selectedSong ? Palette.accent : Color(uiColor: .label))
                         .padding(.horizontal, 10).accessibilityIdentifier("song_\(song.id)")
                         if expanded.contains(song.id) {
-                            ForEach(song.loops) { sample in LibraryLoopRow(audio: audio, song: song, sample: sample, placement: placement) }
+                            ForEach(song.loops) { sample in LibraryLoopRow(audio: audio, song: song, sample: sample) }
                         }
                         Divider()
                     }
@@ -127,21 +89,16 @@ private struct LibraryLoopRow: View {
     @ObservedObject var audio: AudioModel
     let song: Song
     let sample: LoopSample
-    let placement: LibraryPlacement
     private var excluded: Bool { audio.disabled.contains(sample.id) }
+    private func add(to side: Int) {
+        if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
+        audio.addSample(sample.id, side: side)
+    }
     var body: some View {
         Button {
             if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
             if audio.editing { audio.toggleDisabled(sample.id) }
-            else {
-                let selected = audio.arrangement.firstIndex { $0.clips.contains { $0.id == audio.selectedClipID } }
-                switch placement {
-                case .end: audio.addSample(sample.id, at: audio.arrangement.count, layer: false)
-                case .before: audio.addSample(sample.id, at: selected ?? 0, layer: false)
-                case .after: audio.addSample(sample.id, at: selected.map { $0 + 1 } ?? audio.arrangement.count, layer: false)
-                case .layer: audio.addSample(sample.id, at: selected ?? max(0, audio.arrangement.count - 1), layer: !audio.arrangement.isEmpty)
-                }
-            }
+            else { audio.addSample(sample.id) }
         } label: {
             HStack(spacing: 6) {
                 Text(sample.label).font(.caption.weight(.semibold).monospacedDigit()).frame(width: 23, alignment: .leading)
@@ -157,22 +114,9 @@ private struct LibraryLoopRow: View {
         }
         .accessibilityLabel("\(song.name), loop \(sample.label), \(sample.beats / 4) bars")
         .accessibilityValue(excluded ? "Excluded" : "Ready")
-        .accessibilityHint(audio.editing ? "Toggle exclusion" : placement.accessibilityHint)
-        .accessibilityAction(named: Text("Add as layer")) {
-            if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
-            let index = audio.arrangement.firstIndex { $0.clips.contains { $0.id == audio.selectedClipID } } ?? max(0, audio.arrangement.count - 1)
-            audio.addSample(sample.id, at: index, layer: !audio.arrangement.isEmpty)
-        }
-        .accessibilityAction(named: Text("Insert before selected step")) {
-            if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
-            let index = audio.arrangement.firstIndex { $0.clips.contains { $0.id == audio.selectedClipID } } ?? 0
-            audio.addSample(sample.id, at: index, layer: false)
-        }
-        .accessibilityAction(named: Text("Insert after selected step")) {
-            if let index = audio.songs.firstIndex(where: { $0.id == song.id }), index != audio.selectedSong { audio.selectedSong = index }
-            let index = audio.arrangement.firstIndex { $0.clips.contains { $0.id == audio.selectedClipID } }.map { $0 + 1 } ?? audio.arrangement.count
-            audio.addSample(sample.id, at: index, layer: false)
-        }
+        .accessibilityHint(audio.editing ? "Toggle exclusion" : "Add to the quieter side. Drag to choose a side.")
+        .accessibilityAction(named: Text("Add to side A")) { add(to: 0) }
+        .accessibilityAction(named: Text("Add to side B")) { add(to: 1) }
         .accessibilityIdentifier("pad_\(sample.id)")
     }
 }
@@ -225,7 +169,7 @@ private struct PlaybackContent: View {
         let canStop = audio.state.playing || audio.waitingForLoop
         return Button {
             if canStop { audio.stop() }
-            else if audio.arrangement.isEmpty, let first = song?.loops.first(where: { !audio.disabled.contains($0.id) }) { audio.queue([first.id]) }
+            else if audio.arrangement.allSatisfy({ $0.clips.isEmpty }), let first = song?.loops.first(where: { !audio.disabled.contains($0.id) }) { audio.queue([first.id]) }
             else { audio.play() }
         } label: {
             Label(canStop ? "Stop" : "Play", systemImage: canStop ? "stop.fill" : "play.fill")
@@ -315,11 +259,11 @@ private struct MasterFilterControl: View {
     }
 }
 
-private func receiveSample(_ providers: [NSItemProvider], audio: AudioModel, index: Int, layer: Bool) -> Bool {
-    guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else { return false }
+private func receiveSample(_ providers: [NSItemProvider], audio: AudioModel, side: Int) -> Bool {
+    guard let provider = providers.first else { return false }
     provider.loadObject(ofClass: NSString.self) { object, _ in
         guard let value = object as? String, let id = Int32(value) else { return }
-        DispatchQueue.main.async { audio.addSample(id, at: index, layer: layer) }
+        DispatchQueue.main.async { audio.addSample(id, side: side) }
     }
     return true
 }
@@ -327,126 +271,80 @@ private func receiveSample(_ providers: [NSItemProvider], audio: AudioModel, ind
 private struct ArrangementTray: View {
     @ObservedObject var audio: AudioModel
     @ObservedObject var playback: PlaybackMonitor
-    @State private var zoom: CGFloat = 1
-    private func beats(_ step: ArrangementStep) -> Int { step.clips.map { audio.sample($0.sampleID)?.beats ?? 4 }.max() ?? 4 }
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 4) {
+            HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Timeline").font(.headline)
-                    Text(audio.arrangementStatus ?? audio.partStatus ?? (audio.arrangement.isEmpty ? "Drag a loop here to start" : "Drop beneath a clip to layer"))
+                    Text("Stacks").font(.headline)
+                    Text(audio.arrangementStatus ?? audio.partStatus ?? "Tap a loop to add it to the quieter side")
                         .font(.caption2).foregroundStyle(Palette.secondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 if audio.arrangementStatus?.hasPrefix("A loop couldn't load") == true { Button("Retry") { audio.retrySamples() } }
                 if audio.partStatus?.hasPrefix("Parts unavailable") == true { Button("Retry parts") { audio.retryParts() }.frame(minHeight: 44) }
-                Button { zoom = max(1, zoom / 1.5) } label: { Image(systemName: "minus.magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("Zoom out timeline")
-                Button("Fit") { zoom = 1 }.frame(minHeight: 44).accessibilityIdentifier("zoomFit")
-                Button { zoom = min(128, zoom * 1.5) } label: { Image(systemName: "plus.magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("Zoom in timeline")
-                Button("Clear") { audio.clearArrangement() }.disabled(audio.arrangement.isEmpty).frame(minHeight: 44).accessibilityIdentifier("clearArrangement")
+                Button("Clear") { audio.clearArrangement() }.disabled(audio.arrangement.allSatisfy { $0.clips.isEmpty })
+                    .frame(minHeight: 44).accessibilityIdentifier("clearArrangement")
             }.padding(.horizontal, 10)
             Divider()
             GeometryReader { geometry in
-                let availableWidth = max(geometry.size.width, 100) * zoom
-                let totalBeats = max(1, audio.arrangement.reduce(0) { $0 + beats($1) })
-                let musicalWidth = max(0, availableWidth - 72)
-                let stepWidths = audio.arrangement.map { max(270, musicalWidth * CGFloat(beats($0)) / CGFloat(totalBeats)) }
-                let width = audio.arrangement.isEmpty ? availableWidth : max(availableWidth, stepWidths.reduce(72, +))
-                let layers = audio.arrangement.map { $0.clips.count }.max() ?? 1
-                let height = max(geometry.size.height, CGFloat(layers) * 150 + 85)
+                let width = max(geometry.size.width, 540)
                 ScrollView([.horizontal, .vertical]) {
                     HStack(alignment: .top, spacing: 0) {
-                        if audio.arrangement.isEmpty {
-                            SequenceDropGap(audio: audio, index: 0, empty: true).frame(width: width, height: height)
-                        } else {
-                            ForEach(Array(audio.arrangement.enumerated()), id: \.element.id) { index, step in
-                                if index == 0 { SequenceDropGap(audio: audio, index: index, empty: false).frame(width: 36, height: height) }
-                                SequenceCard(audio: audio, playback: playback, step: step, index: index,
-                                             width: stepWidths[index],
-                                             bar: 1 + audio.arrangement.prefix(index).reduce(0) { $0 + beats($1) / 4 })
-                                    .frame(width: stepWidths[index], height: height)
-                            }
-                            SequenceDropGap(audio: audio, index: audio.arrangement.count, empty: false).frame(width: 36, height: height)
+                        ForEach(0..<2) { side in
+                            StackColumn(audio: audio, playback: playback, side: side)
+                                .frame(width: width / 2).frame(minHeight: geometry.size.height, alignment: .top)
                         }
-                    }.frame(width: width, height: height, alignment: .topLeading)
+                    }.frame(width: width, alignment: .topLeading)
                 }.background(Color(uiColor: .secondarySystemBackground)).accessibilityIdentifier("timelineScroll")
             }
+            Divider()
+            HStack(spacing: 8) {
+                Button("A") { audio.setCrossfade(0) }.frame(width: 44, height: 44)
+                    .accessibilityLabel("Fade to side A")
+                Slider(value: Binding(get: { audio.crossfade }, set: { audio.setCrossfade($0) }), in: 0...1, step: 0.01)
+                    .tint(Palette.accent).accessibilityLabel("Crossfader").accessibilityValue("\(Int(audio.crossfade*100)) percent toward side B")
+                    .accessibilityIdentifier("crossfader")
+                Button("B") { audio.setCrossfade(1) }.frame(width: 44, height: 44)
+                    .accessibilityLabel("Fade to side B")
+            }.padding(.horizontal, 10)
         }
     }
 }
 
-private struct SequenceDropGap: View {
-    @ObservedObject var audio: AudioModel
-    let index: Int
-    let empty: Bool
-    @State private var targeted = false
-    var body: some View {
-        ZStack(alignment: empty ? .center : .top) {
-            Rectangle().fill(targeted ? Palette.accent.opacity(0.12) : Color.clear)
-            Text(empty ? "Drag a loop here to start your sequence" : "+")
-                .font(empty ? .subheadline : .title3).foregroundStyle(targeted ? Palette.accent : Palette.secondary)
-                .padding(.top, empty ? 0 : 42)
-        }
-        .contentShape(Rectangle())
-        .onDrop(of: [UTType.plainText], isTargeted: $targeted) { receiveSample($0, audio: audio, index: index, layer: false) }
-        .accessibilityIdentifier("dropStep_\(index)")
-    }
-}
-
-private struct SequenceCard: View {
+private struct StackColumn: View {
     @ObservedObject var audio: AudioModel
     @ObservedObject var playback: PlaybackMonitor
-    let step: ArrangementStep
-    let index: Int
-    let width: CGFloat
-    let bar: Int
-    @State private var targetPosition: Int? = nil
+    let side: Int
+    @State private var targeted = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("BAR \(bar)").font(.caption2.weight(.semibold)).foregroundStyle(Palette.secondary)
-                .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading).padding(.horizontal, 6)
+            HStack {
+                Text(side == 0 ? "A" : "B").font(.title3.weight(.bold))
+                Text("\(audio.arrangement[side].clips.count) / 8").font(.caption.monospacedDigit()).foregroundStyle(Palette.secondary)
+                Spacer()
+                if audio.arrangement[side].clips.count == 8 { Text("FULL").font(.caption2.weight(.semibold)).foregroundStyle(Palette.secondary) }
+                else if side == audio.quieterSide { Text("ADD HERE").font(.caption2.weight(.semibold)).foregroundStyle(Palette.accent) }
+            }.padding(.horizontal, 10).frame(height: 44)
             Divider()
-            ForEach(step.clips) { clip in
+            ForEach(audio.arrangement[side].clips) { clip in
                 if let sample = audio.sample(clip.sampleID), let song = audio.songForSample(clip.sampleID) {
                     let index = playback.state.activeTokens.firstIndex(of: clip.id)
                     ClipRow(audio: audio, clip: clip, sample: sample, song: song,
                             active: playback.state.playing && index != nil,
                             progress: index.flatMap { playback.state.activeProgress.indices.contains($0) ? playback.state.activeProgress[$0] : nil } ?? 0,
-                            stepBeats: step.clips.map { audio.sample($0.sampleID)?.beats ?? 4 }.max() ?? 4,
-                            stepNumber: self.index + 1).frame(height: 150)
+                            stepBeats: sample.beats, stepNumber: side + 1).frame(height: 150)
                 }
             }
-            Text("+ Drop a layer").font(.caption2).foregroundStyle(targetPosition == -1 ? Palette.accent : Palette.secondary)
-                .frame(maxWidth: .infinity, minHeight: 40)
+            Text(audio.arrangement[side].clips.isEmpty ? "Drop a loop on side \(side == 0 ? "A" : "B")" : "+ Drop another loop")
+                .font(.caption).foregroundStyle(targeted ? Palette.accent : Palette.secondary)
+                .frame(maxWidth: .infinity, minHeight: 60)
             Spacer(minLength: 0)
         }
-        .background(targetPosition == -1 ? Palette.accent.opacity(0.12) : Color(uiColor: .systemBackground).opacity(0.7))
-        .overlay(Rectangle().strokeBorder(targetPosition == -1 ? Palette.accent : Color(uiColor: .separator).opacity(0.5)))
-        .overlay(alignment: .leading) { if targetPosition == index { Rectangle().fill(Palette.accent).frame(width: 4) } }
-        .overlay(alignment: .trailing) { if targetPosition == index + 1 { Rectangle().fill(Palette.accent).frame(width: 4) } }
+        .background(targeted ? Palette.accent.opacity(0.12) : Color(uiColor: .systemBackground).opacity(0.7))
+        .overlay(Rectangle().strokeBorder(Color(uiColor: .separator).opacity(0.5)).allowsHitTesting(false))
         .contentShape(Rectangle())
-        .onDrop(of: [UTType.plainText], delegate: SequenceDropDelegate(audio: audio, index: index, width: width, targetPosition: $targetPosition))
-    }
-}
-
-private struct SequenceDropDelegate: DropDelegate {
-    let audio: AudioModel
-    let index: Int
-    let width: CGFloat
-    @Binding var targetPosition: Int?
-    private func position(_ info: DropInfo) -> Int {
-        let edge = min(24, width / 3)
-        if info.location.x < edge { return index }
-        if info.location.x > width - edge { return index + 1 }
-        return -1
-    }
-    func dropEntered(info: DropInfo) { targetPosition = position(info) }
-    func dropUpdated(info: DropInfo) -> DropProposal? { targetPosition = position(info); return DropProposal(operation: .copy) }
-    func dropExited(info: DropInfo) { targetPosition = nil }
-    func performDrop(info: DropInfo) -> Bool {
-        let destination = position(info); targetPosition = nil
-        return receiveSample(info.itemProviders(for: [UTType.plainText]), audio: audio,
-                             index: destination < 0 ? index : destination, layer: destination < 0)
+        .onDrop(of: [UTType.plainText], isTargeted: $targeted) { receiveSample($0, audio: audio, side: side) }
+        .accessibilityIdentifier("stack_\(side)")
     }
 }
 
@@ -479,7 +377,7 @@ private struct ClipRow: View {
                     StylizedClipWaveform(sample: sample, mask: clip.mask, active: active, stepBeats: stepBeats)
                         .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.horizontal, 6).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).accessibilityLabel("Select \(song.name), loop \(sample.label), step \(stepNumber)")
+                .buttonStyle(.plain).accessibilityLabel("Select \(song.name), loop \(sample.label), side \(stepNumber == 1 ? "A" : "B")")
                 .accessibilityValue(active ? "Playing" : "Ready").accessibilityIdentifier("clip_\(clip.id)")
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
             VStack(spacing: 0) {
@@ -500,7 +398,7 @@ private struct ClipRow: View {
                 Slider(value: level, in: 0...1, step: 0.01)
                     .tint(active ? .white : Palette.accent)
                     .frame(width: 90, height: 44).rotationEffect(.degrees(-90)).frame(width: 44, height: 90)
-                    .accessibilityLabel("Level for \(song.name), loop \(sample.label), step \(stepNumber)")
+                    .accessibilityLabel("Level for \(song.name), loop \(sample.label), side \(stepNumber == 1 ? "A" : "B")")
                     .accessibilityIdentifier("clipLevel_\(clip.id)")
                 Text("\(Int((clip.level * 100).rounded()))%").font(.system(size: 10).monospacedDigit()).lineLimit(1)
             }.frame(width: 44).frame(maxHeight: .infinity)
@@ -525,7 +423,7 @@ private struct ClipRow: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain).disabled(sample.parts == nil)
-        .accessibilityLabel("\(labels[index]) for \(song.name), loop \(sample.label), step \(stepNumber)")
+        .accessibilityLabel("\(labels[index]) for \(song.name), loop \(sample.label), side \(stepNumber == 1 ? "A" : "B")")
         .accessibilityValue(on ? "On" : "Off").accessibilityIdentifier("clipPart_\(clip.id)_\(index)")
     }
 }

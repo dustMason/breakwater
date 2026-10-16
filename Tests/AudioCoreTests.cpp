@@ -205,4 +205,35 @@ void layeredMidi(){
  }
  assert(advanced&&r.snapshot().clockState==2&&std::abs(r.snapshot().bpm-145)<1);puts("PASS layered sequence follows MIDI tempo and nudge");
 }
-int main(){layeredArrangement();futureStepPreservesCurrentPhrase();editingStoppedArrangement();independentClipParts();independentClipLevels();layeredWrapFade();layeredMidi();nudgeInternal();nudgeAgainstMidi();partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}
+void stacksWithMidiClock(){
+ Rig r;bw_external(r.e,1);
+ BWClipWithLevel clips[]={{1,11,0,15,0,1200,1000},{2,22,1,15,0,1200,1000}};
+ bw_stacks(r.e,clips,1,1);r.frames(1);assert(!r.snapshot().playing);
+ bw_midi(r.e,0xfa,0,r.now);double next=r.now;bool queued=false,checked=false;
+ for(int tick=0;tick<24*11;tick++){
+  r.seconds(std::max(0.0,next-r.now));bw_midi(r.e,0xf8,0,next);r.frames(1);auto s=r.snapshot();
+  if(!queued&&s.beat>1){bw_stacks(r.e,clips,2,1);queued=true;}
+  if(queued&&s.beat<3.9)assert(s.activeCount==1);
+  if(!checked&&s.beat>4.1){
+   assert(s.activeCount==2&&s.activeTokens[0]==11&&s.activeTokens[1]==22);
+   assert(s.activeProgress[0]>.49&&s.activeProgress[0]<.53);
+   assert(s.activeProgress[1]<.04);bw_crossfade(r.e,1);bw_nudge(r.e,10);checked=true;
+  }
+  if(checked&&s.beat>6)assert(s.activeCount==2);
+  next+=60.0/(24*(tick<24*6?120:150));
+ }
+ assert(checked&&r.snapshot().clockState==2&&std::abs(r.snapshot().bpm-150)<1);
+ auto before=r.snapshot();bw_mode(r.e,1);r.frames(1);auto changed=r.snapshot();
+ assert(std::abs(before.activeProgress[0]-changed.activeProgress[0])<.001);
+ assert(std::abs(before.activeProgress[1]-changed.activeProgress[1])<.001);
+ bw_midi(r.e,0xfc,0,r.now);r.frames(1);auto stopped=r.snapshot();r.seconds(.1);
+ bw_midi(r.e,0xfb,0,r.now);r.frames(1);auto resumed=r.snapshot();
+ assert(std::abs(stopped.activeProgress[0]-resumed.activeProgress[0])<.001);
+ assert(std::abs(stopped.activeProgress[1]-resumed.activeProgress[1])<.001);
+ bw_midi(r.e,0xf2,20,r.now);r.frames(1);auto seek=r.snapshot();
+ assert(std::abs(seek.activeProgress[0]-.625)<.001);
+ assert(std::abs(seek.activeProgress[1]-.25)<.001);
+ puts("PASS two MIDI-synchronized stacks preserve phase through editing, crossfade, nudge and tempo changes");
+}
+
+int main(){stacksWithMidiClock();layeredArrangement();futureStepPreservesCurrentPhrase();editingStoppedArrangement();independentClipParts();independentClipLevels();layeredWrapFade();layeredMidi();nudgeInternal();nudgeAgainstMidi();partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}

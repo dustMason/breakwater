@@ -28,7 +28,7 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(folder.isHittable, "Folder \(id) must be reachable by scrolling")
         folder.tap()
     }
-    func testTimelineLayersAndIndependentSound() {
+    func testStacksAndIndependentSound() {
         let master = app.segmentedControls["masterFilterMode"]
         XCTAssertTrue(master.buttons["HPF"].isHittable)
         master.buttons["HPF"].tap()
@@ -43,7 +43,7 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 10))
         app.buttons["pad_2"].press(forDuration: 0.8, thenDragTo: app.buttons["clip_1"])
         XCTAssertTrue(app.buttons["clip_3"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["clip_3"].label.contains("step 1"), "Dragging onto a clip should add a layer to its step")
+        XCTAssertTrue(app.buttons["clip_3"].label.contains("side A"), "Dragging onto a clip should add it to the same side")
         let firstLevel = app.sliders["clipLevel_1"], layeredLevel = app.sliders["clipLevel_3"]
         XCTAssertTrue(firstLevel.waitForExistence(timeout: 5))
         XCTAssertTrue(layeredLevel.exists)
@@ -75,22 +75,23 @@ final class BreakwaterUITests: XCTestCase {
         waitForExpectations(timeout: 5)
         XCTAssertTrue(master.buttons["HPF"].isSelected)
         XCTAssertEqual(masterCutoff.value as? String, chosenCutoff)
-        capture("timeline-landscape")
+        capture("stacks-landscape")
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.buttons["transport"].isHittable)
         XCTAssertTrue(app.buttons["nudgeEarlier"].isHittable)
         XCTAssertTrue(firstPart.isHittable)
         XCTAssertTrue(firstFilter.isHittable)
         XCTAssertTrue(master.buttons["HPF"].isHittable)
-        capture("timeline-portrait")
+        capture("stacks-portrait")
     }
-    func testCrowdedTimelineControlsScrollable() {
+    func testCrowdedStackControlsScrollable() {
+        app.buttons["Fade to side B"].tap()
         for index in 0..<8 { app.buttons["pad_\(index)"].tap() }
         let lastPart = app.buttons["clipPart_8_0"]
         XCTAssertTrue(lastPart.waitForExistence(timeout: 15))
         let timeline = app.scrollViews["timelineScroll"]
-        for _ in 0..<8 { timeline.swipeLeft() }
-        XCTAssertTrue(lastPart.isHittable, "Crowded steps retain touch-sized controls and scroll horizontally")
+        for _ in 0..<8 where !lastPart.isHittable { timeline.swipeUp() }
+        XCTAssertTrue(lastPart.isHittable, "Crowded stacks retain touch-sized controls and scroll vertically")
         lastPart.tap(); waitForValue("clipPart_8_0", "Off")
         XCTAssertTrue(app.sliders["clipLevel_8"].isHittable)
         XCTAssertTrue(app.descendants(matching: .any)["clipFilter_8"].isHittable)
@@ -102,23 +103,20 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["pad_2"].waitForExistence(timeout: 30)); waitForValue("pad_2", "Excluded")
         app.buttons["editPads"].tap(); app.buttons["pad_2"].tap(); waitForValue("pad_2", "Ready")
     }
-    func testInsertionEdgesAndPlacementMenu() {
+    func testQuietSidePlacementAndAllPartsDefaultOn() {
         app.buttons["pad_0"].tap(); app.buttons["pad_1"].tap()
         XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 15))
-        let source = app.buttons["pad_2"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        let leftEdge = app.buttons["clip_1"].coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.5))
-        source.press(forDuration: 0.8, thenDragTo: leftEdge)
+        XCTAssertTrue(app.buttons["clip_1"].label.contains("side A"))
+        XCTAssertTrue(app.buttons["clip_2"].label.contains("side B"))
+        app.buttons["clipPart_1_0"].tap(); waitForValue("clipPart_1_0", "Off")
+        app.buttons["Fade to side B"].tap(); app.buttons["pad_2"].tap()
         XCTAssertTrue(app.buttons["clip_3"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["clip_3"].label.contains("step 1"), "Dropping near the leading edge inserts a step")
-        app.buttons["placementMenu"].tap(); app.buttons["Insert before selected step"].tap(); app.buttons["pad_3"].tap()
-        XCTAssertTrue(app.buttons["clip_4"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["clip_4"].label.contains("step 1"))
-        app.buttons["placementMenu"].tap(); app.buttons["Insert after selected step"].tap(); app.buttons["pad_4"].tap()
-        XCTAssertTrue(app.buttons["clip_5"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["clip_5"].label.contains("step 2"))
-        app.buttons["placementMenu"].tap(); app.buttons["Add as layer"].tap(); app.buttons["pad_5"].tap()
-        XCTAssertTrue(app.buttons["clip_6"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["clip_6"].label.contains("step 2"))
+        XCTAssertTrue(app.buttons["clip_3"].label.contains("side A"))
+        for part in 0..<4 { waitForValue("clipPart_3_\(part)", "On") }
+        app.buttons["Fade to side A"].tap(); app.buttons["pad_3"].tap()
+        XCTAssertTrue(app.buttons["clip_4"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["clip_4"].label.contains("side B"))
+        XCTAssertTrue(app.sliders["crossfader"].exists)
     }
     func testFolderNavigationAndSourceTempo() {
         app.buttons["useSourceTempo"].tap()

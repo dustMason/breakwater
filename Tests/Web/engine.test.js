@@ -421,3 +421,78 @@ test('linked output dynamics compress sustained peaks and protect correlated sta
   assert.ok(l.every((x,i) => Math.abs(r[i] * 2 - x) < 1e-5), 'both channels receive the same gain');
   e.destroy();
 });
+
+test('two stacks run together and equal-power crossfade independently', () => {
+  const e = new LoopEngine(rate);
+  const a = new Float32Array(rate * 4).fill(.12), b = new Float32Array(rate * 4).fill(.06);
+  e.load(0, [a, a], 8); e.load(1, [b, b], 8);
+  const clips = [{ id: 0, token: 1, step: 0, mask: 15 }, { id: 1, token: 2, step: 1, mask: 15 }];
+  e.stacks(clips); advance(e, .1);
+  assert.deepEqual(e.snapshot().activeTokens, [1, 2]);
+  const mean = values => values.reduce((x, y) => x + y, 0) / values.length;
+  const center = mean(advance(e, .1));
+  e.setCrossfade(0); const rampA = advance(e, .02); const onlyA = mean(advance(e, .1));
+  e.setCrossfade(1); const rampB = advance(e, .02); const onlyB = mean(advance(e, .1));
+  assert.ok(center > onlyA && onlyA > onlyB, `${center}, ${onlyA}, ${onlyB}`);
+  assert.ok(Math.abs(onlyA / onlyB - 2) < .05);
+  assert.ok(Math.abs(center / onlyA - 1.5 / Math.sqrt(2)) < .03);
+  for (const ramp of [rampA, rampB]) {
+    let maxJump = 0;
+    for (let i = 1; i < ramp.length; i++) maxJump = Math.max(maxJump, Math.abs(ramp[i] - ramp[i-1]));
+    assert.ok(maxJump < .003, `crossfader discontinuity ${maxJump}`);
+  }
+});
+
+test('stack edits preserve playing phase and start the new voice on the bar', () => {
+  const e = engine();
+  e.stacks([{ id: 1, token: 10, step: 0, mask: 15 }]);
+  advance(e, .75);
+  e.stacks([{ id: 1, token: 10, step: 0, mask: 15 }, { id: 2, token: 20, step: 1, mask: 15 }]);
+  advance(e, 1.249);
+  assert.deepEqual(e.snapshot().activeTokens, [10]);
+  advance(e, .003);
+  const s = e.snapshot();
+  assert.deepEqual(s.activeTokens, [10, 20]);
+  assert.ok(s.activeProgress[0] > .49 && s.activeProgress[0] < .51, String(s.activeProgress));
+  assert.ok(s.activeProgress[1] < .01, String(s.activeProgress));
+  e.setCrossfade(0); advance(e, 2);
+  const silentSideProgress = e.snapshot().activeProgress[1];
+  assert.ok(silentSideProgress > .24 && silentSideProgress < .26, String(silentSideProgress));
+  e.setCrossfade(1); advance(e, .02);
+  assert.ok(e.snapshot().activeProgress[1] > silentSideProgress);
+});
+
+test('stack layer limit is eight on each side and stopped edits do not start transport', () => {
+  const e = engine();
+  const clips = Array.from({length: 18}, (_, i) => ({ id: 0, token: i + 1, step: i < 9 ? 0 : 1, mask: 15 }));
+  e.stacks(clips, false); advance(e, .01);
+  assert.equal(e.running, false);
+  e.stacks(clips); advance(e, .01);
+  const tokens = e.snapshot().activeTokens;
+  assert.equal(tokens.length, 16);
+  assert.ok(!tokens.includes(9) && !tokens.includes(18));
+  assert.deepEqual(tokens.slice(0, 8), [1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
+test('copies on opposite sides keep independent parts through crossfades', () => {
+  const e = new LoopEngine(rate), frames = rate * 2, frequencies = [180, 600, 2400, 7000];
+  const parts = frequencies.map(hz => {
+    const a = Float32Array.from({length: frames}, (_, i) => .1 * Math.sin(2 * Math.PI * hz * i / rate));
+    return [a, a];
+  });
+  const original = Float32Array.from({length: frames}, (_, i) => parts.reduce((sum, part) => sum + part[0][i], 0));
+  e.load(7, [original, original], 4); e.setParts(7, parts);
+  e.stacks([{id: 7, token: 1, step: 0, mask: 1}, {id: 7, token: 2, step: 1, mask: 2}]);
+  e.setCrossfade(0); advance(e, .15);
+  const amp = (audio, hz) => {
+    let a = 0, b = 0;
+    audio.forEach((x, i) => { a += x * Math.sin(2 * Math.PI * hz * i / rate); b += x * Math.cos(2 * Math.PI * hz * i / rate); });
+    return 2 * Math.hypot(a, b) / audio.length;
+  };
+  let audio = advance(e, 1);
+  assert.ok(amp(audio, 180) > .09 && amp(audio, 600) < .003);
+  e.setCrossfade(1); advance(e, .05); audio = advance(e, 1);
+  assert.ok(amp(audio, 600) > .09 && amp(audio, 180) < .003);
+  e.setClipMask(1, 0); advance(e, .05); audio = advance(e, 1);
+  assert.ok(amp(audio, 600) > .09, 'muting the other copy leaves side B alone');
+});

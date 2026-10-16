@@ -95,6 +95,15 @@ export class WasmEngine {
     }
     this.exports.bw_arrange_with_levels(this.handle, this.control, count);
   }
+  stacks(items, start = true) {
+    this.refresh(); const count = Math.min(MAX_CLIPS, items.length);
+    for (let i = 0; i < count; i++) {
+      const clip = items[i];
+      this.controlInts.set([clip.id, clip.token, clip.step, clip.mask, clip.filterType ?? 0, Math.round(clip.filterHz ?? 1200), Math.round((clip.level ?? 1) * 1000)], i * 7);
+    }
+    this.exports.bw_stacks(this.handle, this.control, count, Number(start));
+  }
+  setCrossfade(position) { this.exports.bw_crossfade(this.handle, position); }
   setClipMask(token, mask) { this.exports.bw_clip_mask(this.handle, token, mask); }
   setClipFilter(token, mode, hz) { this.exports.bw_clip_filter(this.handle, token, mode, hz); }
   setClipLevel(token, level) { this.exports.bw_clip_level(this.handle, token, level); }

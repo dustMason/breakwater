@@ -181,11 +181,11 @@ Play/Stop uses a native Label with an SF Symbol. Its action is disabled while lo
 
 The minimum target frames are recorded in the frontmatter. Clock and edit also have a 44-point minimum height. Preserve the two-row accessibility layout and native focus/accessibility behavior; there is no custom hover, focus-ring or pressed-animation system in the app.
 
-### Sequence and sound controls
+### Two stacks and sound controls
 
-A scrollable sequence tray sits between the grid and transport. Each step shows its samples as stacked waveform rows; a blue outline identifies the playing step, and the active row receives the playing treatment. The plus targets between steps insert a sequential step, while dropping on a step adds a layer. Tapping a row selects its Parts controls; each row also offers a remove action. The tray and selected clip survive song-page changes.
+The Library sits to the left of side-by-side A and B stacks. A clear side label, count and ADD HERE cue show where a library tap will place the next loop. Dropping a library row onto a stack explicitly selects its side. Stacks scroll when needed; the A–B crossfader sits directly below them, above the master transport.
 
-One side panel presents the selected clip's four approximate Parts switches and the global output Filter together, using the same neutral surfaces and blue state cues. Part lanes in the selected and playing waveforms dim when muted. The panel and tray make room by reducing the grid, while song selection, source BPM and transport remain visible. Individual arrangement entries, including repeated copies of one source loop, have independent part settings.
+Clip rows are contiguous and contain a stylized waveform, independent four-part switches, a center-detented low/high-pass filter and a vertical level fader. Blue denotes a running clip, its playhead shows phase, and an outline identifies selection. The master filter remains in the bottom bar. Maintain 44-point touch targets and accessible labels for stack, clip and crossfader controls.
 
 ### Settings and tempo sheets
 

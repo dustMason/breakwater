@@ -346,14 +346,14 @@ pub struct FilteredClip {
     filter_hz: i32,
 }
 
-unsafe fn arrange(p: *mut Handle, clips: *const Clip, count: i32, start: bool) {
+unsafe fn arrange_kind(p: *mut Handle, clips: *const Clip, count: i32, start: bool, kind: u8) {
     let Some(h) = handle(p) else { return };
     let mut n = count.clamp(0, MAX_QUEUE as i32) as usize;
     if clips.is_null() {
         n = 0
     }
     let mut c = Command {
-        kind: ARRANGE,
+        kind,
         value: start as i32,
         count: n as i32,
         ..Command::default()
@@ -362,6 +362,9 @@ unsafe fn arrange(p: *mut Handle, clips: *const Clip, count: i32, start: bool) {
         c.clips[..n].copy_from_slice(std::slice::from_raw_parts(clips, n));
     }
     h.commands.push(c)
+}
+unsafe fn arrange(p: *mut Handle, clips: *const Clip, count: i32, start: bool) {
+    arrange_kind(p, clips, count, start, ARRANGE)
 }
 unsafe fn arrange_basic(p: *mut Handle, clips: *const BasicClip, count: i32, start: bool) {
     let Some(h) = handle(p) else { return };
@@ -472,6 +475,19 @@ pub unsafe extern "C" fn bw_edit_arrangement_with_levels(
     count: i32,
 ) {
     arrange(p, clips, count, false)
+}
+/// # Safety
+/// The handle must be live; clips points to count readable descriptors. The
+/// descriptor's step is the stack side (0 or 1).
+#[no_mangle]
+pub unsafe extern "C" fn bw_stacks(p: *mut Handle, clips: *const Clip, count: i32, start: i32) {
+    arrange_kind(p, clips, count, start != 0, STACKS)
+}
+/// # Safety
+/// The handle must be live and commands sent by the serialized producer.
+#[no_mangle]
+pub unsafe extern "C" fn bw_crossfade(p: *mut Handle, position: f64) {
+    simple(p, CROSSFADE, 0, position)
 }
 /// # Safety
 /// The handle must be live, and calls must come from its one serialized control producer.

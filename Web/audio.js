@@ -16,6 +16,7 @@ export class AudioPlayer {
     this.partPins = new Set();
     this.tempo = 120;
     this.volume = .8;
+    this.crossfade = .5;
     this.filter = { mode: 0, hz: 1200 };
     this.masks = new Map();
     this.requests = new Map();
@@ -50,8 +51,8 @@ export class AudioPlayer {
   async initialize() {
     if (!this.context.audioWorklet) throw new Error('AudioWorklet is unavailable. Try a current Safari, Chrome, or Firefox.');
     const [response] = await Promise.all([
-      fetch(new URL('./breakwater_audio.wasm', import.meta.url)),
-      this.context.audioWorklet.addModule(new URL('./audio-worklet.js', import.meta.url)),
+      fetch(new URL('./breakwater_audio.wasm?v=6', import.meta.url)),
+      this.context.audioWorklet.addModule(new URL('./audio-worklet.js?v=6', import.meta.url)),
     ]);
     if (!response.ok) throw new Error(`Couldn't load the audio engine (HTTP ${response.status}).`);
     const module = await WebAssembly.compile(await response.arrayBuffer());
@@ -79,6 +80,7 @@ export class AudioPlayer {
     });
     this.setTempo(this.tempo);
     this.setFilter(this.filter.mode, this.filter.hz);
+    this.setCrossfade(this.crossfade);
     for (const [id, mask] of this.masks) this.command({ type: 'part-mask', ids: [id], mask });
   }
 
@@ -136,6 +138,8 @@ export class AudioPlayer {
   command(data) { this.node?.port.postMessage(data); }
   queue(ids) { this.command({ type: 'queue', ids }); }
   arrange(items) { this.command({ type: 'arrange', items }); }
+  stacks(items, start = true) { this.command({ type: 'stacks', items, start }); }
+  setCrossfade(position) { this.crossfade = position; this.command({ type: 'crossfade', position }); }
   setClipMask(token, mask) { this.command({ type: 'clip-mask', token, mask }); }
   setClipFilter(token, mode, hz) { this.command({ type: 'clip-filter', token, mode, hz }); }
   setClipLevel(token, level) { this.command({ type: 'clip-level', token, level }); }

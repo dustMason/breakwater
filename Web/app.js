@@ -1,4 +1,4 @@
-import { AudioPlayer } from './audio.js';
+import { AudioPlayer } from './audio.js?v=6';
 import { assetBase, assetURL } from './assets.js';
 import { filterFromPosition, positionFromFilter, waveformBars } from './clip-controls.js';
 
@@ -16,7 +16,7 @@ const partFailures = new Map();
 let songs = [], samples = [], song = null;
 let editing = false, loading = false, request = 0;
 let state = { playing: false, active: null, activeLoops: [], activeTokens: [], beat: 0, progress: 0, pending: false, queue: [] };
-let arrangement = [], selectedToken = null, nextToken = 1, pointer = null;
+let arrangement = [[], []], crossfade = 0.5, selectedToken = null, nextToken = 1, pointer = null;
 let pads = new Map();
 let lastAnnouncement = '';
 const taps = [];
@@ -127,8 +127,7 @@ function selectClip(token) {
 
 function prepareUpcoming() {
   if (!state.playing) return;
-  const index = arrangement.findIndex(step => step.some(clip => (state.activeTokens || []).includes(clip.token)));
-  const upcoming = [...(arrangement[index] || []), ...(arrangement[(index + 1) % arrangement.length] || []), ...(selectedClip() ? [selectedClip()] : [])];
+  const upcoming = allClips();
   const ids = [...new Set(upcoming.filter(clip => clip.mask !== 15).map(clip => clip.id))];
   audio.pinParts([...new Set([...(state.activeLoops || []), ...ids])]);
   for (const id of ids) {
@@ -141,16 +140,15 @@ function prepareUpcoming() {
   renderPartStatus();
 }
 
+function quieterSide() {
+  if (crossfade < .5) return 1;
+  if (crossfade > .5) return 0;
+  return arrangement[0].length <= arrangement[1].length ? 0 : 1;
+}
 function updateHint() {
   $('hint').textContent = editing ? 'Select a loop in the library to exclude or restore it. Changes are saved.'
-    : 'Drop at a step edge to insert; drop beneath a clip to layer. Each clip has its own mix controls.';
+    : 'Both sides loop in sync. Crossfade to bring either stack in.';
 }
-let zoom = 1;
-function applyZoom() {
-  $('arrangement-items').style.setProperty('--zoom', zoom);
-}
-new ResizeObserver(applyZoom).observe($('arrangement-items'));
-
 function renderClipWaveform(svg, sample, clip, beats) {
   const bars = waveformBars(sample.waveform, sample.parts?.waveforms, clip.mask);
   const paths = (key) => bars.map((bar, index) => {
@@ -183,37 +181,27 @@ function updateClipPartsUI(row, clip, sample, beats) {
 
 function paintArrangement() {
   const container = $('arrangement-items'); const content = document.createElement('div'); content.className = 'timeline-content';
-  if (arrangement.length) content.style.minWidth = `${arrangement.length * 270 + 76}px`;
-  let firstBar = 1;
-  function gap(index) {
-    const slot = document.createElement('div'); slot.className = 'arrangement-gap'; slot.dataset.index = index;
-    slot.setAttribute('aria-hidden', 'true'); slot.textContent = '+'; return slot;
-  }
-  if (!arrangement.length) {
-    const empty = document.createElement('div'); empty.className = 'arrangement-empty'; empty.dataset.index = '0';
-    empty.textContent = 'Drag a loop here to start your sequence'; content.append(empty);
-  } else arrangement.forEach((step, index) => {
-    if (index === 0) content.append(gap(index));
-    const beats = Math.max(...step.map(clip => sampleFor(clip.id)?.beats || 4));
-    const group = document.createElement('div'); group.className = 'sequence-step'; group.dataset.step = index; group.style.flexGrow = beats;
+  content.style.minWidth = '540px';
+  arrangement.forEach((step, index) => {
+    const group = document.createElement('div'); group.className = 'sequence-step'; group.dataset.side = index;
     const heading = document.createElement('div'); heading.className = 'step-heading';
-    heading.textContent = `BAR ${firstBar} · ${beats / 4} ${beats === 4 ? 'BAR' : 'BARS'}`; group.append(heading);
-    firstBar += beats / 4;
+    heading.innerHTML = `<strong>${index ? 'B' : 'A'}</strong><span>${step.length} / 8</span><span class="add-here">${step.length >= 8 ? 'FULL' : index === quieterSide() ? 'ADD HERE' : ''}</span>`;
+    group.append(heading);
     for (const clip of step) {
       const sample = sampleFor(clip.id); if (!sample) continue;
       const source = songs.find(item => item.id === sample.songID);
       const labels = source?.partLabels?.length === 4 ? source.partLabels : ['Kick', 'Snare', 'Toms', 'Cymbals'];
-      const row = document.createElement('div'); row.className = 'clip-row'; row.dataset.token = clip.token; row.dataset.beats = beats;
+      const row = document.createElement('div'); row.className = 'clip-row'; row.dataset.token = clip.token; row.dataset.beats = sample.beats;
       row.classList.toggle('selected', clip.token === selectedToken);
       const display = document.createElement('div'); display.className = 'clip-display';
       const title = document.createElement('div'); title.className = 'clip-title';
       const label = document.createElement('span'); label.className = 'clip-label'; label.textContent = `${String(sample.number).padStart(2, '0')} · ${sample.songName}`;
       const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'clip-remove'; remove.dataset.remove = clip.token;
-      remove.setAttribute('aria-label', `Remove ${sample.songName}, loop ${sample.number}, from step ${index + 1}`); remove.textContent = '×';
+      remove.setAttribute('aria-label', `Remove ${sample.songName}, loop ${sample.number}, from side ${index === 0 ? 'A' : 'B'}`); remove.textContent = '×';
       title.append(label, remove);
       const choose = document.createElement('button'); choose.type = 'button'; choose.className = 'clip-select'; choose.dataset.select = clip.token;
       choose.setAttribute('aria-pressed', String(clip.token === selectedToken));
-      choose.setAttribute('aria-label', `Select ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+      choose.setAttribute('aria-label', `Select ${sample.songName}, loop ${sample.number}, side ${index === 0 ? 'A' : 'B'}`);
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.classList.add('clip-waveform'); svg.setAttribute('aria-hidden', 'true');
       choose.append(svg); display.append(title, choose);
       const controls = document.createElement('div'); controls.className = 'clip-parts'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', `Parts for ${sample.songName}, loop ${sample.number}`);
@@ -222,7 +210,7 @@ function paintArrangement() {
       labels.forEach((name, part) => {
         const button = document.createElement('button'); button.type = 'button'; button.dataset.part = part; button.disabled = !sample.parts;
         button.textContent = name === 'Cymbals' ? 'CYM' : name.toUpperCase();
-        button.setAttribute('aria-label', `${name} for ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+        button.setAttribute('aria-label', `${name} for ${sample.songName}, loop ${sample.number}, side ${index === 0 ? 'A' : 'B'}`);
         button.title = `${name}: approximate separated layer`; grid.append(button);
       });
       controls.append(grid);
@@ -231,7 +219,7 @@ function paintArrangement() {
       const dial = document.createElement('div'); dial.className = 'filter-dial';
       dial.innerHTML = '<span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>';
       const filterInput = document.createElement('input'); filterInput.type = 'range'; filterInput.min = '-100'; filterInput.max = '100'; filterInput.step = '1'; filterInput.dataset.filter = clip.token;
-      filterInput.setAttribute('aria-label', `Filter for ${sample.songName}, loop ${sample.number}, step ${index + 1}`); filterInput.setAttribute('aria-describedby', 'filter-help');
+      filterInput.setAttribute('aria-label', `Filter for ${sample.songName}, loop ${sample.number}, side ${index === 0 ? 'A' : 'B'}`); filterInput.setAttribute('aria-describedby', 'filter-help');
       dial.append(filterInput);
       const filterValue = document.createElement('span'); filterValue.className = 'filter-value';
       const filterSides = document.createElement('span'); filterSides.className = 'filter-sides'; filterSides.textContent = 'LP · HP';
@@ -240,20 +228,20 @@ function paintArrangement() {
       const levelLabel = document.createElement('span'); levelLabel.className = 'control-title'; levelLabel.textContent = 'LVL';
       const slider = document.createElement('input'); slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.step = '1';
       slider.value = Math.round((clip.level ?? 1) * 100); slider.dataset.level = clip.token;
-      slider.setAttribute('aria-label', `Level for ${sample.songName}, loop ${sample.number}, step ${index + 1}`);
+      slider.setAttribute('aria-label', `Level for ${sample.songName}, loop ${sample.number}, side ${index === 0 ? 'A' : 'B'}`);
       const sliderArea = document.createElement('span'); sliderArea.className = 'level-slider'; sliderArea.append(slider);
       const value = document.createElement('output'); value.className = 'clip-level-value'; value.textContent = `${slider.value}%`;
       level.append(levelLabel, sliderArea, value); row.append(display, controls, filter, level); group.append(row);
-      updateClipPartsUI(row, clip, sample, beats); updateClipFilterUI(row, clip);
+      updateClipPartsUI(row, clip, sample, sample.beats); updateClipFilterUI(row, clip);
     }
-    const target = document.createElement('div'); target.className = 'layer-target'; target.textContent = '+ Drop a layer'; group.append(target);
+    const target = document.createElement('div'); target.className = 'layer-target'; target.textContent = step.length ? '+ Drop another loop' : `Drop a loop on side ${index ? 'B' : 'A'}`; group.append(target);
     content.append(group);
   });
-  if (arrangement.length) content.append(gap(arrangement.length));
   container.replaceChildren(content);
-  const bars = firstBar - 1, clips = allClips().length;
-  $('sequence-detail').textContent = arrangement.length ? `${bars} ${bars === 1 ? 'bar' : 'bars'} · ${clips} ${clips === 1 ? 'clip' : 'clips'}` : 'Drop loops here to build a sequence';
-  $('clear-arrangement').disabled = !arrangement.length; applyZoom(); paintArrangementState(); renderPartStatus();
+  const clips = allClips().length;
+  $('sequence-detail').textContent = `${clips} ${clips === 1 ? 'clip' : 'clips'} · both sides loop together`;
+  $('clear-arrangement').disabled = !clips; paintArrangementState(); renderPartStatus();
+
 }
 function paintArrangementState() {
   const tokens = state.playing ? state.activeTokens || [] : [];
@@ -287,8 +275,9 @@ function paint() {
 async function submitArrangement(start = true) {
   const clips = arrangement.flatMap((step, index) => step.map(clip => ({ ...clip, step: index })));
   const wasLoading = loading;
+  const shouldStart = start || (wasLoading && !state.playing);
   const attempt = ++request;
-  if (!clips.length) { loading = false; audio.arrange([]); notice(); paint(); return; }
+  if (!clips.length) { loading = false; audio.stacks([], false); notice(); paint(); return; }
   if (!start && !state.playing && !wasLoading) { loading = false; paint(); return; }
   const selected = samples.filter(sample => clips.some(clip => clip.id === sample.id));
   audio.pinParts([...(state.activeLoops || []), ...clips.filter(clip => clip.mask !== 15).map(clip => clip.id)]);
@@ -304,9 +293,9 @@ async function submitArrangement(start = true) {
     });
     if (attempt !== request) return;
     loading = false;
-    audio.arrange(arrangement.flatMap((step, index) => step.map(clip => ({ ...clip, step: index }))).filter(clip => !disabled.has(clip.id)));
+    audio.stacks(arrangement.flatMap((step, index) => step.map(clip => ({ ...clip, step: index }))).filter(clip => !disabled.has(clip.id)), shouldStart);
     notice();
-    announce(state.playing ? 'Sequence update queued for the next bar' : 'Starting playback');
+    announce(state.playing ? 'Stack update queued for the next bar' : 'Starting playback');
     prepareUpcoming();
     paint();
   } catch (error) {
@@ -318,17 +307,14 @@ async function submitArrangement(start = true) {
 }
 
 function newClip(id) {
-  const sample = sampleFor(id);
-  return { id, token: nextToken++, mask: songMask({ id: sample?.songID }), filterType: 0, filterHz: 1200, level: 1 };
+  return { id, token: nextToken++, mask: 15, filterType: 0, filterHz: 1200, level: 1 };
 }
-function addSample(id, index, layer = false, replace = false) {
+function addSample(id, side = quieterSide()) {
   if (disabled.has(id) || !sampleFor(id)) return;
-  if (!replace && allClips().length >= 64) { notice('The sequence can hold up to 64 samples.'); return; }
-  if (layer && arrangement[index]?.length >= 8) { notice('A step can contain up to 8 layers.'); return; }
+  if (![0, 1].includes(side)) return;
+  if (arrangement[side].length >= 8) { notice(`Side ${side ? 'B' : 'A'} can hold up to 8 loops.`); return; }
   const clip = newClip(id);
-  if (replace) arrangement = [[clip]];
-  else if (layer && arrangement[index]) arrangement[index].push(clip);
-  else arrangement.splice(Math.max(0, Math.min(index, arrangement.length)), 0, [clip]);
+  arrangement[side].push(clip);
   selectedToken = clip.token;
   paintArrangement();
   submitArrangement();
@@ -348,7 +334,7 @@ function toggleDisabled(id) {
   if (disabled.has(id)) disabled.delete(id); else disabled.add(id);
   audio.enable(id, !disabled.has(id));
   if (disabled.has(id)) {
-    arrangement = arrangement.map(step => step.filter(clip => clip.id !== id)).filter(step => step.length);
+    arrangement = arrangement.map(step => step.filter(clip => clip.id !== id));
     if (!selectedClip()) selectedToken = null;
     paintArrangement(); submitArrangement(false);
   }
@@ -358,23 +344,14 @@ function toggleDisabled(id) {
 function padAt(target) { return target instanceof Element ? target.closest('.pad') : null; }
 function clearPointer() {
   pointer = null; $('drag-preview').hidden = true;
-  document.querySelectorAll('.drop-active, .drop-before, .drop-after').forEach(element => element.classList.remove('drop-active', 'drop-before', 'drop-after'));
+  document.querySelectorAll('.drop-active').forEach(element => element.classList.remove('drop-active'));
 }
 function dropAt(x, y) {
   const target = document.elementFromPoint(x, y);
   if (!(target instanceof Element)) return null;
-  const slot = target.closest('.arrangement-gap, .arrangement-empty');
-  if (slot) return { element: slot, index: Number(slot.dataset.index), layer: false };
-  const step = target.closest('.sequence-step');
-  if (step) {
-    const index = Number(step.dataset.step), rect = step.getBoundingClientRect();
-    const edge = Math.min(24, rect.width / 3);
-    if (x - rect.left < edge) return { element: step, index, layer: false, edge: 'before' };
-    if (rect.right - x < edge) return { element: step, index: index + 1, layer: false, edge: 'after' };
-    return { element: step, index, layer: true };
-  }
-  const container = target.closest('#arrangement-items');
-  return container ? { element: container, index: arrangement.length, layer: false } : null;
+  const stack = target.closest('.sequence-step');
+  return stack ? { element: stack, side: Number(stack.dataset.side) } : null;
+
 }
 $('grid').addEventListener('pointerdown', event => {
   const pad = padAt(event.target);
@@ -387,8 +364,7 @@ $('grid').addEventListener('pointerdown', event => {
   if (pointer || (!editing && disabled.has(id))) return;
   pad.setPointerCapture(event.pointerId);
   pointer = { pointerId: event.pointerId, id, x: event.clientX, y: event.clientY, lastY: event.clientY,
-    started: performance.now(), touch: event.pointerType === 'touch', dragging: false, scrolling: false,
-    shift: event.shiftKey, alt: event.altKey, target: null };
+    started: performance.now(), touch: event.pointerType === 'touch', dragging: false, scrolling: false, target: null };
 });
 $('grid').addEventListener('pointermove', event => {
   if (!pointer || pointer.pointerId !== event.pointerId) return;
@@ -402,9 +378,9 @@ $('grid').addEventListener('pointermove', event => {
   const sample = sampleFor(pointer.id), preview = $('drag-preview');
   preview.hidden = false; preview.textContent = `${sample.songName} · ${String(sample.number).padStart(2, '0')}`;
   preview.style.left = `${event.clientX + 12}px`; preview.style.top = `${event.clientY + 12}px`;
-  document.querySelectorAll('.drop-active, .drop-before, .drop-after').forEach(element => element.classList.remove('drop-active', 'drop-before', 'drop-after'));
+  document.querySelectorAll('.drop-active').forEach(element => element.classList.remove('drop-active'));
   pointer.target = dropAt(event.clientX, event.clientY);
-  pointer.target?.element.classList.add(pointer.target.edge ? `drop-${pointer.target.edge}` : 'drop-active');
+  pointer.target?.element.classList.add('drop-active');
   const rect = $('arrangement-items').getBoundingClientRect();
   if (event.clientY >= rect.top && event.clientY <= rect.bottom) {
     if (event.clientX < rect.left + 42) $('arrangement-items').scrollLeft -= 14;
@@ -418,11 +394,10 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     if (type === 'pointerup' && !finished.scrolling) {
       if (finished.dragging) {
         const target = dropAt(event.clientX, event.clientY);
-        if (target) addSample(finished.id, target.index, target.layer);
+        if (target) addSample(finished.id, target.side);
       } else if (editing) toggleDisabled(finished.id);
-      else if (finished.shift) addSample(finished.id, arrangement.length);
-      else if (finished.alt && arrangement.length) addSample(finished.id, Math.max(0, arrangement.findIndex(step => step.some(clip => clip.token === selectedToken))), true);
-      else addSample(finished.id, arrangement.length);
+      else addSample(finished.id);
+
     }
     clearPointer();
   });
@@ -439,38 +414,17 @@ $('grid').addEventListener('click', event => {
   if (source && source !== song?.id) showSong(source);
   if (editing) toggleDisabled(id);
   else if (!disabled.has(id)) {
-    if (event.shiftKey) addSample(id, arrangement.length);
-    else if (event.altKey && arrangement.length) addSample(id, Math.max(0, arrangement.findIndex(step => step.some(clip => clip.token === selectedToken))), true);
-    else addSample(id, arrangement.length);
+    addSample(id);
+
   }
 });
 $('grid').addEventListener('keydown', event => {
   if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-    const pad = padAt(event.target); if (!pad) return;
-    event.preventDefault(); if (event.repeat || editing) return;
+    const pad = padAt(event.target); if (!pad || event.repeat || editing) return;
+    event.preventDefault();
     const id = Number(pad.dataset.id), source = sampleFor(id)?.songID;
     if (source && source !== song?.id) showSong(source);
-    const selected = arrangement.findIndex(step => step.some(clip => clip.token === selectedToken));
-    const index = selected < 0 ? (event.key === 'ArrowLeft' ? 0 : arrangement.length) : selected + (event.key === 'ArrowRight' ? 1 : 0);
-    addSample(id, index);
-    return;
-  }
-  // Modified Enter/Space is not consistently translated into a native click,
-  // especially Option-Enter on macOS, so handle those shortcuts directly.
-  if ((event.key === 'Enter' || event.key === ' ') && (event.shiftKey || event.altKey)) {
-    event.preventDefault();
-    if (event.repeat) return;
-    const pad = padAt(event.target);
-    if (!pad) return;
-    const id = Number(pad.dataset.id);
-    const source = sampleFor(id)?.songID;
-    if (source && source !== song?.id) showSong(source);
-    if (editing) toggleDisabled(id);
-    else if (!disabled.has(id)) {
-      if (event.shiftKey) addSample(id, arrangement.length);
-      else if (arrangement.length) addSample(id, Math.max(0, arrangement.findIndex(step => step.some(clip => clip.token === selectedToken))), true);
-      else addSample(id, arrangement.length);
-    }
+    addSample(id, event.key === 'ArrowLeft' ? 0 : 1);
     return;
   }
   if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
@@ -499,7 +453,7 @@ $('arrangement-items').addEventListener('click', event => {
     selectClip(Number(choose.dataset.select)); prepareUpcoming();
   } else if (remove) {
     const token = Number(remove.dataset.remove);
-    arrangement = arrangement.map(step => step.filter(clip => clip.token !== token)).filter(step => step.length);
+    arrangement = arrangement.map(step => step.filter(clip => clip.token !== token));
     if (selectedToken === token) selectedToken = null;
     paintArrangement(); submitArrangement(false);
   }
@@ -541,7 +495,7 @@ $('arrangement-items').addEventListener('dblclick', event => {
   if (input) { input.value = '0'; applyClipFilter(input); }
 });
 $('clear-arrangement').addEventListener('click', () => {
-  arrangement = []; selectedToken = null; paintArrangement(); submitArrangement(false);
+  arrangement = [[], []]; selectedToken = null; paintArrangement(); submitArrangement(false);
 });
 $('retry-parts').addEventListener('click', () => {
   const clip = selectedClip(); if (clip) partFailures.delete(clip.id);
@@ -557,16 +511,26 @@ $('master-cutoff').addEventListener('input', event => {
   filterHz = 40 * (18000 / 40) ** (Number(event.target.value) / 1000);
   $('master-cutoff-value').textContent = formatHz(filterHz); audio.setFilter(filterMode, filterHz);
 });
-$('zoom-fit').addEventListener('click', () => { zoom = 1; applyZoom(); $('arrangement-items').scrollLeft = 0; });
-$('zoom-in').addEventListener('click', () => { zoom = Math.min(128, zoom * 1.5); applyZoom(); });
-$('zoom-out').addEventListener('click', () => { zoom = Math.max(1, zoom / 1.5); applyZoom(); });
-
+function setCrossfade(value) {
+  crossfade = Math.max(0, Math.min(1, value));
+  $('crossfade').value = Math.round(crossfade * 100);
+  $('crossfade').setAttribute('aria-valuetext', crossfade === .5 ? 'Centered between A and B' : `${Math.round((1-crossfade)*100)} percent toward A, ${Math.round(crossfade*100)} percent toward B`);
+  audio.setCrossfade(crossfade);
+  document.querySelectorAll('.sequence-step').forEach(group => {
+    const label = group.querySelector('.add-here');
+    const side = Number(group.dataset.side);
+    label.textContent = arrangement[side].length >= 8 ? 'FULL' : side === quieterSide() ? 'ADD HERE' : '';
+  });
+}
+$('crossfade').addEventListener('input', event => setCrossfade(Number(event.target.value) / 100));
+$('fade-a').addEventListener('click', () => setCrossfade(0));
+$('fade-b').addEventListener('click', () => setCrossfade(1));
 
 $('transport').addEventListener('click', () => {
   if (state.playing || loading) { stop(); return; }
   const first = song.loops.find(sample => !disabled.has(sample.id));
-  if (arrangement.length) submitArrangement();
-  else if (first) addSample(first.id, 0);
+  if (allClips().length) submitArrangement();
+  else if (first) addSample(first.id);
   else notice('Every loop in this folder is excluded. Use Edit to restore a loop.');
 });
 function setupNudge(button, milliseconds) {
@@ -595,7 +559,7 @@ setupNudge($('nudge-earlier'), 10);
 setupNudge($('nudge-later'), -10);
 $('retry').addEventListener('click', () => {
   if (!songs.length) loadCatalog();
-  else if (arrangement.length) submitArrangement();
+  else if (allClips().length) submitArrangement();
 });
 $('edit').addEventListener('click', () => {
   editing = !editing;

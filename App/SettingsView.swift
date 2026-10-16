@@ -32,13 +32,13 @@ struct SettingsView: View {
                         .foregroundStyle(Palette.secondary)
                     LabeledContent("Audio output") { Text(audio.outputName).foregroundStyle(Palette.secondary) }
                 }
-                Section("Pads") {
-                    Text("Tap a pad to replace the sequence on the next bar. Drag a pad onto a sequence step to layer it, or onto a plus to add a step. Shorter layers repeat until the longest loop in that step finishes.")
-                    Text("Tap a sample in the sequence to adjust its Parts. The Parts & FX panel shows those controls alongside the output filter.")
+                Section("Loops") {
+                    Text("Tap a library loop to add it to the quieter side, or drag it onto A or B. Both sides loop together; the crossfader blends between them. New loops start on the next bar without restarting the others.")
+                    Text("Each clip has its own four part switches, filter and level. The master filter is in the bottom bar.")
                     Text("Edit pads excludes unwanted loops and saves your choices. Change songs without interrupting playback.")
                     Button("Restore all pads in this song") { audio.enableSong() }.accessibilityIdentifier("restorePads")
                 }
-                Section("MIDI pads") { Text("Notes 36–65 trigger pads 01–30 in the selected song, on any MIDI channel. Hold notes together to latch a sequence. A new note gesture replaces the sequence.") }
+                Section("MIDI pads") { Text("Notes 36–65 add loops 01–30 from the selected song to the quieter side, on any MIDI channel. Each added loop continues after the note is released.") }
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("settingsDone") } }
