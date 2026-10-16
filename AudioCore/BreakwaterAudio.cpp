@@ -6,18 +6,25 @@
 #include <vector>
 
 namespace {
-constexpr int maxLoops=1024, maxQueue=64, ringSize=4096;
+constexpr int maxLoops=1024, maxQueue=64, maxLayers=8, ringSize=4096;
 struct Parts { std::vector<float> pcm; int frames=0; };
 struct Loop {
  std::vector<float> pcm; std::vector<int> slices; int frames=0,beats=4;
- std::atomic<Parts*> parts{nullptr}; int partMask=15; std::array<float,4> partGain{1,1,1,1};
- float partBlend=0, audible=1;
+ std::atomic<Parts*> parts{nullptr}; int partMask=15;
 };
 struct Stereo { float l=0,r=0; Stereo operator*(double a) const{return {float(l*a),float(r*a)};} Stereo operator+(Stereo b)const{return{l+b.l,r+b.r};} };
-struct Command { int type=0,value=0,count=0; double number=0,time=0; std::array<int,maxQueue> ids{}; };
-enum { Queue,Enable,Tempo,Mode,External,Transport,MIDI,Offset,Nudge,PartMask,Filter };
+struct Command { int type=0,value=0,count=0; double number=0,time=0; std::array<int,maxQueue> ids{}; std::array<BWClip,maxQueue> clips{}; };
+enum { Queue,Arrange,Enable,Tempo,Mode,External,Transport,MIDI,Offset,Nudge,PartMask,ClipMask,Filter };
 struct Voice {
  Loop* loop=nullptr; int mode=0,slice=-1,previousSlice=-1; double position=0,oldPosition=0,localBeat=0,rate=1; int fade=0;
+ int loopID=-1,token=0,partMask=15; std::array<float,4> partGain{1,1,1,1}; float partBlend=0,audible=1;
+ Stereo last{},wrapTail{};int wrapFade=0;
+ void mask(int m,bool immediate=false){partMask=m&15;if(immediate){for(int p=0;p<4;p++)partGain[p]=(partMask&(1<<p))?1:0;audible=partMask?1:0;}}
+ void advanceParts(double sr){if(!loop)return;float step=float(1/(sr*.008));
+  for(int p=0;p<4;p++){float wanted=(partMask&(1<<p))?1:0;partGain[p]+=std::clamp(wanted-partGain[p],-step,step);}
+  float wanted=loop->parts.load(std::memory_order_acquire)?1:0;partBlend+=std::clamp(wanted-partBlend,-step,step);
+  wanted=partMask?1:0;audible+=std::clamp(wanted-audible,-step,step);
+ }
  Stereo at(double index)const {
   if(!loop||loop->frames<2)return{};
   index=std::clamp(index,0.0,double(loop->frames-1));int a=int(index),b=std::min(a+1,loop->frames-1);double f=index-a;
@@ -26,18 +33,18 @@ struct Voice {
    // For a solo layer, avoid leaving the AAC reconstruction residual from
    // three subtracted layers behind. At two or more, retain the original mix
    // minus muted layers. Interpolating the residual keeps changes continuous.
-   float sum=0;for(float gain:loop->partGain)sum+=gain;
+   float sum=0;for(float gain:partGain)sum+=gain;
    float originalWeight=std::clamp(sum-1.0f,0.0f,1.0f);
-   out=out*(1-loop->partBlend+loop->partBlend*originalWeight);
+   out=out*(1-partBlend+partBlend*originalWeight);
    for(int p=0;p<4;p++){
-    float amount=(loop->partGain[p]-originalWeight)*loop->partBlend;
+    float amount=(partGain[p]-originalWeight)*partBlend;
     if(amount==0)continue;
     const auto base=size_t(p)*loop->frames*2;
     out.l+=amount*float(parts->pcm[base+a*2]*(1-f)+parts->pcm[base+b*2]*f);
     out.r+=amount*float(parts->pcm[base+a*2+1]*(1-f)+parts->pcm[base+b*2+1]*f);
    }
   }
-  return out*loop->audible;
+  return out*audible;
  }
  Stereo sliceAt(int index,double elapsed,double sr)const {
   if(index<0||!loop)return{};
@@ -55,7 +62,7 @@ struct Voice {
   return result*decay;
  }
  void begin(Loop* l,int m,double phase=0) {
-  loop=l;mode=m;localBeat=phase;position=l?phase/l->beats*l->frames:0;slice=previousSlice=-1;fade=0;
+  loop=l;mode=m;localBeat=phase;position=l?phase/l->beats*l->frames:0;slice=previousSlice=-1;fade=0;wrapFade=0;
   if(l&&m==1){for(int i=0;i<int(l->slices.size());i++)if(double(l->slices[i])/l->frames*l->beats<=phase)slice=i;
    if(slice<0)slice=0;position=phase/l->beats*l->frames-l->slices[slice];}
  }
@@ -70,6 +77,12 @@ struct Voice {
   return sample;
  }
  Stereo continueTail(double deltaBeat,double sr){localBeat+=deltaBeat;return render(localBeat,deltaBeat,sr);}
+ Stereo renderWrapped(double phase,double deltaBeat,double sr){
+  if(loop&&phase+1e-7<localBeat){wrapTail=last;begin(loop,mode,phase);wrapFade=int(sr*.005);}
+  Stereo result=render(phase,deltaBeat,sr);
+  if(wrapFade>0){double f=double(wrapFade)/(sr*.005);result=result*(1-f)+wrapTail*f;wrapFade--;}
+  last=result;return result;
+ }
 };
 // A smoothed biquad; bypass and coefficient changes fade without changing phase.
 struct OutputFilter {
@@ -99,6 +112,9 @@ struct Engine {
  std::array<Command,ringSize> commands;std::atomic<uint32_t> head{0},tail{0},dropped{0};
  std::array<int,maxQueue> cycle{},pendingIDs{};int cycleCount=0,cyclePos=0,pendingCount=0;
  bool pending=false,running=false,external=false,haveTick=false,transportClock=false;
+ std::array<BWClip,maxQueue> arrangement{},pendingArrangement{}; int arrangementCount=0,pendingArrangementCount=0;
+ bool arranged=false,arrangementPending=false; int arrangementStep=0,stepBeats=4,layerCount=0,oldLayerCount=0,layerTransition=0;
+ std::array<Voice,maxLayers> layers{},oldLayers{};
  int active=-1,mode=0,clockState=0,intervalCount=0,intervalIndex=0;double startBeat=0,nextBar=4,lastTick=-1,clockPulse=-1;
  std::array<double,12> intervals{};
  Voice voice,outgoing;int transition=0;float gain=0; OutputFilter filter;
@@ -107,6 +123,9 @@ struct Engine {
  std::atomic<double> snapBeat{0},snapBPM{120},snapProgress{0};
  std::atomic<int> snapPlaying{0},snapActive{-1},snapMode{0},snapExternal{0},snapClock{0},snapPending{0},snapCount{0};
  std::array<std::atomic<int>,maxQueue> snapQueue{};
+ std::atomic<int> snapActiveCount{0},snapStep{0};
+ std::array<std::atomic<int>,maxLayers> snapActiveLoops{},snapActiveTokens{};
+ std::array<std::atomic<double>,maxLayers> snapActiveProgress{};
  explicit Engine(double s):sr(s),filter(s){enabled.fill(true);}
  ~Engine(){for(auto& l:loops)delete l.parts.load();for(auto& r:retired)delete r.parts;}
  void setParts(int id,Parts* next){
@@ -116,22 +135,48 @@ struct Engine {
   auto epoch=completedBlocks.load(std::memory_order_acquire);
   retired.erase(std::remove_if(retired.begin(),retired.end(),[&](Retired r){if(epoch>r.epoch){delete r.parts;return true;}return false;}),retired.end());
  }
- void advanceParts(Loop* l){if(!l)return;float step=float(1/(sr*.008));
-  for(int p=0;p<4;p++){float wanted=(l->partMask&(1<<p))?1:0;l->partGain[p]+=std::clamp(wanted-l->partGain[p],-step,step);}
-  float wanted=l->parts.load(std::memory_order_acquire)?1:0;l->partBlend+=std::clamp(wanted-l->partBlend,-step,step);
-  wanted=l->partMask?1:0;l->audible+=std::clamp(wanted-l->audible,-step,step);
- }
  bool valid(int id)const{return id>=0&&id<maxLoops&&enabled[id]&&loops[id].frames>0;}
  void push(Command c){auto h=head.load(std::memory_order_relaxed),n=(h+1)%ringSize;if(n==tail.load(std::memory_order_acquire)){dropped.fetch_add(1);return;}commands[h]=c;head.store(n,std::memory_order_release);}
- void launch(int id,double atBeat){outgoing=voice;transition=int(sr*.005);active=id;startBeat=atBeat;voice.begin(valid(id)?&loops[id]:nullptr,mode);}
+ void launch(int id,double atBeat){outgoing=voice;transition=int(sr*.005);active=id;startBeat=atBeat;voice.begin(valid(id)?&loops[id]:nullptr,mode);voice.loopID=id;voice.token=id;voice.mask(valid(id)?loops[id].partMask:15,true);}
+ int nextStep(int current)const{
+  int first=maxQueue,next=maxQueue;for(int i=0;i<arrangementCount;i++)if(valid(arrangement[i].loop)){first=std::min(first,int(arrangement[i].step));if(arrangement[i].step>current)next=std::min(next,int(arrangement[i].step));}
+  return next<maxQueue?next:(first<maxQueue?first:-1);
+ }
+ void launchStep(int step,double atBeat,double phase=0){
+  if(arranged){oldLayers=layers;oldLayerCount=layerCount;}else{oldLayers[0]=voice;oldLayerCount=voice.loop?1:0;}
+  layerTransition=int(sr*.005);layerCount=0;stepBeats=1;arrangementStep=step;startBeat=atBeat;
+  for(int i=0;i<arrangementCount&&layerCount<maxLayers;i++){auto clip=arrangement[i];if(clip.step!=step||!valid(clip.loop))continue;
+   Voice next;next.loopID=clip.loop;next.token=clip.token;next.mask(clip.mask,true);next.begin(&loops[clip.loop],mode,std::fmod(std::max(0.0,phase),double(loops[clip.loop].beats)));
+   layers[layerCount++]=next;stepBeats=std::max(stepBeats,loops[clip.loop].beats);
+  }
+  active=-1;for(int i=0;i<arrangementCount;i++)if(arrangement[i].step==step&&valid(arrangement[i].loop)){active=arrangement[i].loop;break;}
+ }
+ void applyArrangement(double atBeat){
+  arrangementCount=pendingArrangementCount;std::copy_n(pendingArrangement.begin(),arrangementCount,arrangement.begin());arrangementPending=false;pending=false;
+  int step=-1;for(int i=0;i<arrangementCount;i++)if(valid(arrangement[i].loop)&&(step<0||arrangement[i].step<step))step=arrangement[i].step;
+  bool found=false;for(int v=0;arranged&&v<layerCount&&!found;v++)for(int i=0;i<arrangementCount;i++)if(arrangement[i].token==layers[v].token&&valid(arrangement[i].loop)){step=arrangement[i].step;found=true;break;}
+  // Editing another step must not restart the phrase already in progress.
+  if(running&&found){
+   int count=0;bool same=true;
+   for(int i=0;i<arrangementCount;i++)if(arrangement[i].step==step&&valid(arrangement[i].loop)){
+    count++;bool matches=false;
+    for(int v=0;v<layerCount;v++)if(layers[v].token==arrangement[i].token&&layers[v].loopID==arrangement[i].loop){layers[v].mask(arrangement[i].mask);matches=true;break;}
+    if(!matches)same=false;
+   }
+   if(same&&count==layerCount){arrangementStep=step;return;}
+  }
+  if(step>=0){launchStep(step,atBeat);arranged=true;}else{launchStep(-1,atBeat);arranged=true;if(!external)running=false;}
+ }
  void applyPending(double atBeat){cycleCount=0;for(int i=0;i<pendingCount;i++)if(valid(pendingIDs[i]))cycle[cycleCount++]=pendingIDs[i];cyclePos=0;pending=false;
+  if(arranged&&layerCount){voice=layers[0];arranged=false;}
   if(cycleCount)launch(cycle[0],atBeat);else{running=false;active=-1;} }
  void cleanQueue(){int count=0;for(int i=0;i<cycleCount;i++)if(valid(cycle[i]))cycle[count++]=cycle[i];cycleCount=count;cyclePos=0;for(int i=0;i<count;i++)if(cycle[i]==active)cyclePos=i;
   count=0;for(int i=0;i<pendingCount;i++)if(valid(pendingIDs[i]))pendingIDs[count++]=pendingIDs[i];pendingCount=count;
   if(pending&&pendingCount==0&&valid(active))pending=false;
   if(active>=0&&!valid(active)&&!pending){pending=true;pendingCount=cycleCount;std::copy_n(cycle.begin(),cycleCount,pendingIDs.begin());}}
  void start(bool reset){if(reset){beat=0;nextBar=4;startBeat=0;clockPulse=-1;}
-  if(pending)applyPending(beat);else if(!reset&&valid(active)){outgoing=voice;transition=int(sr*.005);voice.begin(&loops[active],mode,std::max(0.0,beat-startBeat));}else if(cycleCount){cyclePos=0;launch(cycle[0],beat);}else if(valid(active))launch(active,beat);
+  if(arrangementPending)applyArrangement(beat);else if(pending)applyPending(beat);else if(arranged&&arrangementCount){int step=reset?nextStep(-1):arrangementStep;double phase=reset?0:std::max(0.0,beat-startBeat);launchStep(step,reset?beat:startBeat,phase);}
+  else if(!reset&&valid(active)){outgoing=voice;transition=int(sr*.005);voice.begin(&loops[active],mode,std::max(0.0,beat-startBeat));}else if(cycleCount){cyclePos=0;launch(cycle[0],beat);}else if(valid(active))launch(active,beat);
   running=true;transportClock=true;}
  void midi(int status,int value,double time){
   if(!external)return;
@@ -142,17 +187,27 @@ struct Engine {
   else if(status==0xfc){running=false;transportClock=false;}
   else if(status==0xfb){clockPulse=std::round((beat-(offset+nudgeOffset)*clockBPM/60)*24)-1;start(false);lastTick=time;haveTick=true;}
   else if(status==0xf2){beat=value*.25;clockPulse=beat*24-1;nextBar=(std::floor(beat/4)+1)*4;
-   if(valid(active)){startBeat=std::floor(beat/loops[active].beats)*loops[active].beats;voice.begin(&loops[active],mode,beat-startBeat);}else startBeat=beat;}
+   if(arranged&&layerCount){startBeat=std::floor(beat/stepBeats)*stepBeats;launchStep(arrangementStep,startBeat,beat-startBeat);}
+   else if(valid(active)){startBeat=std::floor(beat/loops[active].beats)*loops[active].beats;voice.begin(&loops[active],mode,beat-startBeat);}else startBeat=beat;}
  }
  void consume(){auto t=tail.load(std::memory_order_relaxed);const auto h=head.load(std::memory_order_acquire);while(t!=h){const auto& c=commands[t];
   switch(c.type){
-   case Queue:pendingCount=0;for(int i=0;i<c.count;i++)if(valid(c.ids[i]))pendingIDs[pendingCount++]=c.ids[i];if(!pendingCount)break;pending=true;
+   case Queue:pendingCount=0;for(int i=0;i<c.count;i++)if(valid(c.ids[i]))pendingIDs[pendingCount++]=c.ids[i];if(!pendingCount)break;pending=true;arrangementPending=false;
     if(!running&&!external){applyPending(beat);if(active>=0){running=true;nextBar=(std::floor(beat/4)+1)*4;}}break;
-   case Enable:if(c.value>=0&&c.value<maxLoops){enabled[c.value]=c.number!=0;cleanQueue();}break;
+   case Arrange:{
+    pendingArrangementCount=0;std::array<int,maxQueue> perStep{};
+    for(int i=0;i<c.count;i++){auto clip=c.clips[i];if(valid(clip.loop)&&clip.step>=0&&clip.step<maxQueue&&clip.token>0&&perStep[clip.step]<maxLayers){clip.mask&=15;pendingArrangement[pendingArrangementCount++]=clip;perStep[clip.step]++;}}
+    arrangementPending=true;pending=false;
+    if(c.value&&!running&&!external){applyArrangement(beat);if(active>=0){running=true;nextBar=(std::floor(beat/4)+1)*4;}}
+   }break;
+   case Enable:if(c.value>=0&&c.value<maxLoops){enabled[c.value]=c.number!=0;
+    if((arranged||arrangementPending)&&!enabled[c.value]){if(!arrangementPending){pendingArrangementCount=arrangementCount;std::copy_n(arrangement.begin(),arrangementCount,pendingArrangement.begin());}
+     int count=0;for(int i=0;i<pendingArrangementCount;i++)if(valid(pendingArrangement[i].loop))pendingArrangement[count++]=pendingArrangement[i];pendingArrangementCount=count;arrangementPending=true;
+    }else if(!arranged&&!arrangementPending)cleanQueue();}break;
    case Tempo:if(!external)targetBPM=std::clamp(c.number,30.0,300.0);break;
-   case Mode:if(mode!=c.value){mode=c.value?1:0;outgoing=voice;transition=int(sr*.005);if(active>=0)voice.begin(&loops[active],mode,std::max(0.0,beat-startBeat));}break;
+   case Mode:if(mode!=c.value){mode=c.value?1:0;if(arranged&&layerCount)launchStep(arrangementStep,startBeat,std::max(0.0,beat-startBeat));else{outgoing=voice;transition=int(sr*.005);if(active>=0)voice.begin(&loops[active],mode,std::max(0.0,beat-startBeat));}}break;
    case External:external=c.value;haveTick=false;lastTick=-1;clockPulse=-1;intervalCount=0;intervalIndex=0;clockState=external?1:0;transportClock=false;nudgeOffset=0;nudgeRemaining=0;if(external)running=false;break;
-   case Transport:if(c.value==0){running=false;transportClock=false;}else if(c.value==1){start(true);}else if(c.value==2){start(false);}else{beat=0;nextBar=4;clockPulse=-1;haveTick=false;if(active>=0)launch(active,0);}break;
+   case Transport:if(c.value==0){running=false;transportClock=false;}else if(c.value==1){start(true);}else if(c.value==2){start(false);}else{beat=0;nextBar=4;clockPulse=-1;haveTick=false;if(arranged&&layerCount)launchStep(arrangementStep,0);else if(active>=0)launch(active,0);}break;
    case MIDI:midi(c.value,c.count,c.time);break;
    case Offset:offset=std::clamp(c.number,-200.0,200.0)/1000;break;
    case Nudge:if(running&&active>=0&&std::isfinite(c.number)){
@@ -160,7 +215,13 @@ struct Engine {
     if(external){double target=std::clamp(nudgeOffset+step,-2.0,2.0);step=target-nudgeOffset;nudgeOffset=target;}
     if(!external||!transportClock||clockState!=2||clockPulse<0)nudgeRemaining+=step*bpm/60;
    }break;
-   case PartMask:if(c.value>=0&&c.value<maxLoops)loops[c.value].partMask=c.count&15;break;
+   case PartMask:if(c.value>=0&&c.value<maxLoops){loops[c.value].partMask=c.count&15;if(voice.loopID==c.value)voice.mask(c.count);if(outgoing.loopID==c.value)outgoing.mask(c.count);}break;
+   case ClipMask:
+    for(int i=0;i<arrangementCount;i++)if(arrangement[i].token==c.value)arrangement[i].mask=c.count&15;
+    for(int i=0;i<pendingArrangementCount;i++)if(pendingArrangement[i].token==c.value)pendingArrangement[i].mask=c.count&15;
+    for(int i=0;i<layerCount;i++)if(layers[i].token==c.value)layers[i].mask(c.count);
+    for(int i=0;i<oldLayerCount;i++)if(oldLayers[i].token==c.value)oldLayers[i].mask(c.count);
+    break;
    case Filter:filter.set(c.value,c.number);break;
   }t=(t+1)%ringSize;}
   tail.store(t,std::memory_order_release);
@@ -183,22 +244,30 @@ struct Engine {
     correction+=applied*60*sr;nudgeRemaining-=applied;}
    double delta=(bpm+correction)/(60*sr);
    if(running){
-    if(beat+1e-9>=nextBar){double boundary=nextBar;nextBar+=4;if(pending)applyPending(boundary);}
-    if(active>=0&&valid(active)&&beat-startBeat+1e-9>=loops[active].beats){double boundary=startBeat+loops[active].beats;
+    if(beat+1e-9>=nextBar){double boundary=nextBar;nextBar+=4;if(arrangementPending)applyArrangement(boundary);else if(pending)applyPending(boundary);}
+    if(arranged&&layerCount&&beat-startBeat+1e-9>=stepBeats){double boundary=startBeat+stepBeats;launchStep(nextStep(arrangementStep),boundary);}
+    else if(!arranged&&active>=0&&valid(active)&&beat-startBeat+1e-9>=loops[active].beats){double boundary=startBeat+loops[active].beats;
      if(cycleCount){cyclePos=(cyclePos+1)%cycleCount;launch(cycle[cyclePos],boundary);}else launch(active,boundary);}
    }
    double desiredGain=running&&active>=0?1:0;gain+=float(std::clamp(desiredGain-gain,-1/(sr*.008),1/(sr*.003)));
-   advanceParts(voice.loop);if(outgoing.loop!=voice.loop)advanceParts(outgoing.loop);
    Stereo sample{};
-   if(gain>0&&voice.loop){sample=running?voice.render(std::max(0.0,beat-startBeat),delta,sr):voice.continueTail(delta,sr);
+   if(gain>0&&arranged){
+    for(int v=0;v<layerCount;v++){auto& layer=layers[v];layer.advanceParts(sr);double phase=std::fmod(std::max(0.0,beat-startBeat),double(layer.loop->beats));sample=sample+(running?layer.renderWrapped(phase,delta,sr):layer.continueTail(delta,sr))*(1.0/layerCount);}
+    if(layerTransition>0){Stereo old{};for(int v=0;v<oldLayerCount;v++){oldLayers[v].advanceParts(sr);old=old+oldLayers[v].continueTail(delta,sr)*(1.0/oldLayerCount);}double f=double(layerTransition)/(sr*.005);sample=sample*(1-f)+old*f;layerTransition--;}
+   }else if(gain>0&&voice.loop){voice.advanceParts(sr);outgoing.advanceParts(sr);sample=running?voice.render(std::max(0.0,beat-startBeat),delta,sr):voice.continueTail(delta,sr);
     if(transition>0){double f=double(transition)/(sr*.005);sample=sample*(1-f)+outgoing.continueTail(delta,sr)*f;transition--;}}
    sample=filter.process(sample);left[i]=sample.l*gain*.8f;right[i]=sample.r*gain*.8f;
    if(running)beat+=delta;
   }
   snapBeat.store(beat,std::memory_order_relaxed);snapBPM.store(bpm,std::memory_order_relaxed);
-  snapProgress.store(active>=0&&loops[active].beats?std::clamp((beat-startBeat)/loops[active].beats,0.0,1.0):0,std::memory_order_relaxed);
-  snapPlaying.store(running);snapActive.store(active);snapMode.store(mode);snapExternal.store(external);snapClock.store(clockState);snapPending.store(pending);
-  int count=pending?pendingCount:cycleCount;for(int i=0;i<count;i++)snapQueue[i].store(pending?pendingIDs[i]:cycle[(cyclePos+i)%std::max(1,cycleCount)]);snapCount.store(count);
+  snapProgress.store(active>=0?std::clamp((beat-startBeat)/(arranged?stepBeats:loops[active].beats),0.0,1.0):0,std::memory_order_relaxed);
+  snapPlaying.store(running);snapActive.store(active);snapMode.store(mode);snapExternal.store(external);snapClock.store(clockState);snapPending.store(pending||arrangementPending);
+  int count=0;if(arrangementPending){for(int i=0;i<pendingArrangementCount;i++)snapQueue[count++].store(pendingArrangement[i].loop);}
+  else if(arranged){for(int i=0;i<arrangementCount;i++)snapQueue[count++].store(arrangement[i].loop);}
+  else{count=pending?pendingCount:cycleCount;for(int i=0;i<count;i++)snapQueue[i].store(pending?pendingIDs[i]:cycle[(cyclePos+i)%std::max(1,cycleCount)]);}snapCount.store(count);
+  int activeCount=arranged?layerCount:(active>=0&&voice.loop?1:0);snapActiveCount.store(activeCount);snapStep.store(arrangementStep);
+  for(int i=0;i<activeCount;i++){snapActiveLoops[i].store(arranged?layers[i].loopID:active);snapActiveTokens[i].store(arranged?layers[i].token:active);
+   int beats=arranged?layers[i].loop->beats:loops[active].beats;snapActiveProgress[i].store(std::fmod(std::max(0.0,beat-startBeat),double(beats))/beats);}
   completedBlocks.fetch_add(1,std::memory_order_release);
  }
 };
@@ -209,6 +278,9 @@ BWEngine bw_create(double sr){return new Engine(sr);}
 void bw_destroy(BWEngine p){delete E(p);}
 int32_t bw_load_loop(BWEngine p,int32_t id,const float* pcm,int32_t frames,int32_t beats,const int32_t* slices,int32_t count){if(id<0||id>=maxLoops||frames<2||beats<1||count<1||slices[0]!=0)return 0;for(int i=0;i<count;i++)if(slices[i]<0||slices[i]>=frames||(i&&slices[i]<=slices[i-1]))return 0;auto& l=E(p)->loops[id];l.frames=frames;l.beats=beats;l.pcm.assign(pcm,pcm+frames*2);l.slices.assign(slices,slices+count);return 1;}
 void bw_queue(BWEngine p,const int32_t* ids,int32_t n){Command c;c.type=Queue;c.count=std::clamp(int(n),0,maxQueue);std::copy_n(ids,c.count,c.ids.begin());E(p)->push(c);}
+void bw_arrange(BWEngine p,const BWClip* clips,int32_t n){Command c;c.type=Arrange;c.value=1;c.count=std::clamp(int(n),0,maxQueue);if(c.count&&clips)std::copy_n(clips,c.count,c.clips.begin());else c.count=0;E(p)->push(c);}
+void bw_edit_arrangement(BWEngine p,const BWClip* clips,int32_t n){Command c;c.type=Arrange;c.count=std::clamp(int(n),0,maxQueue);if(c.count&&clips)std::copy_n(clips,c.count,c.clips.begin());else c.count=0;E(p)->push(c);}
+void bw_clip_mask(BWEngine p,int32_t token,int32_t mask){Command c;c.type=ClipMask;c.value=token;c.count=mask;E(p)->push(c);}
 void bw_enable(BWEngine p,int32_t id,int32_t enabled){command(p,Enable,id,enabled);}
 void bw_tempo(BWEngine p,double bpm){command(p,Tempo,0,bpm);}
 void bw_mode(BWEngine p,int32_t mode){command(p,Mode,mode);}
@@ -222,5 +294,5 @@ void bw_set_parts(BWEngine p,int32_t id,BWParts parts){E(p)->setParts(id,static_
 void bw_part_mask(BWEngine p,int32_t id,int32_t mask){Command c;c.type=PartMask;c.value=id;c.count=mask;E(p)->push(c);}
 void bw_filter(BWEngine p,int32_t type,double hz){command(p,Filter,type,hz);}
 void bw_render(BWEngine p,float* l,float* r,uint32_t n,double t){E(p)->render(l,r,n,t);}
-void bw_snapshot(BWEngine p,BWSnapshot* s){auto e=E(p);s->beat=e->snapBeat.load();s->bpm=e->snapBPM.load();s->loopProgress=e->snapProgress.load();s->playing=e->snapPlaying.load();s->activeLoop=e->snapActive.load();s->mode=e->snapMode.load();s->externalClock=e->snapExternal.load();s->clockState=e->snapClock.load();s->pending=e->snapPending.load();s->queueCount=e->snapCount.load();for(int i=0;i<s->queueCount;i++)s->queue[i]=e->snapQueue[i].load();s->droppedCommands=e->dropped.load();}
+void bw_snapshot(BWEngine p,BWSnapshot* s){auto e=E(p);s->beat=e->snapBeat.load();s->bpm=e->snapBPM.load();s->loopProgress=e->snapProgress.load();s->playing=e->snapPlaying.load();s->activeLoop=e->snapActive.load();s->mode=e->snapMode.load();s->externalClock=e->snapExternal.load();s->clockState=e->snapClock.load();s->pending=e->snapPending.load();s->queueCount=e->snapCount.load();for(int i=0;i<s->queueCount;i++)s->queue[i]=e->snapQueue[i].load();s->activeCount=e->snapActiveCount.load();s->activeStep=e->snapStep.load();for(int i=0;i<s->activeCount;i++){s->activeLoops[i]=e->snapActiveLoops[i].load();s->activeTokens[i]=e->snapActiveTokens[i].load();s->activeProgress[i]=e->snapActiveProgress[i].load();}s->droppedCommands=e->dropped.load();}
 }

@@ -87,6 +87,8 @@ export class AudioPlayer {
 
   command(data) { this.node?.port.postMessage(data); }
   queue(ids) { this.command({ type: 'queue', ids }); }
+  arrange(items) { this.command({ type: 'arrange', items }); }
+  setClipMask(token, mask) { this.command({ type: 'clip-mask', token, mask }); }
   stop() { this.command({ type: 'stop' }); }
   enable(id, enabled) { this.command({ type: 'enable', id, enabled }); }
   setTempo(bpm) { this.tempo = bpm; this.command({ type: 'tempo', bpm }); }

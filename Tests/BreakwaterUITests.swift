@@ -71,10 +71,20 @@ final class BreakwaterUITests: XCTestCase {
         app.buttons["pad_2"].tap()
         waitForValue("pad_2", "Ready")
     }
-    func test03DragCycleAndPortrait() {
-        app.buttons["pad_0"].press(forDuration: 0.2, thenDragTo: app.buttons["pad_2"])
+    func test03DragLayersAndSequenceInPortrait() {
+        app.buttons["pad_0"].press(forDuration: 0.7, thenDragTo: app.descendants(matching: .any)["dropStep_0"])
         waitForValue("pad_0", "Playing")
-        XCTAssertTrue((app.buttons["pad_2"].value as? String ?? "").contains("Cycle"))
+        XCTAssertTrue(app.buttons["clip_1"].waitForExistence(timeout: 4))
+        app.buttons["pad_1"].press(forDuration: 0.7, thenDragTo: app.buttons["clip_1"])
+        XCTAssertTrue(app.buttons["clip_2"].waitForExistence(timeout: 4))
+        app.buttons["pad_2"].press(forDuration: 0.7, thenDragTo: app.descendants(matching: .any)["dropStep_1"])
+        XCTAssertTrue(app.buttons["clip_3"].waitForExistence(timeout: 4))
+        app.buttons["clip_1"].tap()
+        XCTAssertTrue(app.buttons["part_0"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.sliders["filterCutoff"].exists)
+        app.buttons["part_0"].tap(); waitForValue("part_0", "Off")
+        app.buttons["clip_2"].tap(); waitForValue("part_0", "On")
+        app.buttons["clip_1"].tap(); waitForValue("part_0", "Off")
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.buttons["pad_29"].isHittable)
         capture("tablet-portrait")
@@ -83,6 +93,14 @@ final class BreakwaterUITests: XCTestCase {
         capture("tablet-settings")
         app.buttons["settingsDone"].tap()
         XCTAssertEqual(app.buttons["transport"].label, "Stop")
+        app.buttons["transport"].tap()
+        expectation(for: NSPredicate(format: "label == 'Play'"), evaluatedWith: app.buttons["transport"])
+        waitForExpectations(timeout: 4)
+        app.buttons["removeClip_1"].tap()
+        XCTAssertFalse(app.buttons["clip_1"].exists)
+        XCTAssertEqual(app.buttons["transport"].label, "Play")
+        app.buttons["transport"].tap()
+        waitForValue("pad_1", "Playing")
     }
     func test04AppearanceCapture() {
         app.buttons["pad_5"].tap()
@@ -164,7 +182,7 @@ final class BreakwaterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["clockStatus"].label.contains("LOCKED"))
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(earlier.isHittable && later.isHittable)
-        app.buttons["showFX"].tap()
+        app.buttons["showSound"].tap()
         XCTAssertTrue(earlier.isHittable && later.isHittable)
         capture("nudge-portrait")
     }
@@ -183,7 +201,7 @@ final class BreakwaterUITests: XCTestCase {
         app.buttons["pad_0"].tap()
         waitForValue("pad_0", "Playing")
         let width = app.otherElements["padGrid"].frame.width
-        app.buttons["showParts"].tap()
+        app.buttons["showSound"].tap()
         XCTAssertTrue(app.buttons["part_0"].waitForExistence(timeout: 3))
         XCTAssertLessThan(app.otherElements["padGrid"].frame.width, width)
         app.buttons["All off"].tap()
@@ -196,7 +214,6 @@ final class BreakwaterUITests: XCTestCase {
         expectation(for: NSPredicate { _, _ in !self.app.staticTexts["partStatus"].exists }, evaluatedWith: nil)
         waitForExpectations(timeout: 20)
         capture("tablet-parts-landscape")
-        app.buttons["showFX"].tap()
         XCTAssertTrue(app.sliders["filterCutoff"].waitForExistence(timeout: 3))
         app.segmentedControls.buttons["BPF"].tap()
         XCTAssertTrue(app.segmentedControls.buttons["BPF"].isSelected)
@@ -211,7 +228,7 @@ final class BreakwaterUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label CONTAINS 'LOCKED'"), evaluatedWith: app.buttons["clockStatus"])
         waitForExpectations(timeout: 10)
         app.buttons["pad_0"].tap(); waitForValue("pad_0", "Playing")
-        app.buttons["showParts"].tap(); app.buttons["part_0"].tap()
+        app.buttons["showSound"].tap(); app.buttons["part_0"].tap()
         expectation(for: NSPredicate { _, _ in !self.app.staticTexts["partStatus"].exists }, evaluatedWith: nil)
         waitForExpectations(timeout: 20)
         app.buttons["pad_1"].tap(); waitForValue("pad_1", "Playing")

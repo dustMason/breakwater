@@ -6,22 +6,22 @@ A native iPad instrument and a static browser player for percussion loops. The n
 
 ## Performance behavior
 
-- The song picker opens a scrollable list of sources. Selecting a page never stops the audio; tap a pad to queue a loop from that song.
+- The song picker opens a scrollable list of sources. Selecting a page leaves the arrangement playing, so its steps can combine loops from different songs.
 - **Use source** sets the internal tempo to the selected song’s approximate BPM. It is disabled while following MIDI clock, because the external device controls the tempo.
-- Tap a pad to replace the current loop on the next four-beat bar boundary. With internal clock stopped, tapping starts that pad immediately.
+- Drag a pad into the bottom **Sequence** tray: drop it on a step to layer it with that step, or on a plus target to insert another step. The sequence repeats; each step lasts as long as its longest loop, and shorter layers repeat underneath. Tap a pad to replace the arrangement; with the internal clock stopped, the first selection starts immediately. Changes during playback take effect at a four-beat bar boundary. Editing a different step preserves the current phrase; changing the playing step's layers re-cues that step together at the boundary.
+- Tap a clip in the tray to select it for Parts. Each clip, including separate copies of the same loop, has its own layer switches and waveform. Remove clips with their × controls, or use **Clear**. An arrangement can contain up to 64 clips, with at most eight in one step. Layers are mixed at reduced levels to leave headroom. Arrangement and Parts settings last for the current session; pad exclusions remain persistent.
 - Use **Nudge** in the bottom bar to move the playing loop earlier or later in 10 ms steps; hold either arrow to repeat. The adjustment settles smoothly and follows queued loops. When following MIDI clock, it changes the alignment against the master without changing its tempo or the saved latency setting. Switching clock modes clears the MIDI nudge adjustment.
-- Hold one pad and touch additional pads to form an ordered cycle. The cycle stays latched when you release your fingers. Each selected sample plays its full one-, two-, or four-bar length, then the next sample plays. The next fresh gesture replaces the cycle at the next bar.
 - `Edit pads` toggles persistent exclusions. Disabled pads remain visible so they can be restored. They cannot be launched by touch or MIDI and are removed from cycles. Disabling the playing pad changes to the next valid selection on a bar boundary; if none remains, playback fades out.
 - **Tape** follows tempo by changing playback rate and pitch together.
 - **Slice** schedules precomputed drum transients against the beat clock, plays their attacks at original pitch, and uses short crossfades / decaying tail extension. It preserves the original internal swing, rather than quantizing every hit to a rigid subdivision. Extreme tempo changes can reveal slicing artifacts.
-- Open **FX** for a low-pass, band-pass or high-pass output filter and its cutoff. The tray makes room by resizing the grid, and filter changes are smoothed during playback.
-- Open **Parts** for four approximate layers: Low, Body, Attack and High. Use **All off** and bring them in one by one, or switch individual layers while playing. The four waveform lanes dim as their layers are muted. Layer choices are saved per song. The labels describe the analysis rather than reliably naming individual instruments: the separation can contain bleed or artifacts, particularly when drums overlap. The unmodified original plays when all four layers are on.
+- Open **Parts & FX** to see both the selected clip's parts and the output filter together. The tray makes room by resizing the grid; filter choices are Off, low-pass, band-pass and high-pass, with a smoothed cutoff.
+- Parts offers four approximate layers: Low, Body, Attack and High. Use **All off** and bring them in one by one, or switch individual layers while playing. Waveform lanes dim when their layers are muted. The labels describe the analysis rather than reliably naming individual instruments: the separation can contain bleed or artifacts, particularly when drums overlap. The unmodified original plays when all four layers are on.
 
 ## MIDI and audio
 
 Connect the clock source's MIDI OUT to the CME U2MIDI Pro's white **TO MIDI OUT** plug; connect its USB end to the iPad through Apple's USB camera adapter. Audio goes separately from the iPad's headphone output or an audio interface to your mixer.
 
-Select the MIDI source and enable external clock in Settings. Incoming MIDI Clock, Start, Stop, Continue and Song Position Pointer are supported. Start establishes bar one; Align downbeat can establish it when joining a running jam. Note numbers 36–65 trigger pads 01–30 on the displayed song page; removed pad numbers remain unmapped (Can You See? starts with pad 07 at note 42). Note release latches the selection, like finger release. Notes are accepted on all channels.
+Select the MIDI source and enable external clock in Settings. Incoming MIDI Clock, Start, Stop, Continue and Song Position Pointer are supported. Start establishes bar one; Align downbeat can establish it when joining a running jam. Note numbers 36–65 trigger pads 01–30 on the displayed song page; removed pad numbers remain unmapped (Can You See? starts with pad 07 at note 42). Held notes form a sequence that remains after release. Notes are accepted on all channels.
 
 Clock smoothing and a phase correction loop reject small timing jitter without jumping the sample cursor. Tempo changes slew over roughly 90 ms, in addition to the short incoming-clock measurement window. If clock vanishes, playback briefly freewheels; after two seconds it fades out and waits for transport restart. The latency offset advances playback for positive values. Physical timing should be calibrated against the actual audio output.
 
@@ -36,7 +36,7 @@ python3 Scripts/serve_web.py
 # Open http://127.0.0.1:8765/
 ```
 
-The browser version uses the same song pages, real waveform previews, next-bar replacements, full-length cycles, timing nudges, and persistent pad exclusions. Drag across pads or Shift-click to build a cycle with a mouse; on a tablet, hold one pad while touching more. Keyboard users can navigate pads with the arrow keys and activate with Enter/Space (Shift adds to the cycle). On small screens the grid scrolls vertically; touch taps launch on release so swiping does not trigger samples. The bottom transport stays visible.
+The browser version uses the same arrangement, song pages, waveform previews, next-bar changes, timing nudges, and persistent pad exclusions. Drag from the grid to the sequence; on touch screens, hold briefly before dragging. Keyboard users can navigate pads with the arrow keys and activate with Enter/Space; Shift adds a step, and Alt adds a layer to the selected step. On small screens the grid scrolls vertically and the bottom transport stays visible.
 
 Enter a tempo, use **Tap tempo**, or **Use source**. Pitch follows speed, with smoothly changing tempo and short transition fades. There is no MIDI or Slice mode in this version. Only selected loops download and decode when first triggered; subsequent plays use the in-memory cache. Rapid selections share in-flight downloads, and failed clips can be retried without reloading successful clips. Playback then runs in an AudioWorklet on the audio thread, independently of animation and main-thread timers. Browser interruptions require pressing Play again. Preferences belong to this browser and are separate from the native app.
 
@@ -76,7 +76,7 @@ Scripts/test_core.sh
 Scripts/test_interactions.sh
 ```
 
-The first compiles the portable audio engine with AddressSanitizer and UndefinedBehaviorSanitizer. It tests bar-boundary replacements, full-length cycles, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, layer muting and the output filters. The second tests gesture latching, MIDI parsing, and every shipped sample's format and metadata. Run `npm test` for the browser engine and `python3 Tests/PartsCatalogTests.py` (requires ffprobe) to verify the prepared layer files.
+The first compiles the portable audio engine with AddressSanitizer and UndefinedBehaviorSanitizer. It tests bar-boundary changes, layered steps, exclusions, clock jitter, tempo steps, phase lock, clock loss, MIDI transport, pitch behavior, per-clip muting and output filters. The second tests MIDI parsing and every shipped sample's format and metadata. Run `npm test` for the browser engine and `python3 Tests/PartsCatalogTests.py` (requires ffprobe) to verify the prepared layer files.
 
 Run native UI tests with `Scripts/test_simulator.sh <iPad Simulator UDID>`. Results and physical-device limitations are recorded in [VALIDATION.md](VALIDATION.md).
 

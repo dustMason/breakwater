@@ -1,5 +1,12 @@
 # Validation
 
+## Layered sequence and per-clip Parts — 2026-10-15
+
+- Both players use a bottom arrangement of ordered steps, with multiple clips per step and separate Parts settings per clip. The longest clip determines step duration; shorter clips repeat. Changes are applied at a bar boundary, future-step edits preserve the current phrase, and changes to the current step re-cue its layers together. Layers are averaged for headroom. The original catalog and sample assets are unchanged.
+- `Scripts/test_core.sh` passes with AddressSanitizer and UndefinedBehaviorSanitizer, including layered step lengths, looping and wrap fades, independent masks for duplicate samples, future-step edits, stopped edits, an empty arrangement awaiting MIDI Start, and synthetic MIDI clock and nudge. `npm test` passes 20 tests, including matching web timing and layer coverage. `Scripts/test_interactions.sh` passes MIDI and 222 original WAV/catalog checks; `Tests/PartsCatalogTests.py` checks all 888 prepared components. The static site and unsigned Release iPad device build succeed.
+- A muted iPad A16 Simulator run passed six focused UI checks: dragging layers and sequence steps in portrait, song selection with synthetic MIDI clock, source tempo, combined Parts/Filter, Parts with synthetic clock, and nudge with synthetic clock. A final two-test rerun passed on the updated build, including removing a clip while stopped and restarting. The landscape and portrait screenshots show the combined panel and sequence tray; the tray scrolls, as does the browser grid when needed. The muted browser preview was checked for layering, sequencing, cross-song clips, independent Parts, and keyboard controls. The updated static build is served locally at port 8765.
+- Simulator results include existing AVAudioSession main-thread and future full-screen behavior warnings. No physical iPad, A12 load, USB MIDI clock, audible blending, or live-jam latency has been validated; the four Parts remain approximate spectral components rather than verified isolated instruments.
+
 ## Live timing nudge
 
 - `Scripts/test_core.sh` passes with sanitizers. Paired synthetic MIDI clocks verify 10 ms nudges in both Tape and Slice, phase continuity, next-pad replacement, a 120→150 BPM tempo change, freewheel and reacquisition, and MIDI Stop/Continue. The test also covers internal-clock nudging and checks the saved latency offset remains independent.

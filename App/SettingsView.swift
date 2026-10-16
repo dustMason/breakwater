@@ -33,11 +33,12 @@ struct SettingsView: View {
                     LabeledContent("Audio output") { Text(audio.outputName).foregroundStyle(Palette.secondary) }
                 }
                 Section("Pads") {
-                    Text("Tap a pad to launch it on the next bar. Hold one pad and touch more to build a cycle in that order; release to keep it cycling. Dragging across pads also builds a cycle. Each loop plays its full length until your next selection.")
+                    Text("Tap a pad to replace the sequence on the next bar. Drag a pad onto a sequence step to layer it, or onto a plus to add a step. Shorter layers repeat until the longest loop in that step finishes.")
+                    Text("Tap a sample in the sequence to adjust its Parts. The Parts & FX panel shows those controls alongside the output filter.")
                     Text("Edit pads excludes unwanted loops and saves your choices. Change songs without interrupting playback.")
                     Button("Restore all pads in this song") { audio.enableSong() }.accessibilityIdentifier("restorePads")
                 }
-                Section("MIDI pads") { Text("Notes 36–65 trigger pads 01–30 in the selected song, on any MIDI channel. Hold notes together to latch a cycle. A new touch or note gesture replaces the cycle.") }
+                Section("MIDI pads") { Text("Notes 36–65 trigger pads 01–30 in the selected song, on any MIDI channel. Hold notes together to latch a sequence. A new note gesture replaces the sequence.") }
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("settingsDone") } }

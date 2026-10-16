@@ -125,4 +125,68 @@ void partsAndFilters(){
  assert(level(1,200)>10*level(1,6000));assert(level(3,6000)>10*level(3,200));assert(level(2,1000)>4*level(2,100));
  puts("PASS separated-part mute/fade/restore and low/band/high output filtering");
 }
-int main(){nudgeInternal();nudgeAgainstMidi();partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}
+void layeredArrangement(){
+ Rig r;BWClip initial[]={{0,101,0,15},{1,102,0,15},{2,103,1,15}};
+ bw_arrange(r.e,initial,3);r.frames(1);auto s=r.snapshot();assert(s.playing&&s.activeCount==2&&s.activeTokens[0]==101&&s.activeTokens[1]==102);
+ r.untilBeat(7.99);s=r.snapshot();assert(s.activeCount==2&&s.activeLoop==0&&s.activeStep==0);
+ r.untilBeat(8.01);s=r.snapshot();assert(s.activeCount==1&&s.activeLoop==2&&s.activeStep==1);
+ r.untilBeat(12.01);assert(r.snapshot().activeCount==2);
+ BWClip edited[]={{0,101,0,15},{1,102,1,15},{2,103,1,15}};
+ r.untilBeat(13);bw_arrange(r.e,edited,3);r.frames(1);assert(r.snapshot().pending&&r.snapshot().activeCount==2);
+ r.untilBeat(15.99);assert(r.snapshot().activeCount==2);r.untilBeat(16.01);assert(r.snapshot().activeCount==1&&r.snapshot().activeTokens[0]==101);
+ r.untilBeat(20.01);assert(r.snapshot().activeCount==2&&r.snapshot().activeTokens[0]==102);
+ bw_enable(r.e,1,0);r.frames(1);assert(r.snapshot().pending);r.untilBeat(24.01);assert(r.snapshot().activeCount==1&&r.snapshot().activeLoop==2);
+ puts("PASS layered steps repeat shorter loops, sequence full phrases and apply edits at the next bar");
+}
+void futureStepPreservesCurrentPhrase(){
+ Rig r;BWClip initial[]={{1,101,0,15}};bw_arrange(r.e,initial,1);r.frames(1);r.untilBeat(1);
+ BWClip edited[]={{1,101,0,15},{0,102,1,15}};bw_arrange(r.e,edited,2);
+ r.untilBeat(4.01);assert(r.snapshot().activeTokens[0]==101&&r.snapshot().activeProgress[0]>.49);
+ r.untilBeat(8.01);assert(r.snapshot().activeTokens[0]==102);
+ puts("PASS editing a future step preserves the current phrase and its end");
+}
+void editingStoppedArrangement(){
+ Rig r;BWClip initial[]={{0,101,0,15},{1,102,1,15}};bw_arrange(r.e,initial,2);r.frames(1);
+ bw_transport(r.e,0);r.frames(1);BWClip edited[]={{1,102,0,15}};bw_edit_arrangement(r.e,edited,1);r.seconds(.1);
+ assert(!r.snapshot().playing&&r.snapshot().pending);
+ bw_transport(r.e,2);r.frames(1);assert(r.snapshot().playing&&r.snapshot().activeTokens[0]==102);
+ Rig external;bw_external(external.e,1);bw_arrange(external.e,initial,2);external.frames(1);
+ bw_edit_arrangement(external.e,nullptr,0);external.frames(1);bw_midi(external.e,0xfa,0,external.now);external.frames(1);
+ assert(external.snapshot().activeLoop<0&&external.snapshot().activeCount==0);
+ puts("PASS stopped edits stay stopped and clearing a MIDI-pending arrangement prevents stale playback");
+}
+void independentClipParts(){
+ constexpr int frames=96000;const double pi=3.141592653589793;const int frequencies[4]={180,600,2400,7000};
+ std::vector<float> pcm(frames*2),parts(frames*8),l(48000),r(48000);
+ for(int i=0;i<frames;i++)for(int p=0;p<4;p++){float v=float(.1*std::sin(2*pi*frequencies[p]*i/48000));for(int ch=0;ch<2;ch++){parts[p*frames*2+i*2+ch]=v;pcm[i*2+ch]+=v;}}
+ auto e=bw_create(48000);int32_t slice=0;assert(bw_load_loop(e,7,pcm.data(),frames,4,&slice,1));bw_set_parts(e,7,bw_create_parts(parts.data(),frames));
+ BWClip clips[]={{7,201,0,1},{7,202,0,2}};bw_arrange(e,clips,2);bw_render(e,l.data(),r.data(),48000,10);
+ auto amplitude=[&](int hz){double a=0,b=0;for(int i=2000;i<48000;i++){a+=l[i]*std::sin(2*pi*hz*i/48000);b+=l[i]*std::cos(2*pi*hz*i/48000);}return 2*std::hypot(a,b)/46000;};
+ assert(amplitude(180)>.035&&amplitude(600)>.035);
+ bw_clip_mask(e,201,0);bw_render(e,l.data(),r.data(),48000,11);assert(amplitude(180)<.002&&amplitude(600)>.035);
+ bw_clip_mask(e,202,0);bw_clip_mask(e,201,1);bw_render(e,l.data(),r.data(),48000,12);assert(amplitude(180)>.035&&amplitude(600)<.002);
+ bw_destroy(e);puts("PASS repeated copies have independent part controls");
+}
+void layeredWrapFade(){
+ auto e=bw_create(48000);int32_t slice=0;std::vector<float> shortPCM(96000*2),longPCM(192000*2,0);
+ for(int i=0;i<96000;i++)shortPCM[i*2]=shortPCM[i*2+1]=i<48000?.6f:-.6f;
+ assert(bw_load_loop(e,0,shortPCM.data(),96000,4,&slice,1));assert(bw_load_loop(e,1,longPCM.data(),192000,8,&slice,1));
+ BWClip clips[]={{0,1,0,15},{1,2,0,15}};bw_arrange(e,clips,2);
+ std::vector<float> l(95000),r(95000);bw_render(e,l.data(),r.data(),95000,10);float previous=l.back();
+ l.resize(2000);r.resize(2000);bw_render(e,l.data(),r.data(),2000,10+95000.0/48000);
+ float maxJump=0;for(float sample:l){maxJump=std::max(maxJump,std::abs(sample-previous));previous=sample;}
+ assert(maxJump<.01);bw_destroy(e);puts("PASS shorter layered loops crossfade their wrap");
+}
+void layeredMidi(){
+ Rig r;bw_external(r.e,1);BWClip clips[]={{0,1,0,15},{1,2,0,15},{2,3,1,15}};bw_arrange(r.e,clips,3);r.frames(1);
+ bw_midi(r.e,0xfa,0,r.now);double next=r.now;bool advanced=false;
+ for(int tick=0;tick<260;tick++){
+  r.seconds(std::max(0.0,next-r.now));bw_midi(r.e,0xf8,0,next);r.frames(1);
+  if(tick==80)bw_nudge(r.e,10);
+  auto s=r.snapshot();if(s.beat>1&&s.beat<7.8)assert(s.activeCount==2&&s.activeTokens[0]==1&&s.activeTokens[1]==2);
+  if(s.beat>8.2){assert(s.activeCount==1&&s.activeTokens[0]==3);advanced=true;}
+  next+=60.0/(24*(tick<150?120:145));
+ }
+ assert(advanced&&r.snapshot().clockState==2&&std::abs(r.snapshot().bpm-145)<1);puts("PASS layered sequence follows MIDI tempo and nudge");
+}
+int main(){layeredArrangement();futureStepPreservesCurrentPhrase();editingStoppedArrangement();independentClipParts();layeredWrapFade();layeredMidi();nudgeInternal();nudgeAgainstMidi();partsAndFilters();missingFirstClock();positionWithinPhrase();queuedExclusion();midiContinue();midiBarReplacement();barQueueAndCycle();exclusions();tempoChanges();clockLock();pitchModes();stopStart();puts("All audio-core tests passed.");}

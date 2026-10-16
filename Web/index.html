@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#004cc9">
-  <meta name="description" content="Breakwater: a playable grid of drum loops. Choose a song, build a cycle, and change the tempo.">
+  <meta name="description" content="Breakwater: a playable grid of drum loops. Layer and sequence samples, shape their parts, and change the tempo.">
   <title>Breakwater</title>
   <link rel="icon" type="image/png" href="./icon.png">
   <link rel="apple-touch-icon" href="./icon.png">
@@ -22,23 +22,24 @@
       </div>
       <div class="source-tempo"><span>Source BPM</span><strong id="source-bpm">—</strong></div>
       <div class="tray-actions" aria-label="Sound controls">
-        <button id="show-parts" aria-controls="tray" aria-expanded="false">Parts</button>
-        <button id="show-fx" aria-controls="tray" aria-expanded="false">FX</button>
+        <button id="show-sound" aria-controls="tray" aria-expanded="false">Parts &amp; FX</button>
       </div>
     </header>
 
     <div class="workspace">
       <section id="grid" class="grid" aria-label="Loop pads" aria-busy="true"></section>
       <aside id="tray" class="tray" aria-label="Sound controls" hidden>
-        <div class="tray-heading"><h2 id="tray-title">Parts</h2><button id="close-tray" aria-label="Close sound controls"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2"/></svg></button></div>
+        <div class="tray-heading"><h2>Sound</h2><button id="close-tray" aria-label="Close sound controls"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2"/></svg></button></div>
         <section id="parts-controls">
-          <p class="tray-description">Approximate layers from this song. Some sounds may overlap.</p>
+          <h3>Parts</h3>
+          <p id="part-target" class="tray-description">Tap a sample in the sequence to edit its parts.</p>
           <div class="part-actions"><button id="parts-off">All off</button><button id="parts-on">All on</button></div>
           <div id="part-buttons" class="part-buttons"></div>
           <p id="part-message" class="tray-description" role="status"></p>
           <button id="retry-parts" hidden>Retry parts</button>
         </section>
-        <section id="fx-controls" hidden>
+        <section id="fx-controls">
+          <h3>Filter</h3>
           <p class="tray-description">Shape the full output.</p>
           <div id="filter-modes" class="filter-modes" aria-label="Filter type">
             <button data-mode="0" aria-pressed="true">Off</button><button data-mode="1" aria-pressed="false">LPF</button><button data-mode="2" aria-pressed="false">BPF</button><button data-mode="3" aria-pressed="false">HPF</button>
@@ -53,7 +54,14 @@
       <button id="retry" hidden>Retry</button>
       <progress id="loading-progress" max="60" value="0" aria-label="Loading samples" hidden></progress>
     </div>
-    <p id="hint" class="hint">Tap a pad to play. Drag across pads, Shift-click, or hold several to make a cycle.</p>
+    <p id="hint" class="hint">Drag a pad below: drop on a step to layer, or between steps to sequence.</p>
+    <p id="keyboard-help" class="sr-only">Use the arrow keys to move between pads. Press Enter or Space to replace the sequence, Shift with Enter or Space to add a step, or Alt with Enter or Space to add a layer to the selected step.</p>
+
+    <section id="arrangement" class="arrangement" aria-label="Playback sequence">
+      <div class="arrangement-heading"><strong>Sequence</strong><span>Drop on a step to layer · drop between steps to sequence</span><button id="clear-arrangement">Clear</button></div>
+      <div id="arrangement-items" class="arrangement-items" aria-label="Sequence steps"></div>
+    </section>
+    <div id="drag-preview" class="drag-preview" hidden aria-hidden="true"></div>
 
     <footer class="dock">
       <button id="transport" class="transport" disabled aria-label="Play">

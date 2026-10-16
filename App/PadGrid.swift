@@ -7,35 +7,39 @@ struct PadGrid: UIViewRepresentable {
     let disabled: Set<Int32>
     let editing: Bool
     let ready: Bool
-    let partMask: Int
-    let showParts: Bool
+    let partMasks: [Int32: Int]
+    let orders: [Int32: Int]
     let queue: ([Int32]) -> Void
     let toggle: (Int32) -> Void
+    let append: (Int32) -> Void
+    let layer: (Int32) -> Void
     func makeUIView(context: Context) -> PadGridView { PadGridView() }
     func updateUIView(_ view: PadGridView, context: Context) {
-        view.queue = queue; view.toggle = toggle
-        view.update(samples: samples, state: state, disabled: disabled, editing: editing, ready: ready, partMask: partMask, showParts: showParts)
+        view.queue = queue; view.toggle = toggle; view.append = append; view.layerSample = layer
+        view.update(samples: samples, state: state, disabled: disabled, editing: editing, ready: ready, partMasks: partMasks, orders: orders)
     }
 }
 
-final class PadGridView: UIView {
+final class PadGridView: UIView, UIDragInteractionDelegate {
     var queue: ([Int32]) -> Void = { _ in }
     var toggle: (Int32) -> Void = { _ in }
+    var append: (Int32) -> Void = { _ in }
+    var layerSample: (Int32) -> Void = { _ in }
     private var pads: [WavePad] = []
     private var ids: [Int32] = []
     private var disabled: Set<Int32> = []
     private var editing = false
     private var ready = false
-    private var gesture = PadGesture()
-    private var editTouches: [Int: Int32] = [:]
+    private var touchesStarted: [Int: (id: Int32, point: CGPoint)] = [:]
     override init(frame: CGRect) {
         super.init(frame: frame); isMultipleTouchEnabled = true
         accessibilityIdentifier = "padGrid"
+        let drag = UIDragInteraction(delegate: self); drag.isEnabled = true; addInteraction(drag)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    func update(samples: [LoopSample], state: PlaybackState, disabled: Set<Int32>, editing: Bool, ready: Bool, partMask: Int, showParts: Bool) {
+    func update(samples: [LoopSample], state: PlaybackState, disabled: Set<Int32>, editing: Bool, ready: Bool, partMasks: [Int32: Int], orders: [Int32: Int]) {
         if ids != samples.map(\.id) {
-            gesture.cancel(); editTouches.removeAll()
+            touchesStarted.removeAll()
             pads.forEach { $0.removeFromSuperview() }
             ids = samples.map(\.id)
             pads = samples.map { sample in
@@ -48,19 +52,23 @@ final class PadGridView: UIView {
                     return true
                 }
                 pad.exclude = { [weak self] in self?.toggle(sample.id); return true }
+                pad.append = { [weak self] in guard let self, self.ready, !self.disabled.contains(sample.id) else { return false }; self.append(sample.id); return true }
+                pad.layerSample = { [weak self] in guard let self, self.ready, !self.disabled.contains(sample.id) else { return false }; self.layerSample(sample.id); return true }
                 addSubview(pad); return pad
             }
             accessibilityElements = pads
             setNeedsLayout()
         }
-        if self.editing != editing { gesture.cancel(); editTouches.removeAll() }
+        if self.editing != editing { touchesStarted.removeAll() }
         self.disabled = disabled; self.editing = editing; self.ready = ready
         CATransaction.begin(); CATransaction.setDisableActions(true)
         for pad in pads {
-            let order = state.queue.firstIndex(of: pad.sample.id).map { $0 + 1 }
-            pad.update(active: state.playing && state.active == pad.sample.id,
-                       pending: state.pending, order: order, progress: state.progress,
-                       disabled: disabled.contains(pad.sample.id), editing: editing, ready: ready, partMask: partMask, showParts: showParts)
+            let order = orders[pad.sample.id]
+            let index = state.activeLoops.firstIndex(of: pad.sample.id)
+            let progress = index.flatMap { state.activeProgress.indices.contains($0) ? state.activeProgress[$0] : nil } ?? state.progress
+            pad.update(active: state.playing && state.activeLoops.contains(pad.sample.id),
+                       pending: state.pending, order: order, progress: progress,
+                       disabled: disabled.contains(pad.sample.id), editing: editing, ready: ready, partMask: partMasks[pad.sample.id] ?? 15, showParts: partMasks[pad.sample.id] != nil)
         }
         CATransaction.commit()
     }
@@ -77,41 +85,40 @@ final class PadGridView: UIView {
     }
     private func token(_ touch: UITouch) -> Int { ObjectIdentifier(touch).hashValue }
     private func pad(at touch: UITouch) -> WavePad? { let point=touch.location(in:self); return pads.first { $0.frame.contains(point) } }
+    func dragInteraction(_ interaction: UIDragInteraction, itemsForBeginning session: UIDragSession) -> [UIDragItem] {
+        let point = session.location(in: self)
+        guard ready, !editing, let pad = pads.first(where: { $0.frame.contains(point) }), !disabled.contains(pad.sample.id) else { return [] }
+        let item = UIDragItem(itemProvider: NSItemProvider(object: String(pad.sample.id) as NSString))
+        item.localObject = pad.sample.id
+        return [item]
+    }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard ready else { return }
-        var cycle: [Int32]?
-        let sorted = touches.sorted { a,b in
-            if a.timestamp != b.timestamp { return a.timestamp < b.timestamp }
-            let p=a.location(in:self), q=b.location(in:self)
-            return p.y == q.y ? p.x < q.x : p.y < q.y
-        }
-        for touch in sorted {
+        for touch in touches {
             guard let pad = pad(at:touch) else { continue }
-            if editing { editTouches[token(touch)] = pad.sample.id; toggle(pad.sample.id) }
-            else if !disabled.contains(pad.sample.id) { cycle = gesture.began(token: token(touch), pad: pad.sample.id) }
+            touchesStarted[token(touch)] = (pad.sample.id, touch.location(in:self))
         }
-        if let cycle { queue(cycle) }
     }
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        var cycle: [Int32]?
-        for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
-            guard let pad = pad(at:touch) else { continue }
-            if editing {
-                if editTouches[token(touch)] != pad.sample.id { editTouches[token(touch)] = pad.sample.id; toggle(pad.sample.id) }
-            } else if !disabled.contains(pad.sample.id), let next = gesture.moved(token: token(touch), pad: pad.sample.id) { cycle = next }
-        }
-        if let cycle { queue(cycle) }
+        // UIDragInteraction handles the long-press drag; taps are resolved on release.
     }
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for touch in touches { gesture.ended(token: token(touch)); editTouches.removeValue(forKey: token(touch)) }
+        for touch in touches {
+            guard let start = touchesStarted.removeValue(forKey: token(touch)), let pad = pad(at: touch), pad.sample.id == start.id else { continue }
+            let end = touch.location(in:self)
+            guard hypot(end.x-start.point.x,end.y-start.point.y) < 12 else { continue }
+            if editing { toggle(start.id) } else if !disabled.contains(start.id) { queue([start.id]) }
+        }
     }
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { touchesEnded(touches, with:event) }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { for touch in touches { touchesStarted.removeValue(forKey: token(touch)) } }
 }
 
 final class WavePad: UIView {
     let sample: LoopSample
     var activate: () -> Bool = { false }
     var exclude: () -> Bool = { false }
+    var append: () -> Bool = { false }
+    var layerSample: () -> Bool = { false }
     private let number = UILabel(), bars = UILabel(), status = UILabel()
     private let waveform = CAShapeLayer(), progressFill = CALayer(), playhead = CALayer(), queueFlash = CALayer()
     private let partWaveforms = (0..<4).map { _ in CAShapeLayer() }
@@ -136,11 +143,13 @@ final class WavePad: UIView {
         registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitPreferredContentSizeCategory.self, UITraitAccessibilityContrast.self]) { (view: WavePad, _: UITraitCollection) in
             view.updateFonts(); view.lastSize = .zero; view.applyStyle(); view.setNeedsLayout()
         }
-        accessibilityCustomActions = [UIAccessibilityCustomAction(name: "Exclude or restore pad", target: self, selector: #selector(toggleExclusion))]
+        accessibilityCustomActions = [UIAccessibilityCustomAction(name: "Add as a sequence step", target: self, selector: #selector(appendToSequence)), UIAccessibilityCustomAction(name: "Layer on selected step", target: self, selector: #selector(addLayer)), UIAccessibilityCustomAction(name: "Exclude or restore pad", target: self, selector: #selector(toggleExclusion))]
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func accessibilityActivate() -> Bool { activate() }
     @objc private func toggleExclusion() -> Bool { exclude() }
+    @objc private func appendToSequence() -> Bool { append() }
+    @objc private func addLayer() -> Bool { layerSample() }
     private func updateFonts() {
         number.font = UIFontMetrics(forTextStyle: .subheadline).scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .semibold), maximumPointSize: 23)
         bars.font = UIFontMetrics(forTextStyle: .caption1).scaledFont(for: .systemFont(ofSize: 12), maximumPointSize: 19)
@@ -192,7 +201,7 @@ final class WavePad: UIView {
         alpha = ready ? 1 : 0.45
         accessibilityLabel = "Loop \(sample.label), \(sample.bars) \(sample.bars == 1 ? "bar" : "bars")"
         accessibilityValue = excluded ? "Excluded" : active ? "Playing" : order != nil ? "\(pending ? "Queued" : "Cycle") \(order!)" : "Ready"
-        accessibilityHint = editing ? "Double tap to \(excluded ? "restore" : "exclude") this loop" : "Double tap to queue for the next bar"
+        accessibilityHint = editing ? "Double tap to \(excluded ? "restore" : "exclude") this loop" : "Double tap to replace the sequence, or use actions to add a layer or step."
         accessibilityTraits = [.button]
         if excluded && !editing || !ready { accessibilityTraits.insert(.notEnabled) }
         if active { accessibilityTraits.insert(.selected) }

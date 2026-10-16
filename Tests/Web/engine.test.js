@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { LoopEngine } from '../../Web/engine.js';
-import { PadGesture } from '../../Web/gestures.js';
 
 const rate = 48000;
 function engine() {
@@ -163,21 +162,6 @@ test('sample boundaries use short fades instead of discontinuous jumps', () => {
   assert.ok(largest < .01, `maximum jump ${largest}`);
 });
 
-test('multi-touch, drag and shift-append latch in order; releases do not rewrite', () => {
-  const g = new PadGesture();
-  assert.deepEqual(g.begin(1, 0), [0]);
-  assert.deepEqual(g.begin(2, 1), [0, 1]);
-  g.end(1);
-  assert.deepEqual(g.move(2, 2), [0, 1, 2]);
-  g.end(2);
-  assert.deepEqual(g.order, [0, 1, 2]);
-  assert.deepEqual(g.begin(3, 30), [30]);
-  g.end(3);
-  assert.deepEqual(g.begin(4, 0, true, [30]), [30, 0]);
-  g.cancel();
-  assert.deepEqual(g.begin(5, 1), [1]);
-});
-
 test('all catalog samples exist with unique IDs and valid waveform/phrase metadata', () => {
   const catalog = JSON.parse(readFileSync(new URL('../../Samples/catalog.json', import.meta.url)));
   const all = catalog.flatMap(song => song.loops);
@@ -236,4 +220,53 @@ test('output filters select frequency bands and survive rapid changes', () => {
   assert.ok(level(2, 1000) > level(2, 100) * 4);
   const e = engine(); e.queue([0]);
   for (let i = 0; i < 80; i++) { e.setFilter(i % 4, 40 * (450 ** ((i % 17) / 16))); advance(e, .002); }
+});
+
+test('layered steps repeat the shorter loop, advance after the longest and apply edits at a bar', () => {
+  const e = engine();
+  e.arrange([{id:0,token:101,step:0,mask:15}, {id:1,token:102,step:0,mask:15}, {id:2,token:103,step:1,mask:15}]);
+  advance(e, 2.01);
+  assert.deepEqual(e.snapshot().activeTokens, [101,102]);
+  assert.ok(e.layers[0].position < rate / 4, 'shorter loop repeated');
+  advance(e, 1.98); assert.deepEqual(e.snapshot().activeTokens, [101,102]);
+  advance(e, .02); assert.deepEqual(e.snapshot().activeTokens, [103]);
+  e.arrange([{id:0,token:101,step:0,mask:15}, {id:1,token:102,step:1,mask:15}, {id:2,token:103,step:1,mask:15}]);
+  assert.equal(e.snapshot().pending, true); advance(e, 2);
+  assert.deepEqual(e.snapshot().activeTokens, [102,103]);
+  assert.equal(e.snapshot().activeStep, 1);
+  e.enable(1, false); advance(e, 2); assert.deepEqual(e.snapshot().activeTokens, [103]);
+});
+
+test('editing a future step preserves the current phrase and its end', () => {
+  const e = engine();
+  e.arrange([{id:1,token:101,step:0,mask:15}]); advance(e, .5);
+  e.arrange([{id:1,token:101,step:0,mask:15},{id:0,token:102,step:1,mask:15}]);
+  advance(e, 1.51);
+  assert.equal(e.snapshot().activeTokens[0], 101);
+  assert.ok(e.snapshot().activeProgress[0] > .49);
+  advance(e, 2);
+  assert.equal(e.snapshot().activeTokens[0], 102);
+});
+
+test('two copies of a loop have independent part controls', () => {
+  const e = new LoopEngine(rate), frames = rate * 2, frequencies = [180,600,2400,7000];
+  const parts = frequencies.map(hz => { const a = Float32Array.from({length:frames}, (_, i) => .1 * Math.sin(2 * Math.PI * hz * i / rate)); return [a, a]; });
+  const original = Float32Array.from({length:frames}, (_, i) => parts.reduce((sum, part) => sum + part[0][i], 0));
+  e.load(7, [original, original], 4); e.setParts(7, parts);
+  e.arrange([{id:7,token:201,step:0,mask:1}, {id:7,token:202,step:0,mask:2}]); advance(e, .2);
+  const amp = (audio, hz) => { let a=0,b=0; audio.forEach((x,i) => { a+=x*Math.sin(2*Math.PI*hz*i/rate); b+=x*Math.cos(2*Math.PI*hz*i/rate); }); return 2*Math.hypot(a,b)/audio.length; };
+  let audio = advance(e, 1); assert.ok(amp(audio,180) > .045 && amp(audio,600) > .045);
+  e.setClipMask(201,0); advance(e,.05); audio=advance(e,1); assert.ok(amp(audio,180) < .003 && amp(audio,600) > .045);
+  e.setClipMask(202,0); e.setClipMask(201,1); advance(e,.05); audio=advance(e,1); assert.ok(amp(audio,180) > .045 && amp(audio,600) < .003);
+});
+
+test('a short layer crossfades when it wraps underneath a longer one', () => {
+  const e = new LoopEngine(rate);
+  const short = Float32Array.from({length:rate*2}, (_, i) => i < rate ? .6 : -.6);
+  const long = new Float32Array(rate*4);
+  e.load(0, [short,short],4); e.load(1,[long,long],8);
+  e.arrange([{id:0,token:1,step:0,mask:15},{id:1,token:2,step:0,mask:15}]);
+  let previous = advance(e, 1.98).at(-1), jump = 0;
+  for (const value of advance(e, .06)) { jump = Math.max(jump, Math.abs(value-previous)); previous=value; }
+  assert.ok(jump < .01, `wrap jump ${jump}`);
 });

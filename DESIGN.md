@@ -162,7 +162,7 @@ The song name and native chevron form one Menu control with a minimum 44-point h
 
 ### Waveform pads
 
-Each pad exposes a button accessibility role and its loop number, duration and state. Active pads also expose selected state. Excluded pads outside editing, and pads before loading completes, expose not-enabled state. An accessibility custom action excludes or restores a pad. UIKit handles multi-touch at the grid level; the child pad is a drawing and accessibility surface.
+Each pad exposes a button accessibility role and its loop number, duration and state. Active pads also expose selected state. Excluded pads outside editing, and pads before loading completes, expose not-enabled state. Accessibility custom actions add a step or layer, or exclude or restore a pad. UIKit handles pad taps and drags at the grid level; the child pad is a drawing and accessibility surface.
 
 - **Ready:** native background and label ink, secondary waveform, no status text.
 - **Playing:** fixed playing-blue field, white waveform and text, white phase fill and vertical playhead; status reads PLAYING with cycle order when present.
@@ -180,6 +180,12 @@ The pending queue pulse animates opacity from zero to one over 0.55 seconds, aut
 Play/Stop uses a native Label with an SF Symbol. Its action is disabled while loading; Stop is red during playback. Tempo opens its own native form. Clock status opens settings and distinguishes internal, waiting, locked, freewheel and clock-lost states. Tape/Slice uses the native segmented Picker. Edit pads changes to Done during exclusion editing. Settings uses the native gear symbol with a spoken Settings label.
 
 The minimum target frames are recorded in the frontmatter. Clock and edit also have a 44-point minimum height. Preserve the two-row accessibility layout and native focus/accessibility behavior; there is no custom hover, focus-ring or pressed-animation system in the app.
+
+### Sequence and sound controls
+
+A scrollable sequence tray sits between the grid and transport. Each step shows its samples as stacked waveform rows; a blue outline identifies the playing step, and the active row receives the playing treatment. The plus targets between steps insert a sequential step, while dropping on a step adds a layer. Tapping a row selects its Parts controls; each row also offers a remove action. The tray and selected clip survive song-page changes.
+
+One side panel presents the selected clip's four approximate Parts switches and the global output Filter together, using the same neutral surfaces and blue state cues. Part lanes in the selected and playing waveforms dim when muted. The panel and tray make room by reducing the grid, while song selection, source BPM and transport remain visible. Individual arrangement entries, including repeated copies of one source loop, have independent part settings.
 
 ### Settings and tempo sheets
 

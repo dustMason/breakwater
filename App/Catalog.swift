@@ -33,6 +33,15 @@ struct Song: Codable, Identifiable {
             .map { (Int32(35 + $0.number), $0.id) })
     }
 }
+struct ArrangementClip: Identifiable {
+    let id: Int32
+    let sampleID: Int32
+    var mask: Int
+}
+struct ArrangementStep: Identifiable {
+    let id = UUID()
+    var clips: [ArrangementClip]
+}
 struct PlaybackState {
     var beat = 0.0
     var bpm = 120.0
@@ -41,6 +50,10 @@ struct PlaybackState {
     var active: Int32 = -1
     var pending = false
     var queue: [Int32] = []
+    var activeLoops: [Int32] = []
+    var activeTokens: [Int32] = []
+    var activeProgress: [Double] = []
+    var activeStep = 0
     var clockState = 0
     var clockLabel: String {
         ["INTERNAL", "WAITING", "LOCKED", "FREEWHEEL", "CLOCK LOST"][min(4, max(0, clockState))]

@@ -6,10 +6,15 @@ extern "C" {
 #endif
 typedef void* BWEngine;
 typedef void* BWParts;
+// A clip belongs to one ordered step; clips in the same step play together.
+typedef struct { int32_t loop, token, step, mask; } BWClip;
 typedef struct {
  double beat, bpm, loopProgress;
  int32_t playing, activeLoop, mode, externalClock, clockState, pending, queueCount;
  int32_t queue[64];
+ int32_t activeCount, activeStep;
+ int32_t activeLoops[8], activeTokens[8];
+ double activeProgress[8];
  uint32_t droppedCommands;
 } BWSnapshot;
 BWEngine bw_create(double sampleRate);
@@ -18,6 +23,11 @@ void bw_destroy(BWEngine engine);
 int32_t bw_load_loop(BWEngine engine,int32_t id,const float* interleaved,int32_t frames,int32_t beats,const int32_t* slices,int32_t sliceCount);
 // All commands must come from one serialized producer; render is the consumer.
 void bw_queue(BWEngine engine,const int32_t* ids,int32_t count);
+// Up to 64 clips total, eight simultaneously. Steps are zero-based and ordered.
+void bw_arrange(BWEngine engine,const BWClip* clips,int32_t count);
+// Change the arrangement without starting a stopped transport.
+void bw_edit_arrangement(BWEngine engine,const BWClip* clips,int32_t count);
+void bw_clip_mask(BWEngine engine,int32_t token,int32_t mask);
 void bw_enable(BWEngine engine,int32_t id,int32_t enabled);
 void bw_tempo(BWEngine engine,double bpm);
 void bw_mode(BWEngine engine,int32_t mode);

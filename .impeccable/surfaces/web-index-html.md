@@ -9,7 +9,7 @@ related_targets: ["Web/app.js","Web/style.css"]
 Mode: Operate. Static HTML/CSS/JavaScript port of the approved native performance surface; desktop, tablet and small screens.
 
 ## Direction contract
-THESIS: The existing waveform instrument, immediately playable in a browser, using the shared committed sample catalog (now 258 loops across 14 sources).
+THESIS: The existing waveform instrument, immediately playable in a browser, using the shared committed sample catalog (222 loops across 13 sources).
 OWN-WORLD: Inherit DESIGN.md's neutral surfaces, system typography, thin borders and blue playing/queued states. Reuse the approved B icon.
 STORY: Choose a song, tap a loop, change tempo, build a latched cycle, and persistently exclude unwanted pads. Browsing does not interrupt audio.
 FIRST VIEWPORT: Compact song dropdown and source BPM above the expanding waveform grid; transport, editable tempo, volume and Edit pads below. Six columns on landscape tablets/desktops, five on portrait tablets, three on narrow phones with the grid scrollable and transport anchored.
@@ -36,3 +36,8 @@ The October 14 percussion pass adds twelve song pages without changing the compo
 Parts and FX open a closeable side tray beside the reflowing grid. Parts offers four per-song approximate layers, individual ON/OFF controls and All on / All off; the copy notes possible overlap. Opening Parts, or leaving a layer off, shows four waveform lanes per pad, with muted lanes dimmed. Filter provides Off, LPF, BPF and HPF choices and a labeled cutoff slider. These controls use the existing neutral surfaces, blue states, thin borders and system type. When the tray narrows the grid below 260px, the browser uses two columns.
 
 The documentation pass checked `Web/index.html`, `Web/style.css` and `Web/app.js`, and opened `build/features-final/web-desktop.png` and `build/features-final/web-mobile.png`, which show the Parts tray and grid at desktop and phone sizes. `VALIDATION.md` records the additional browser and audio checks. The captures do not establish audible separation quality or physical-touch performance.
+
+## Arrangement extension — 2026-10-15
+The sequence tray shows ordered step cards containing waveform rows. A drop on a card layers a sample; a drop on a plus inserts a step. Clicking a row selects its independent Parts settings. The panel shows Parts and Filter at once, and the sequence remains across song changes. Keyboard activation provides step and layer shortcuts. The muted browser preview was checked for layering, sequencing, cross-song arrangement, independent Parts and keyboard use; `VALIDATION.md` records functional and hardware limits. This supersedes the earlier per-song Parts and separate tray description above.
+
+The finish review inspected the combined panel and layered tray in a 1280×720 muted browser preview. Both sound sections and the transport are visible together; longer grids and stacked clips scroll. No layout blocker was found at that viewport. This is not a physical-touch or audible-quality validation.
