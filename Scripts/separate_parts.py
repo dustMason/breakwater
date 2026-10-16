@@ -1,109 +1,283 @@
 #!/usr/bin/env python3
-"""Approximate drum parts with per-loop nonnegative spectrogram factorization.
+"""Prepare four DrumSep parts offline; publish the catalog only after validation.
 
-The output masks partition the complex stereo spectrogram, preserving phase and
-loop length. Names are deliberately descriptive rather than instrument claims.
-Requires numpy, scipy, soundfile and ffmpeg for offline preparation only.
+Requires Scripts/requirements-parts.txt, ffmpeg, ffprobe, and the original
+49469ca8.th checkpoint. Originals are read-only. No network access at runtime.
 """
 import argparse
 import concurrent.futures
+import hashlib
 import json
+import multiprocessing
 import os
 from pathlib import Path
+import random
 import subprocess
-import warnings
+import tempfile
 
-os.environ.setdefault('OPENBLAS_NUM_THREADS', '1')
-os.environ.setdefault('VECLIB_MAXIMUM_THREADS', '1')
 import numpy as np
 import soundfile as sf
-from scipy import signal
 
 ROOT = Path(__file__).resolve().parents[1]
-PARTS = ('Low', 'Body', 'Attack', 'High')
-NFFT, HOP, RANK, ITERATIONS = 2048, 512, 8, 42
+PARTS = ('Kick', 'Snare', 'Toms', 'Cymbals')
+SOURCES = ('bombo', 'redoblante', 'toms', 'platillos')
+MODEL_SHA256 = 'aefaa8543c9b9c75e22f5f32b53ab86dfe416457849af1383ff1aef83401423f'
+RECIPE = {'method': 'drumsep', 'version': 1, 'model': '49469ca8',
+          'modelSHA256': MODEL_SHA256, 'sampleRate': 44100, 'seed': 0,
+          'shifts': 1, 'overlap': 0.25, 'codec': 'aac', 'bitrate': '160k',
+          'peakCeiling': 0.98, 'aacRetryCeiling': 0.9,
+          'torch': '2.6.0', 'torchaudio': '2.6.0', 'demucs': '4.0.1'}
 
 
-def separate(sample):
-    source = ROOT / 'Samples' / sample['file']
-    audio, sr = sf.read(source, dtype='float32', always_2d=True)
-    if sr != 48000 or audio.shape != (sample['frames'], 2):
-        raise ValueError(f'Unexpected audio format: {source}')
-    # Wrap padding makes analysis continuous across the loop boundary.
-    padded = np.pad(audio, ((NFFT, NFFT), (0, 0)), mode='wrap')
-    specs = [signal.stft(padded[:, ch], fs=sr, nperseg=NFFT, noverlap=NFFT-HOP,
-                         boundary='zeros', padded=True)[2] for ch in range(2)]
-    magnitude = np.sqrt((np.abs(specs[0]) ** 2 + np.abs(specs[1]) ** 2) * .5).astype('float32')
-    # Whiten frequencies so quiet high percussion can form its own component.
-    weight = np.maximum(np.mean(magnitude, axis=1, keepdims=True), 1e-6) ** .5
-    v = magnitude / weight
-    rng = np.random.default_rng(sample['id'] + 17)
-    w = rng.random((v.shape[0], RANK), dtype=np.float32) + .1
-    h = rng.random((RANK, v.shape[1]), dtype=np.float32) + .1
-    eps = 1e-8
-    for _ in range(ITERATIONS):
-        h *= (w.T @ v) / (w.T @ w @ h + eps)
-        w *= (v @ h.T) / (w @ (h @ h.T) + eps)
-        norm = np.maximum(w.sum(axis=0), eps)
-        w /= norm
-        h *= norm[:, None]
-    templates = w * weight
-    frequencies = np.fft.rfftfreq(NFFT, 1 / sr)
-    centroids = (templates.T @ frequencies) / np.maximum(templates.sum(axis=0), eps)
-    order = np.argsort(centroids)
-    components = np.empty(RANK, dtype=np.int32)
-    for group, pair in enumerate(np.array_split(order, len(PARTS))):
-        components[pair] = group
-    energies = np.stack([templates[:, components == group] @ h[components == group] for group in range(len(PARTS))])
-    masks = energies / np.maximum(energies.sum(axis=0, keepdims=True), eps)
-    if not np.isfinite(masks).all():
-        raise ValueError(f'Non-finite analysis masks: {source}')
-    paths, waveforms = [], []
-    base = f"Stems/{Path(sample['file']).stem}"
-    for group, name in enumerate(PARTS):
-        channels = []
-        for spec in specs:
-            _, y = signal.istft(spec * masks[group], fs=sr, nperseg=NFFT, noverlap=NFFT-HOP,
-                                input_onesided=True, boundary=True)
-            channels.append(y[NFFT:NFFT + len(audio)])
-        stem = np.stack(channels, axis=1).astype('float32')
-        if len(stem) != len(audio):
-            raise ValueError(f'Stem length mismatch: {source}')
-        path = f'{base}-{group}.m4a'
-        destination = ROOT / 'Samples' / path
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        temp = destination.with_suffix('.tmp.m4a')
-        subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'f32le', '-ar', str(sr),
-                        '-ac', '2', '-i', 'pipe:0', '-c:a', 'aac', '-b:a', '160k', '-movie_timescale', '48000', '-movflags', '+faststart', str(temp)],
-                       input=stem.tobytes(), check=True)
-        temp.replace(destination)
-        paths.append(path)
-        waveform = [float(np.max(np.abs(chunk))) if len(chunk) else 0 for chunk in np.array_split(stem, len(sample['waveform']))]
-        waveforms.append([round(x, 5) for x in waveform])
-    return sample['id'], paths, waveforms
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--jobs', type=int, default=4)
-    parser.add_argument('--ids', nargs='*', type=int, help='Only analyze these sample IDs (for audition/development)')
-    args = parser.parse_args()
-    catalog_path = ROOT / 'Samples/catalog.json'
-    catalog = json.loads(catalog_path.read_text())
-    selected = [s for song in catalog for s in song['loops'] if args.ids is None or s['id'] in args.ids]
-    with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
-        futures = [pool.submit(separate, s) for s in selected]
-        results = {}
-        for i, future in enumerate(concurrent.futures.as_completed(futures), 1):
-            ident, paths, waveforms = future.result()
-            results[ident] = {'files': paths, 'waveforms': waveforms}
-            print(f'{i}/{len(selected)}: loop {ident}', flush=True)
+def source_path(root, relative):
+    path = (root / relative).resolve()
+    if Path(relative).is_absolute() or not path.is_relative_to(root.resolve()):
+        raise ValueError(f'Path is outside the sample library: {relative}')
+    return path
+
+
+def select_samples(catalog, ids):
+    all_ids = [sample['id'] for song in catalog for sample in song['loops']]
+    if len(all_ids) != len(set(all_ids)):
+        raise ValueError('Duplicate sample IDs')
+    chosen = set(all_ids if ids is None else ids)
+    if not chosen or chosen - set(all_ids):
+        raise ValueError('Select at least one valid sample ID')
     for song in catalog:
-        song['partLabels'] = list(PARTS)
+        song_ids = {s['id'] for s in song['loops']}
+        if song_ids & chosen and song.get('partLabels') != list(PARTS) and not song_ids <= chosen:
+            raise ValueError(f"First DrumSep migration must include every loop in {song['name']}; song-wide labels cannot mix NMF and DrumSep parts")
+    return [s for song in catalog for s in song['loops'] if s['id'] in chosen]
+
+
+def cached_parts(root, sample, source_hash):
+    parts = sample.get('parts', {})
+    provenance = parts.get('separation', {})
+    if provenance.get('recipe') != RECIPE or provenance.get('sourceSHA256') != source_hash:
+        return None
+    files, hashes, waves = parts.get('files', []), provenance.get('fileSHA256', []), parts.get('waveforms', [])
+    if not (len(files) == len(hashes) == len(waves) == 4):
+        return None
+    if any(len(w) != len(sample['waveform']) or not np.isfinite(w).all()
+           or any(v < 0 or v > 1 for v in w) for w in waves):
+        return None
+    try:
+        if all(source_path(root, file).is_file() and digest(source_path(root, file)) == sha
+               for file, sha in zip(files, hashes)):
+            return parts
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def receipt_path(root, sample):
+    return root / 'Stems' / 'drumsep-v1' / str(sample['id']) / 'parts.json'
+
+
+def read_receipt(root, sample, source_hash):
+    try:
+        candidate = dict(sample, parts=json.loads(receipt_path(root, sample).read_text()))
+        return cached_parts(root, candidate, source_hash)
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+
+
+def write_receipt(root, sample, parts):
+    path = receipt_path(root, sample)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='.receipt-', delete=False) as temp:
+        json.dump(parts, temp)
+        temporary = Path(temp.name)
+    try:
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def load_separator(checkpoint, threads):
+    import torch
+    import torchaudio
+    from importlib.metadata import version
+    from demucs.hdemucs import HDemucs
+    from demucs.states import load_model
+    from demucs.apply import apply_model
+    if digest(checkpoint) != MODEL_SHA256:
+        raise ValueError('Checkpoint SHA-256 does not match the original auditioned DrumSep model')
+    for package in ('torch', 'torchaudio', 'demucs'):
+        if version(package).split('+')[0] != RECIPE[package]:
+            raise ValueError(f'Install Scripts/requirements-parts.txt: expected {package} {RECIPE[package]}')
+    torch.set_num_threads(threads)
+    with torch.serialization.safe_globals([HDemucs]):
+        package = torch.load(checkpoint, map_location='cpu', weights_only=True)
+    model = load_model(package).cpu().eval()
+    if set(model.sources) != set(SOURCES) or model.samplerate != 44100 or model.audio_channels != 2:
+        raise ValueError('Unexpected DrumSep model shape or source names')
+
+    def separate(audio, rate):
+        # Seed each loop independently so --ids and resumed runs produce the same result.
+        torch.manual_seed(RECIPE['seed'])
+        random.seed(RECIPE['seed'])
+        x = torchaudio.functional.resample(torch.from_numpy(audio.T.copy()), rate, model.samplerate)
+        ref = x.mean(0)
+        mean, std = ref.mean(), ref.std()
+        if float(std) < 1e-8:
+            return np.zeros((4, len(audio), 2), dtype=np.float32)
+        with torch.inference_mode():
+            stems = apply_model(model, ((x - mean) / std)[None], device='cpu', shifts=1,
+                                split=True, overlap=0.25, progress=False)[0] * std + mean
+            stems = stems[[model.sources.index(s) for s in SOURCES]]
+            stems = torchaudio.functional.resample(stems, model.samplerate, rate)
+            stems = torch.nn.functional.pad(stems, (0, max(0, len(audio) - stems.shape[-1])))
+        result = stems[..., :len(audio)].permute(0, 2, 1).numpy()
+        if result.shape != (4, len(audio), 2) or not np.isfinite(result).all():
+            raise ValueError('Invalid DrumSep output')
+        return result
+    return separate
+
+
+def encode_parts(root, sample, stems, source_hash):
+    """Use one shared gain, including AAC overshoot, and retain exact container duration."""
+    target = root / 'Stems' / 'drumsep-v1' / str(sample['id'])
+    target.mkdir(parents=True, exist_ok=True)
+    gain = min(1.0, RECIPE['peakCeiling'] / max(float(np.max(np.abs(stems))), 1e-12))
+    with tempfile.TemporaryDirectory(prefix='.encode-', dir=target) as temporary:
+        temporary = Path(temporary)
+        decoded = []
+        for attempt in range(8):
+            decoded = []
+            for index, stem in enumerate(stems):
+                path = temporary / f'{index}.m4a'
+                subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', '48000', '-ac', '2',
+                                '-i', 'pipe:0', '-c:a', 'aac', '-b:a', '160k', '-movie_timescale', '48000',
+                                '-movflags', '+faststart', str(path)],
+                               input=np.asarray(stem * gain, dtype='<f4').tobytes(), check=True)
+                info = json.loads(subprocess.check_output(['ffprobe', '-v', 'error', '-select_streams', 'a:0',
+                    '-show_entries', 'stream=sample_rate,channels,duration_ts,time_base', '-of', 'json', str(path)]))['streams'][0]
+                if (info['sample_rate'], info['channels'], info['time_base'], info['duration_ts']) != ('48000', 2, '1/48000', sample['frames']):
+                    raise ValueError(f'Encoded format/duration mismatch: {path}')
+                raw = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', str(path), '-f', 'f32le', '-acodec', 'pcm_f32le', 'pipe:1'])
+                y = np.frombuffer(raw, dtype='<f4').reshape(-1, 2)
+                if len(y) < sample['frames'] or not np.isfinite(y).all():
+                    raise ValueError(f'Invalid AAC decode: {path}')
+                decoded.append(y[:sample['frames']])
+            peak = max(float(np.max(np.abs(y))) for y in decoded)
+            if peak <= 1.0:
+                break
+            # AAC quantization is nonlinear: tiny gain changes can retain an
+            # overshoot. Leave appreciable headroom on each retry.
+            gain *= RECIPE['aacRetryCeiling'] / peak
+        else:
+            raise ValueError('Unable to encode parts without full-scale overshoot')
+        files, hashes, waves = [], [], []
+        for index, y in enumerate(decoded):
+            path = temporary / f'{index}.m4a'
+            sha = digest(path)
+            destination = target / f'{index}-{PARTS[index].lower()}-{sha}.m4a'
+            if destination.exists() and digest(destination) != sha:
+                raise ValueError(f'Existing immutable stem is corrupt: {destination}')
+            if not destination.exists():
+                path.replace(destination)
+            files.append(str(destination.relative_to(root)))
+            hashes.append(sha)
+            waves.append([round(float(np.max(np.abs(chunk))), 5) if len(chunk) else 0
+                          for chunk in np.array_split(y, len(sample['waveform']))])
+    return {'files': files, 'waveforms': waves,
+            'separation': {'recipe': RECIPE, 'sourceSHA256': source_hash, 'fileSHA256': hashes,
+                           'gain': gain, 'decodedPeak': peak}}
+
+
+def initialize_worker(checkpoint, threads, root):
+    global worker_separate, worker_root
+    worker_separate = load_separator(checkpoint, threads)
+    worker_root = root
+
+
+def prepare_sample(sample, source_hash):
+    audio, sr = sf.read(source_path(worker_root, sample['file']), dtype='float32', always_2d=True)
+    if sr != 48000 or audio.shape != (sample['frames'], 2) or not np.isfinite(audio).all():
+        raise ValueError(f"Unexpected original format: {sample['file']}")
+    parts = encode_parts(worker_root, sample, worker_separate(audio, sr), source_hash)
+    write_receipt(worker_root, sample, parts)
+    return sample['id'], parts
+
+
+def publish_catalog(path, expected_bytes, catalog, results, root, source_hashes):
+    # Recheck every input and the catalog to avoid overwriting concurrent curation.
+    for relative, sha in source_hashes.items():
+        if digest(source_path(root, relative)) != sha:
+            raise RuntimeError(f'Source changed during separation: {relative}; catalog was not published')
+    if path.read_bytes() != expected_bytes:
+        raise RuntimeError('Catalog changed during separation; rerun against the new catalog')
+    for song in catalog:
+        if any(s['id'] in results for s in song['loops']):
+            song['partLabels'] = list(PARTS)
         for sample in song['loops']:
             if sample['id'] in results:
                 sample['parts'] = results[sample['id']]
-    catalog_path.write_text(json.dumps(catalog, indent=2) + '\n')
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='.catalog-', suffix='.json', delete=False) as temp:
+        json.dump(catalog, temp, indent=2)
+        temp.write('\n')
+        temporary = Path(temp.name)
+    try:
+        if path.read_bytes() != expected_bytes:
+            raise RuntimeError('Catalog changed before publication; rerun against the new catalog')
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source', type=Path, default=ROOT / 'Samples', help='Source library containing catalog.json')
+    parser.add_argument('--model', type=Path, default=Path(os.environ.get('BREAKWATER_DRUMSEP_MODEL', ROOT / 'build/models/49469ca8.th')))
+    parser.add_argument('--threads', type=int, default=4, help='CPU inference threads per worker')
+    parser.add_argument('--jobs', type=int, default=1, help='Independent worker processes, each holding a model and using --threads CPU threads')
+    parser.add_argument('--ids', nargs='+', type=int, help='Only regenerate these IDs; first migration requires whole songs')
+    parser.add_argument('--force', action='store_true', help='Recompute even when source, recipe, and stem hashes match')
+    args = parser.parse_args()
+    if args.threads < 1 or args.jobs < 1:
+        parser.error('--threads and --jobs must be positive')
+    root = args.source.resolve()
+    catalog_path = root / 'catalog.json'
+    original = catalog_path.read_bytes()
+    catalog = json.loads(original)
+    selected = select_samples(catalog, args.ids)
+    hashes = {s['file']: digest(source_path(root, s['file'])) for s in selected}
+    results, pending = {}, []
+    for sample in selected:
+        sha = hashes[sample['file']]
+        parts = None if args.force else cached_parts(root, sample, sha)
+        if parts is None and not args.force:
+            parts = read_receipt(root, sample, sha)
+        if parts is None:
+            pending.append((sample, sha))
+        else:
+            results[sample['id']] = parts
+            print(f"{len(results)}/{len(selected)}: loop {sample['id']} cached", flush=True)
+
+    def completed(result):
+        ident, parts = result
+        results[ident] = parts
+        print(f"{len(results)}/{len(selected)}: loop {ident} generated", flush=True)
+
+    if pending and args.jobs == 1:
+        initialize_worker(args.model, args.threads, root)
+        for sample, sha in pending:
+            completed(prepare_sample(sample, sha))
+    elif pending:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=min(args.jobs, len(pending)),
+                mp_context=multiprocessing.get_context('spawn'), initializer=initialize_worker,
+                initargs=(args.model, args.threads, root)) as pool:
+            futures = [pool.submit(prepare_sample, sample, sha) for sample, sha in pending]
+            for future in concurrent.futures.as_completed(futures):
+                completed(future.result())
+    publish_catalog(catalog_path, original, catalog, results, root, hashes)
+    print(f'Published {len(selected)} loops with Kick / Snare / Toms / Cymbals. Originals unchanged.')
+
 
 if __name__ == '__main__':
     main()

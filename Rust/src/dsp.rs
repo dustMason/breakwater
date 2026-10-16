@@ -96,7 +96,9 @@ impl Voice {
         };
         if let Some(parts) = s.parts() {
             let sum: f32 = self.gains.iter().sum();
-            let original = (sum - 1.).clamp(0., 1.);
+            // Neural estimates need not reconstruct the mix. Partial masks sum
+            // the selected stems; only all four enabled restores the original.
+            let original = (sum - 3.).clamp(0., 1.);
             out = out.scale((1. - self.blend + self.blend * original) as f64);
             for p in 0..4 {
                 let amount = (self.gains[p] - original) * self.blend;

@@ -116,6 +116,8 @@ void partsAndFilters(){
  bw_part_mask(e,0,14);bw_render(e,l.data(),r.data(),48000,11);
  auto amplitude=[&](int hz){double a=0,b=0;for(int i=2000;i<48000;i++){a+=l[i]*std::sin(2*pi*hz*i/48000);b+=l[i]*std::cos(2*pi*hz*i/48000);}return 2*std::hypot(a,b)/46000;};
  assert(amplitude(180)<.005);assert(amplitude(600)>.07);
+ assert(amplitude(1000)<.005); // Three selected estimates must not retain original-only residuals.
+ bw_part_mask(e,0,3);bw_render(e,l.data(),r.data(),48000,11.25);assert(amplitude(180)>.07);assert(amplitude(600)>.07);assert(amplitude(1000)<.005);assert(amplitude(2400)<.005);
  bw_part_mask(e,0,1);bw_render(e,l.data(),r.data(),48000,11.5);assert(amplitude(180)>.07);assert(amplitude(1000)<.005);
  bw_part_mask(e,0,0);bw_render(e,l.data(),r.data(),48000,12);for(int i=1000;i<48000;i++)assert(std::abs(l[i])<1e-6);
  bw_part_mask(e,0,15);bw_render(e,l.data(),r.data(),48000,13);assert(amplitude(180)>.07);assert(amplitude(1000)>.025);
